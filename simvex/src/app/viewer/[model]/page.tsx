@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -62,6 +62,33 @@ export default function ViewerPage() {
 
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
+  const isResizing = useRef(false);
+
+  // 패널 리사이즈 핸들러
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setNotesPanelWidth(Math.max(320, Math.min(800, newWidth))); // 최소 320px, 최대 800px
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // 디버그용 오버라이드 상태
   const [partOverrides, setPartOverrides] = useState<Map<string, Partial<PartConfig>>>(new Map());
@@ -107,6 +134,11 @@ export default function ViewerPage() {
     }
     return null;
   }, [isCombinedModel, combinedModel, model]);
+
+  // Zustand store hydration (SSR 호환)
+  useEffect(() => {
+    useViewerStore.persist.rehydrate();
+  }, []);
 
   // 모델 초기화
   useEffect(() => {
@@ -288,25 +320,29 @@ export default function ViewerPage() {
 
         {/* 노트 패널 (슬라이드) */}
         <div
-          className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] w-96 ${
+          className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
             isDarkMode ? 'bg-gray-900' : 'bg-white'
           } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
           transform transition-transform duration-300 ease-in-out z-50
           ${isNotesPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          style={{ width: notesPanelWidth }}
         >
+          {/* 리사이즈 핸들 */}
+          <div
+            className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 transition-colors ${
+              isDarkMode ? 'hover:bg-blue-400' : 'hover:bg-blue-500'
+            }`}
+            onMouseDown={handleResizeStart}
+          />
           <div className="h-full p-4">
-            <NotesPanel />
+            <NotesPanel
+              modelInfo={currentModelInfo}
+              selectedPart={selectedPart}
+            />
           </div>
         </div>
 
-        {/* 오버레이 */}
-        {isNotesPanelOpen && (
-          <div
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setIsNotesPanelOpen(false)}
-            style={{ top: '3.5rem' }}
-          />
-        )}
+{/* 오버레이 제거 - 3D 뷰어 조작을 위해 */}
       </div>
 
       {/* 디버그 패널 (일반 모델만 지원) */}
