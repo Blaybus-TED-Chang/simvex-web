@@ -5,11 +5,18 @@ import { Canvas } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 
-// 텍스쳐 관련 경고 억제
+// 텍스쳐 관련 경고/에러 억제
 const originalWarn = console.warn;
+const originalError = console.error;
 console.warn = (...args) => {
-  if (typeof args[0] === 'string' && args[0].includes('texture')) return;
+  const msg = String(args[0] || '');
+  if (msg.includes('texture') || msg.includes('Texture') || msg.includes('GLTFLoader')) return;
   originalWarn.apply(console, args);
+};
+console.error = (...args) => {
+  const msg = String(args[0] || '');
+  if (msg.includes('texture') || msg.includes('Texture') || msg.includes('GLTFLoader') || msg.includes('.png') || msg.includes('.jpg')) return;
+  originalError.apply(console, args);
 };
 
 // 통합 GLB에서 추출된 부품 설정
