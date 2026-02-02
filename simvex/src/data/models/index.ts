@@ -1,4 +1,5 @@
 import { ModelConfig } from '@/types/viewer';
+import { CombinedModelConfig } from '@/components/viewer/CombinedGLBPart';
 import { suspensionModel } from './suspension';
 import { droneModel } from './drone';
 import { v4EngineModel } from './v4engine';
@@ -6,8 +7,9 @@ import { robotArmModel } from './robotArm';
 import { robotGripperModel } from './robotGripper';
 import { leafSpringModel } from './leafSpring';
 import { machineViceModel } from './machineVice';
+import { droneCombinedModel } from './droneCombined';
 
-// 모든 모델 목록
+// 개별 GLB 모델 목록
 export const models: ModelConfig[] = [
   suspensionModel,
   droneModel,
@@ -18,9 +20,19 @@ export const models: ModelConfig[] = [
   machineViceModel,
 ];
 
-// ID로 모델 찾기
+// 통합 GLB 모델 목록
+export const combinedModels: CombinedModelConfig[] = [
+  droneCombinedModel,
+];
+
+// ID로 개별 모델 찾기
 export function getModelById(id: string): ModelConfig | undefined {
   return models.find((model) => model.id === id);
+}
+
+// ID로 통합 모델 찾기
+export function getCombinedModelById(id: string): CombinedModelConfig | undefined {
+  return combinedModels.find((model) => model.id === id);
 }
 
 // 카테고리별 모델 필터링
@@ -30,5 +42,6 @@ export function getModelsByCategory(category: string): ModelConfig[] {
 
 // 모든 카테고리 목록
 export function getAllCategories(): string[] {
-  return [...new Set(models.map((model) => model.category))];
+  const allModels = [...models, ...combinedModels];
+  return [...new Set(allModels.map((model) => model.category))];
 }

@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { PartConfig } from '@/types/viewer';
 import { useViewerStore } from '@/lib/store/viewerStore';
 
+// 공통 부품 정보 인터페이스
+interface PartInfo {
+  id: string;
+  name: string;
+  nameKo: string;
+  color?: string;
+}
+
 interface PartsListProps {
-  parts: PartConfig[];
+  parts: PartInfo[];
 }
 
 export function PartsList({ parts }: PartsListProps) {

@@ -1,9 +1,17 @@
 'use client';
 
-import { PartConfig } from '@/types/viewer';
+// 공통 부품 정보 인터페이스
+interface PartInfo {
+  id: string;
+  name: string;
+  nameKo: string;
+  description: string;
+  material?: string;
+  color?: string;
+}
 
 interface PartInfoProps {
-  part: PartConfig | null;
+  part: PartInfo | null;
 }
 
 export function PartInfo({ part }: PartInfoProps) {

@@ -1,14 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { ModelConfig } from '@/types/viewer';
+
+// 공통 모델 정보 인터페이스
+interface ModelInfo {
+  nameKo: string;
+  name: string;
+  category: string;
+  description: string;
+  theory: string;
+  parts: { id: string }[];
+}
 
 interface ProductInfoProps {
-  model: ModelConfig;
+  model: ModelInfo | null;
 }
 
 export function ProductInfo({ model }: ProductInfoProps) {
   const [isTheoryExpanded, setIsTheoryExpanded] = useState(false);
+
+  if (!model) return null;
 
   return (
     <div className="bg-gray-800/50 backdrop-blur rounded-lg p-4">

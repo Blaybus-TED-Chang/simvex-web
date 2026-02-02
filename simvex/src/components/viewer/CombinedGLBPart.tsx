@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useMemo, useEffect, useState, useCallback } from 'react';
-import { useGLTF } from '@react-three/drei';
+import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { useGLTF, OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 
 // 통합 GLB에서 추출된 부품 설정
@@ -84,11 +85,16 @@ function PartMesh({
     worldPosition.z + dz * dist,
   ];
 
-  // Clone material for this instance
+  // Create material with base color from config
   const clonedMaterial = useMemo(() => {
-    const mat = material.clone();
+    // 새로운 MeshStandardMaterial 생성하고 color 적용
+    const mat = new THREE.MeshStandardMaterial({
+      color: partConfig.color || '#888888',
+      metalness: 0.3,
+      roughness: 0.6,
+    });
     return mat;
-  }, [material]);
+  }, [partConfig.color]);
 
   // Update emissive for highlight
   useEffect(() => {
@@ -266,5 +272,151 @@ export function CombinedGLBViewer({
         );
       })}
     </group>
+  );
+}
+
+// 전체 뷰어 컴포넌트 (Canvas 포함)
+interface CombinedModelViewerProps {
+  model: CombinedModelConfig;
+  explodeValue: number;
+  selectedPartId: string | null;
+  hoveredPartId: string | null;
+  visibleParts: string[];
+  onSelectPart: (partId: string | null) => void;
+  onHoverPart: (partId: string | null) => void;
+  cameraPosition?: [number, number, number];
+  cameraTarget?: [number, number, number];
+  isDarkMode?: boolean;
+}
+
+function LoadingFallback() {
+  return (
+    <mesh>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color="#666" wireframe />
+    </mesh>
+  );
+}
+
+export function CombinedModelViewer({
+  model,
+  explodeValue,
+  selectedPartId,
+  hoveredPartId,
+  visibleParts,
+  onSelectPart,
+  onHoverPart,
+  cameraPosition,
+  cameraTarget,
+  isDarkMode = true,
+}: CombinedModelViewerProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const bgColor = isDarkMode ? '#111' : '#f5f5f5';
+  const gradientFrom = isDarkMode ? 'from-gray-900' : 'from-gray-100';
+  const gradientTo = isDarkMode ? 'to-gray-950' : 'to-gray-200';
+  const finalCameraPosition = cameraPosition || model.cameraPosition || [5, 3, 5];
+  const finalCameraTarget = cameraTarget || model.cameraTarget || [0, 0, 0];
+
+  if (!mounted) {
+    return (
+      <div className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg flex items-center justify-center`}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>3D 뷰어 초기화 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`}>
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        camera={{
+          position: finalCameraPosition,
+          fov: 50,
+          near: 0.01,
+          far: 100,
+        }}
+        onPointerMissed={() => onSelectPart(null)}
+        gl={{
+          antialias: true,
+          preserveDrawingBuffer: true,
+          powerPreference: 'high-performance',
+        }}
+      >
+        <color attach="background" args={[bgColor]} />
+        <fog attach="fog" args={[bgColor, 10, 50]} />
+
+        {/* 조명 */}
+        <ambientLight intensity={isDarkMode ? 1.2 : 1.5} />
+        <directionalLight
+          position={[10, 10, 5]}
+          intensity={isDarkMode ? 1.5 : 1.8}
+          castShadow
+          shadow-mapSize={[1024, 1024]}
+        />
+        <directionalLight position={[-5, 5, -5]} intensity={isDarkMode ? 0.8 : 1.0} />
+        <directionalLight position={[0, -5, 0]} intensity={isDarkMode ? 0.4 : 0.6} />
+        <directionalLight position={[5, 0, -5]} intensity={isDarkMode ? 0.5 : 0.7} />
+
+        {/* 통합 GLB 뷰어 */}
+        <Suspense fallback={<LoadingFallback />}>
+          <CombinedGLBViewer
+            model={model}
+            explodeValue={explodeValue}
+            selectedPartId={selectedPartId}
+            hoveredPartId={hoveredPartId}
+            visibleParts={visibleParts}
+            onSelectPart={onSelectPart}
+            onHoverPart={onHoverPart}
+          />
+        </Suspense>
+
+        {/* 좌표축 */}
+        <axesHelper args={[1]} />
+
+        {/* 그리드 */}
+        <Grid
+          args={[20, 20]}
+          position={[0, -0.01, 0]}
+          cellSize={0.1}
+          cellThickness={0.5}
+          cellColor={isDarkMode ? '#404040' : '#c0c0c0'}
+          sectionSize={0.5}
+          sectionThickness={1}
+          sectionColor={isDarkMode ? '#606060' : '#a0a0a0'}
+          fadeDistance={10}
+          fadeStrength={1}
+        />
+
+        {/* 바닥 */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+          <planeGeometry args={[50, 50]} />
+          <meshStandardMaterial
+            color={isDarkMode ? '#1a1a1a' : '#e8e8e8'}
+            transparent
+            opacity={0.5}
+          />
+        </mesh>
+
+        {/* 카메라 컨트롤 */}
+        <OrbitControls
+          makeDefault
+          enableDamping
+          dampingFactor={0.05}
+          minDistance={0.1}
+          maxDistance={30}
+          target={finalCameraTarget}
+        />
+      </Canvas>
+    </div>
   );
 }
