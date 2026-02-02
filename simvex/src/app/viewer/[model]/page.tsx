@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { getModelById } from '@/data/models';
+import { getModelById, getCombinedModelById } from '@/data/models';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { ExplodeSlider } from '@/components/viewer/ExplodeSlider';
 import { ProductInfo } from '@/components/viewer/ProductInfo';
@@ -13,10 +13,17 @@ import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { DebugPanel } from '@/components/viewer/DebugPanel';
 import { PartConfig, ModelConfig } from '@/types/viewer';
+import { CombinedModelConfig, CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
   () => import('@/components/viewer/ModelViewer').then((mod) => mod.ModelViewer),
+  { ssr: false, loading: () => <ViewerSkeleton /> }
+);
+
+// 통합 GLB 뷰어 (Canvas 포함)
+const CombinedModelViewer = dynamic(
+  () => import('@/components/viewer/CombinedGLBPart').then((mod) => mod.CombinedModelViewer),
   { ssr: false, loading: () => <ViewerSkeleton /> }
 );
 
@@ -33,12 +40,20 @@ function ViewerSkeleton() {
 
 export default function ViewerPage() {
   const params = useParams();
-  const router = useRouter();
   const modelId = params.model as string;
+
+  // 일반 모델 또는 통합 모델 조회
   const originalModel = getModelById(modelId);
+  const combinedModel = getCombinedModelById(modelId);
+  const isCombinedModel = !originalModel && !!combinedModel;
 
   const {
     selectedPartId,
+    setSelectedPartId,
+    hoveredPartId,
+    setHoveredPartId,
+    explodeValue,
+    visibleParts,
     setCurrentModel,
     setAllPartsVisible,
     isDarkMode,
@@ -51,13 +66,13 @@ export default function ViewerPage() {
   // 디버그용 오버라이드 상태
   const [partOverrides, setPartOverrides] = useState<Map<string, Partial<PartConfig>>>(new Map());
   const [cameraPosition, setCameraPosition] = useState<[number, number, number]>(
-    originalModel?.cameraPosition || [5, 3, 5]
+    originalModel?.cameraPosition || combinedModel?.cameraPosition || [5, 3, 5]
   );
   const [cameraTarget, setCameraTarget] = useState<[number, number, number]>(
-    originalModel?.cameraTarget || [0, 0, 0]
+    originalModel?.cameraTarget || combinedModel?.cameraTarget || [0, 0, 0]
   );
 
-  // 오버라이드가 적용된 모델 생성
+  // 오버라이드가 적용된 일반 모델 생성
   const model: ModelConfig | undefined = originalModel ? {
     ...originalModel,
     parts: originalModel.parts.map(part => {
@@ -66,6 +81,33 @@ export default function ViewerPage() {
     })
   } : undefined;
 
+  // 현재 모델 정보 (통합 또는 일반)
+  const currentModelInfo = useMemo(() => {
+    if (isCombinedModel && combinedModel) {
+      return {
+        id: combinedModel.id,
+        name: combinedModel.name,
+        nameKo: combinedModel.nameKo,
+        description: combinedModel.description,
+        theory: combinedModel.theory,
+        category: combinedModel.category,
+        parts: combinedModel.parts,
+      };
+    }
+    if (model) {
+      return {
+        id: model.id,
+        name: model.name,
+        nameKo: model.nameKo,
+        description: model.description,
+        theory: model.theory,
+        category: model.category,
+        parts: model.parts,
+      };
+    }
+    return null;
+  }, [isCombinedModel, combinedModel, model]);
+
   // 모델 초기화
   useEffect(() => {
     if (originalModel) {
@@ -73,8 +115,13 @@ export default function ViewerPage() {
       setAllPartsVisible(originalModel.parts.map((p) => p.id));
       setCameraPosition(originalModel.cameraPosition || [5, 3, 5]);
       setCameraTarget(originalModel.cameraTarget || [0, 0, 0]);
+    } else if (combinedModel) {
+      setCurrentModel(combinedModel.id);
+      setAllPartsVisible(combinedModel.parts.map((p) => p.id));
+      setCameraPosition(combinedModel.cameraPosition || [5, 3, 5]);
+      setCameraTarget(combinedModel.cameraTarget || [0, 0, 0]);
     }
-  }, [originalModel, setCurrentModel, setAllPartsVisible]);
+  }, [originalModel, combinedModel, setCurrentModel, setAllPartsVisible]);
 
   // 부품 업데이트 핸들러
   const handleUpdatePart = useCallback((partId: string, updates: Partial<PartConfig>) => {
@@ -93,7 +140,7 @@ export default function ViewerPage() {
   }, []);
 
   // 모델이 없으면 에러 페이지
-  if (!model || !originalModel) {
+  if (!currentModelInfo) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -109,7 +156,8 @@ export default function ViewerPage() {
     );
   }
 
-  const selectedPart = model.parts.find((p) => p.id === selectedPartId) || null;
+  // 선택된 부품 찾기
+  const selectedPart = currentModelInfo.parts.find((p) => p.id === selectedPartId) || null;
 
   return (
     <div className={`viewer-page min-h-screen ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
@@ -131,10 +179,10 @@ export default function ViewerPage() {
             </div>
             <div>
               <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {model.nameKo}
+                {currentModelInfo.nameKo}
               </h1>
               <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {model.name}
+                {currentModelInfo.name}
               </p>
             </div>
           </div>
@@ -197,13 +245,28 @@ export default function ViewerPage() {
       <div className="h-[calc(100vh-3.5rem)] flex">
         {/* 3D 뷰포트 */}
         <div className="flex-1 p-4">
-          <ModelViewer
-            model={model}
-            debugMode={debugMode}
-            overrideParts={partOverrides}
-            cameraPosition={cameraPosition}
-            cameraTarget={cameraTarget}
-          />
+          {isCombinedModel && combinedModel ? (
+            <CombinedModelViewer
+              model={combinedModel}
+              explodeValue={explodeValue}
+              selectedPartId={selectedPartId}
+              hoveredPartId={hoveredPartId}
+              visibleParts={visibleParts}
+              onSelectPart={setSelectedPartId}
+              onHoverPart={setHoveredPartId}
+              cameraPosition={cameraPosition}
+              cameraTarget={cameraTarget}
+              isDarkMode={isDarkMode}
+            />
+          ) : model ? (
+            <ModelViewer
+              model={model}
+              debugMode={debugMode}
+              overrideParts={partOverrides}
+              cameraPosition={cameraPosition}
+              cameraTarget={cameraTarget}
+            />
+          ) : null}
         </div>
 
         {/* 우측 패널 */}
@@ -213,13 +276,13 @@ export default function ViewerPage() {
             <ExplodeSlider />
 
             {/* 제품 정보 */}
-            <ProductInfo model={model} />
+            <ProductInfo model={currentModelInfo} />
 
             {/* 부품 정보 */}
             <PartInfo part={selectedPart} />
 
             {/* 부품 목록 */}
-            <PartsList parts={model.parts} />
+            <PartsList parts={currentModelInfo.parts} />
           </div>
         </div>
 
@@ -246,8 +309,8 @@ export default function ViewerPage() {
         )}
       </div>
 
-      {/* 디버그 패널 */}
-      {debugMode && (
+      {/* 디버그 패널 (일반 모델만 지원) */}
+      {debugMode && model && !isCombinedModel && (
         <DebugPanel
           model={model}
           onUpdatePart={handleUpdatePart}

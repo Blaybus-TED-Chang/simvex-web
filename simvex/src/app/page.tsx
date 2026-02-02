@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { models } from '@/data/models';
+import { models, combinedModels } from '@/data/models';
 
 const simulations = [
   {
@@ -164,6 +164,53 @@ export default function Home() {
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* 통합 GLB 모델 (NEW 뱃지 추가) */}
+            {combinedModels.map((model) => (
+              <Link
+                key={model.id}
+                href={`/viewer/${model.id}`}
+                className="group"
+              >
+                <div className="relative overflow-hidden rounded-xl border border-green-800/50 bg-gray-900/50 backdrop-blur-sm transition-all duration-300 hover:border-green-500/50 hover:scale-[1.02] hover:shadow-xl hover:shadow-green-500/10">
+                  {/* Thumbnail placeholder */}
+                  <div className="h-32 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-white group-hover:text-green-400 transition-colors">
+                        {model.nameKo}
+                      </h4>
+                      <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                        {model.parts.length}개 부품
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">{model.name}</p>
+                    <p className="text-sm text-gray-400 mt-2 line-clamp-2">
+                      {model.description}
+                    </p>
+                  </div>
+
+                  {/* Category badge + NEW badge */}
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-green-500/20 border border-green-500/50 text-xs text-green-400 rounded-full font-medium">
+                      NEW
+                    </span>
+                    <span className="px-2 py-0.5 bg-gray-800/80 backdrop-blur text-xs text-gray-400 rounded">
+                      {model.category}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+
+            {/* 개별 GLB 모델 */}
             {models.map((model) => (
               <Link
                 key={model.id}
@@ -206,30 +253,6 @@ export default function Home() {
               </Link>
             ))}
 
-            {/* Coming Soon Cards */}
-            {['드론', '로봇 팔', '로봇 집게', 'V4 엔진', '판스프링', '공작 바이스'].slice(models.length).map((name, idx) => (
-              <div
-                key={idx}
-                className="relative overflow-hidden rounded-xl border border-gray-800/50 bg-gray-900/30 opacity-50"
-              >
-                <div className="h-32 bg-gradient-to-br from-gray-800/50 to-gray-900/50 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gray-800 rounded-xl flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-semibold text-gray-600">{name}</h4>
-                  <p className="text-xs text-gray-700 mt-1">준비 중...</p>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="px-3 py-1 bg-gray-800 text-gray-500 text-sm rounded-full">
-                    Coming Soon
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
