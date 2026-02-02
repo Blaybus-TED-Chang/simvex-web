@@ -5,6 +5,13 @@ import { Canvas } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 
+// 텍스쳐 관련 경고 억제
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('texture')) return;
+  originalWarn.apply(console, args);
+};
+
 // 통합 GLB에서 추출된 부품 설정
 export interface CombinedPartConfig {
   id: string;

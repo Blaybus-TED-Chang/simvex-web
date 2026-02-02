@@ -58,6 +58,7 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
         notes: state.notes,
         isDarkMode: state.isDarkMode,
       }),
+      skipHydration: true,
     }
   )
 );
