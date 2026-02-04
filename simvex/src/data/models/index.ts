@@ -8,6 +8,7 @@ import { robotGripperModel } from './robotGripper';
 import { leafSpringModel } from './leafSpring';
 import { machineViceModel } from './machineVice';
 import { droneCombinedModel } from './droneCombined';
+import { robotArmCombinedModel } from './robotArmCombined';
 
 // 개별 GLB 모델 목록
 export const models: ModelConfig[] = [
@@ -23,6 +24,7 @@ export const models: ModelConfig[] = [
 // 통합 GLB 모델 목록
 export const combinedModels: CombinedModelConfig[] = [
   droneCombinedModel,
+  robotArmCombinedModel,
 ];
 
 // ID로 개별 모델 찾기

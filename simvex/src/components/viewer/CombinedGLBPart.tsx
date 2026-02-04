@@ -41,6 +41,7 @@ export interface CombinedModelConfig {
   category: string;
   thumbnail: string;
   glbPath: string;            // 통합 GLB 파일 경로
+  scale?: number;             // 모델 전체 스케일 (기본값 1)
   cameraPosition?: [number, number, number];
   cameraTarget?: [number, number, number];
   parts: CombinedPartConfig[];
@@ -263,9 +264,11 @@ export function CombinedGLBViewer({
     }
   }, [scene, meshToPartMap, onDebugInfo]);
 
+  const modelScale = model.scale || 1;
+
   return (
-    <group>
-      {extractedMeshes.map((meshData) => {
+    <group scale={[modelScale, modelScale, modelScale]}>
+      {extractedMeshes.map((meshData, index) => {
         const { partConfig } = meshData;
         const isVisible = visibleParts.length === 0 || visibleParts.includes(partConfig.id);
         const isSelected = selectedPartId === partConfig.id;
@@ -273,7 +276,7 @@ export function CombinedGLBViewer({
 
         return (
           <PartMesh
-            key={partConfig.id}
+            key={`${partConfig.id}-${index}`}
             meshData={meshData}
             explodeValue={explodeValue}
             isSelected={isSelected}
