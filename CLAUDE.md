@@ -23,19 +23,27 @@
 
 ---
 
-## 3D 에셋 (etc/3D Asset/)
+## 3D 에셋
 
-7개 기계 모델, 총 58개 GLB 부품 파일:
+### 원본 에셋 (etc/3D Asset/)
+7개 기계 모델 원본 파일
 
-| 모델 | 경로 | 부품 수 | 조립도 |
-|------|------|---------|--------|
-| Suspension (서스펜션) | `etc/3D Asset/Suspension/` | 5개 | 1개 |
-| V4 Engine (V4 엔진) | `etc/3D Asset/V4_Engine/` | 7개 | 1개 |
-| Robot Gripper (로봇 집게) | `etc/3D Asset/Robot Gripper/` | 8개 | 3개 |
-| Robot Arm (로봇 팔) | `etc/3D Asset/Robot Arm/` | 8개 | 1개 |
-| Leaf Spring (판스프링) | `etc/3D Asset/Leaf Spring/` | 9개 | 2개 |
-| Machine Vice (공작 바이스) | `etc/3D Asset/Machine Vice/` | 10개 | 2개 |
-| Drone (드론) | `etc/3D Asset/Drone/` | 11개 | 8개 |
+| 모델 | 경로 | 상태 |
+|------|------|------|
+| Suspension (서스펜션) | `etc/3D Asset/Suspension/` | 미구현 |
+| V4 Engine (V4 엔진) | `etc/3D Asset/V4_Engine/` | 미구현 |
+| Robot Gripper (로봇 집게) | `etc/3D Asset/Robot Gripper/` | 미구현 |
+| Robot Arm (로봇 팔) | `etc/3D Asset/Robot Arm/` | 미구현 |
+| Leaf Spring (판스프링) | `etc/3D Asset/Leaf Spring/` | 미구현 |
+| Machine Vice (공작 바이스) | `etc/3D Asset/Machine Vice/` | 미구현 |
+| Drone (드론) | `etc/3D Asset/Drone/` | 미구현 |
+
+### 수정된 에셋 (etc/3D Asset modify/)
+통합 GLB 형식으로 변환된 파일
+
+| 모델 | 파일 | 부품 수 | 상태 |
+|------|------|---------|------|
+| Drone (드론) | `drone-combined.glb` | 36개 | ✅ 구현됨 |
 
 ---
 
@@ -43,48 +51,51 @@
 
 ### 필수 구현 (MVP)
 
-#### 1. 학습 기계/장비 조회
-- [ ] 홈페이지에 4~7개 3D 오브젝트 선택 카드/버튼
-- [ ] 각 모델별 썸네일 이미지 표시
-- [ ] 클릭 시 해당 모델 뷰어 페이지로 이동
+#### 1. 학습 기계/장비 조회 ✅
+- [x] 홈페이지에 3D 오브젝트 선택 카드/버튼
+- [x] 각 모델별 썸네일 이미지 표시
+- [x] 클릭 시 해당 모델 뷰어 페이지로 이동
 
-#### 2. 3D 모델 출력
-- [ ] GLB 파일 로딩 및 뷰포트 렌더링
-- [ ] 조명 설정 (Ambient + Directional)
-- [ ] 광택 셰이더 효과 (MeshStandardMaterial)
-- [ ] 그리드 및 배경
+#### 2. 3D 모델 출력 ✅
+- [x] GLB 파일 로딩 및 뷰포트 렌더링
+- [x] 조명 설정 (Ambient + Directional)
+- [x] MeshStandardMaterial (색상 기반, 텍스쳐 미사용)
+- [x] 그리드 및 배경
 
-#### 3. 3D 오브젝트 인터랙션
-- [ ] 마우스 드래그로 화면 회전 (OrbitControls)
-- [ ] 마우스 스크롤로 줌 인/아웃
-- [ ] 부품 조립도 형태로 오브젝트 배치
+#### 3. 3D 오브젝트 인터랙션 ✅
+- [x] 마우스 드래그로 화면 회전 (OrbitControls)
+- [x] 마우스 스크롤로 줌 인/아웃
+- [x] 부품 조립도 형태로 오브젝트 배치
 
-#### 4. 분해/조립 조절용 GUI ⭐ (핵심 기능)
-- [ ] 분해도 조절 슬라이더 (0% ~ 100%)
-- [ ] 슬라이더 값에 따른 부품 위치 보간 (lerp)
-- [ ] 완제품(0%) ↔ 분해도(100%) 애니메이션
-- [ ] 제품 구조/이론 설명 패널
+#### 4. 분해/조립 조절용 GUI ⭐ ✅
+- [x] 분해도 조절 슬라이더 (0% ~ 100%)
+- [x] 슬라이더 값에 따른 부품 위치 이동
+- [x] 완제품(0%) ↔ 분해도(100%)
+- [x] 제품 구조/이론 설명 패널
 
-#### 5. 부품 정보 조회
-- [ ] 부품 클릭 시 선택 하이라이트
-- [ ] 선택된 부품명 표시
-- [ ] 부품 역할/기능 설명 표시
-- [ ] 부품 호버 시 툴팁 (선택사항)
+#### 5. 부품 정보 조회 ✅
+- [x] 부품 클릭 시 선택 하이라이트 (emissive)
+- [x] 선택된 부품명 표시
+- [x] 부품 역할/기능 설명 표시
+- [x] 부품 호버 시 하이라이트
 
-#### 6. 사용자 데이터 저장
+#### 6. 사용자 데이터 저장 (부분 완료)
 - [ ] 현재 뷰 상태 저장 (카메라 위치, 분해도, 줌)
 - [ ] 새로고침 시 상태 복원
-- [ ] JSON 형태로 localStorage 저장
+- [x] JSON 형태로 localStorage 저장 (노트, 다크모드만)
 
-#### 7. 측면 서브 노트 (메모장)
-- [ ] 측면 패널에 노트 영역
-- [ ] 텍스트 입력 및 저장
-- [ ] 패널 접기/펼치기 버튼
+#### 7. 측면 서브 노트 (메모장) ✅
+- [x] 측면 패널에 노트 영역
+- [x] 텍스트 입력 및 저장
+- [x] 패널 접기/펼치기 버튼
+- [x] 패널 크기 조절 (드래그)
 
-#### 8. 서브 AI 어시스턴트
-- [ ] 노트 ↔ AI 탭 전환 버튼
-- [ ] AI 채팅 인터페이스
-- [ ] API 연동 (Claude/OpenAI)
+#### 8. 서브 AI 어시스턴트 ✅
+- [x] 노트 ↔ AI 탭 전환 버튼
+- [x] AI 채팅 인터페이스
+- [x] OpenAI GPT-5-mini API 연동
+- [x] 현재 모델/부품 컨텍스트 전달
+- [x] 대화 기록 유지
 
 ---
 
@@ -107,16 +118,6 @@
 
 ---
 
-## 기존 구현 (유지)
-
-현재 구현된 기능들은 그대로 유지:
-
-- `/robot-arm` - 로봇 암 FK/IK 시뮬레이터
-- `/jet-engine` - 제트 엔진 시뮬레이터
-- 다크모드 토글
-- Zustand 상태 관리 구조
-- React Three Fiber 씬 구조
-
 ---
 
 ## 프로젝트 구조
@@ -126,48 +127,46 @@
 ├── CLAUDE.md                 # 이 파일
 ├── docs/                     # 기존 PRD 문서
 ├── etc/
-│   ├── 3D Asset/            # GLB 모델 파일들
+│   ├── 3D Asset/            # 원본 GLB 모델 파일들
+│   ├── 3D Asset modify/     # 수정된 통합 GLB 파일들
 │   └── [도사] MVP 해커톤 기획서.xlsx
 └── simvex/                   # Next.js 프로젝트
     ├── public/
-    │   └── models/          # GLB 파일 복사 위치 (생성 필요)
+    │   └── models/
+    │       └── drone/
+    │           └── drone-combined.glb  # 통합 드론 모델
     ├── src/
     │   ├── app/
     │   │   ├── page.tsx     # 홈 (모델 선택)
+    │   │   ├── api/
+    │   │   │   └── chat/
+    │   │   │       └── route.ts  # AI 채팅 API
     │   │   ├── viewer/
     │   │   │   └── [model]/
     │   │   │       └── page.tsx  # 동적 뷰어 페이지
     │   │   ├── robot-arm/   # 기존 시뮬레이터
     │   │   └── jet-engine/  # 기존 시뮬레이터
     │   ├── components/
-    │   │   ├── viewer/      # 새 뷰어 컴포넌트
+    │   │   ├── viewer/
     │   │   │   ├── ModelViewer.tsx
+    │   │   │   ├── CombinedGLBPart.tsx  # 통합 GLB 뷰어
     │   │   │   ├── ExplodeSlider.tsx
     │   │   │   ├── PartInfo.tsx
     │   │   │   ├── ProductInfo.tsx
     │   │   │   ├── PartsList.tsx
-    │   │   │   └── NotesPanel.tsx
+    │   │   │   └── NotesPanel.tsx  # 노트 + AI 채팅
     │   │   ├── three/       # 기존 3D 컴포넌트
     │   │   └── layout/      # 기존 레이아웃
     │   ├── data/
-    │   │   └── models/      # 모델별 메타데이터
+    │   │   └── models/
     │   │       ├── index.ts
-    │   │       ├── suspension.ts
-    │   │       ├── v4engine.ts
-    │   │       ├── robotGripper.ts
-    │   │       ├── robotArm.ts
-    │   │       ├── leafSpring.ts
-    │   │       ├── machineVice.ts
-    │   │       └── drone.ts
+    │   │       └── droneCombined.ts  # 통합 드론 모델 설정
     │   ├── lib/
     │   │   └── store/
-    │   │       ├── robotStore.ts    # 기존
-    │   │       ├── jetEngineStore.ts # 기존
-    │   │       └── viewerStore.ts   # 새 뷰어 상태
+    │   │       └── viewerStore.ts   # 뷰어 상태 (Zustand)
     │   └── types/
-    │       ├── robot.ts     # 기존
-    │       ├── jetEngine.ts # 기존
-    │       └── viewer.ts    # 새 뷰어 타입
+    │       └── viewer.ts
+    ├── .env.local           # OPENAI_API_KEY
     └── package.json
 ```
 
@@ -221,29 +220,27 @@ interface ViewerState {
 
 ---
 
-## 구현 우선순위
+## 구현 현황
 
-### Phase 1: 기본 뷰어 MVP (최우선)
-1. GLB 파일을 public/models/에 복사
-2. Suspension 모델 메타데이터 작성
-3. 기본 뷰어 페이지 구현 (`/viewer/suspension`)
-4. 분해/조립 슬라이더 구현
-5. 부품 클릭 선택 및 정보 표시
+### ✅ 완료됨
+1. 기본 뷰어 페이지 구현 (`/viewer/[model]`)
+2. 통합 GLB 모델 지원 (CombinedGLBPart)
+3. 분해/조립 슬라이더 구현
+4. 부품 클릭 선택 및 정보 표시
+5. 홈페이지 모델 선택 UI
+6. 노트 패널 구현
+7. AI 어시스턴트 통합 (OpenAI GPT-5-mini)
+8. 다크모드 지원
+9. 드론 통합 모델 (36개 부품)
 
-### Phase 2: 전체 모델 확장
-6. 나머지 6개 모델 메타데이터 작성
-7. 홈페이지 모델 선택 UI
-8. 동적 라우팅 (`/viewer/[model]`)
+### 🔄 진행 중 / 부분 완료
+- 사용자 데이터 저장 (노트, 다크모드만 저장됨 / 카메라 상태 미저장)
+- 다른 모델 추가 (현재 드론만 완료)
 
-### Phase 3: 학습 보조 기능
-9. 노트 패널 구현
-10. 사용자 데이터 저장 (localStorage)
-11. AI 어시스턴트 통합
-
-### Phase 4: 추가 기능
-12. 퀴즈 기능
-13. 워크플로우 차트
-14. PDF 출력
+### ❌ 미구현
+- 퀴즈 기능
+- 워크플로우 차트
+- PDF 출력
 
 ---
 
@@ -259,6 +256,29 @@ cd simvex && npm run build
 # 린트
 cd simvex && npm run lint
 ```
+
+---
+
+## AI 어시스턴트 설정
+
+### 환경 변수 (.env.local)
+
+```
+OPENAI_API_KEY=sk-proj-...
+```
+
+### API 설정 (src/app/api/chat/route.ts)
+
+- **모델**: `gpt-5-mini` (reasoning 모델)
+- **max_completion_tokens**: 16000 (reasoning 토큰 포함)
+- **시스템 프롬프트**: 현재 모델/부품 정보 포함
+- **응답 길이**: 기본 500토큰 이내, 상세 요청 시 확장
+
+### 주의사항
+
+- GPT-5-mini는 reasoning 모델로, 토큰의 일부가 내부 추론에 사용됨
+- `max_completion_tokens`가 너무 작으면 응답이 비어있을 수 있음
+- 텍스쳐 관련 에러는 자동 억제됨 (CombinedGLBPart.tsx)
 
 ---
 
@@ -357,9 +377,9 @@ import { CombinedGLBViewer } from '@/components/viewer/CombinedGLBPart';
 />
 ```
 
-### 테스트 페이지
+### 현재 구현된 모델
 
-`/viewer-test` - 통합 GLB 분해 테스트 페이지
+- **드론 (drone)**: `/viewer/drone` - 36개 부품, 통합 GLB 방식
 
 ---
 
@@ -370,6 +390,8 @@ import { CombinedGLBViewer } from '@/components/viewer/CombinedGLBPart';
 3. **부품 위치**: 각 GLB 파일의 원점이 다를 수 있으므로 조립 위치 수동 조정 필요
 4. **성능**: 많은 GLB 파일 동시 로딩 시 메모리 주의, 필요시 LOD 적용
 5. **메시 이름**: Three.js는 메시 이름에서 콜론(:) 등 특수문자를 제거함 (위 가이드 참조)
+6. **텍스쳐 미사용**: 텍스쳐 대신 `color` 속성으로 부품 색상 지정 (MeshStandardMaterial)
+7. **SSR Hydration**: Zustand persist에 `skipHydration: true` 설정됨, 클라이언트에서 수동 rehydrate 필요
 
 ---
 
