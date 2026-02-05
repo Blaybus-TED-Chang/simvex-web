@@ -22,7 +22,7 @@ export const droneCombinedModel: CombinedModelConfig = {
   category: '항공',
   thumbnail: '/models/drone-combined/thumbnail.png',
   glbPath: '/models/drone-combined/drone-combined.glb',
-  cameraPosition: [0.8, 0.6, 0.8],
+  cameraPosition: [5, 5, 5],
   cameraTarget: [0, 0.3, 0],
   parts: [
     // 메인 프레임

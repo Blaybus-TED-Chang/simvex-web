@@ -66,25 +66,65 @@ export default function ViewerPage() {
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
+  const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
   const isResizing = useRef(false);
+  const isSidebarResizing = useRef(false);
 
-  // 패널 리사이즈 핸들러
+  // 노트 패널 리사이즈 핸들러
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     isResizing.current = true;
     document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
 
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
+    document.body.appendChild(overlay);
+
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
       const newWidth = window.innerWidth - e.clientX;
-      setNotesPanelWidth(Math.max(320, Math.min(800, newWidth))); // 최소 320px, 최대 800px
+      setNotesPanelWidth(Math.max(320, Math.min(800, newWidth)));
     };
 
     const handleMouseUp = () => {
       isResizing.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      overlay.remove();
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // 우측 사이드바 리사이즈 핸들러
+  const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isSidebarResizing.current = true;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    // 리사이즈 중 전체 화면 위에 투명 오버레이를 생성하여 3D Canvas 이벤트 차단
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
+    document.body.appendChild(overlay);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isSidebarResizing.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setSidebarWidth(Math.max(240, Math.min(600, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      isSidebarResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      overlay.remove();
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -279,9 +319,9 @@ export default function ViewerPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <div className="h-[calc(100vh-3.5rem)] flex">
+      <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden">
         {/* 3D 뷰포트 */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 min-w-0 p-4">
           {isCombinedModel && combinedModel ? (
             <CombinedModelViewer
               model={combinedModel}
@@ -306,21 +346,34 @@ export default function ViewerPage() {
           ) : null}
         </div>
 
+        {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}
+        <div
+          className={`w-1.5 flex-shrink-0 cursor-ew-resize group relative z-20 ${
+            isDarkMode ? 'bg-gray-900' : 'bg-white'
+          }`}
+          onMouseDown={handleSidebarResizeStart}
+        >
+          <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-all group-hover:w-1 ${
+            isDarkMode ? 'group-hover:bg-blue-400' : 'group-hover:bg-blue-500'
+          }`} />
+        </div>
+
         {/* 우측 패널 */}
-        <div className={`w-80 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} p-4 overflow-y-auto`}>
-          <div className="space-y-4">
-            {/* 분해/조립 슬라이더 */}
-            <ExplodeSlider />
+        <div
+          className={`flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} overflow-y-auto p-4 space-y-4`}
+          style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
+        >
+          {/* 분해/조립 슬라이더 */}
+          <ExplodeSlider />
 
-            {/* 제품 정보 */}
-            <ProductInfo model={currentModelInfo} />
+          {/* 제품 정보 */}
+          <ProductInfo model={currentModelInfo} />
 
-            {/* 부품 정보 */}
-            <PartInfo part={selectedPart} />
+          {/* 부품 정보 */}
+          <PartInfo part={selectedPart} />
 
-            {/* 부품 목록 */}
-            <PartsList parts={currentModelInfo.parts} />
-          </div>
+          {/* 부품 목록 */}
+          <PartsList parts={currentModelInfo.parts} />
         </div>
 
         {/* 노트 패널 (슬라이드) */}

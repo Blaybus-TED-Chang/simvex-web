@@ -23,7 +23,7 @@ export const robotArmCombinedModel: CombinedModelConfig = {
   thumbnail: '/models/robot-arm/thumbnail.png',
   glbPath: '/models/robot-arm-combined/robot-arm-combined.glb',
   scale: 0.1,
-  cameraPosition: [0.5, 0.4, 0.5],
+  cameraPosition: [7, 7, 7],
   cameraTarget: [0, 0.15, 0],
   parts: [
     // 베이스 (2 meshes: base2imagetostl_mesh0, mesh1)
