@@ -20,7 +20,10 @@ export const robotArmCombinedModel: CombinedModelConfig = {
    - 야코비안: 말단 속도와 관절 속도의 관계
    - 토크: τ = J^T × F (J: 야코비안, F: 말단 힘)`,
   category: '로봇',
-  thumbnail: '/models/robot-arm/thumbnail.png',
+  thumbnail: '/models/robot-arm-combined/thumbnails/assembly-1.png',
+  thumbnails: [
+    '/models/robot-arm-combined/thumbnails/assembly-1.png',
+  ],
   glbPath: '/models/robot-arm-combined/robot-arm-combined.glb',
   scale: 0.1,
   cameraPosition: [7, 7, 7],

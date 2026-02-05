@@ -1,9 +1,69 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import Image from 'next/image';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { models, combinedModels } from '@/data/models';
 import { AuthButton } from '@/components/auth/AuthButton';
+
+function ThumbnailSlideshow({ images }: { images: string[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startSlideshow = useCallback(() => {
+    if (images.length <= 1) return;
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 1200);
+  }, [images.length]);
+
+  const stopSlideshow = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setCurrentIndex(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return (
+    <div
+      className="relative aspect-video bg-gray-900 overflow-hidden"
+      onMouseEnter={startSlideshow}
+      onMouseLeave={stopSlideshow}
+    >
+      {images.map((src, i) => (
+        <Image
+          key={src}
+          src={src}
+          alt={`Assembly view ${i + 1}`}
+          fill
+          className={`object-cover transition-opacity duration-500 ${
+            i === currentIndex ? 'opacity-100' : 'opacity-0'
+          }`}
+          sizes="(max-width: 768px) 100vw, 33vw"
+        />
+      ))}
+      {images.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+          {images.map((_, i) => (
+            <div
+              key={i}
+              className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                i === currentIndex ? 'bg-white' : 'bg-white/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const simulations = [
   {
@@ -176,14 +236,18 @@ export default function Home() {
                 className="group"
               >
                 <div className="relative overflow-hidden rounded-xl border border-green-800/50 bg-gray-900/50 backdrop-blur-sm transition-all duration-300 hover:border-green-500/50 hover:scale-[1.02] hover:shadow-xl hover:shadow-green-500/10">
-                  {/* Thumbnail placeholder */}
-                  <div className="h-32 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                      </svg>
+                  {/* Thumbnail slideshow */}
+                  {model.thumbnails && model.thumbnails.length > 0 ? (
+                    <ThumbnailSlideshow images={model.thumbnails} />
+                  ) : (
+                    <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Content */}
                   <div className="p-4">
