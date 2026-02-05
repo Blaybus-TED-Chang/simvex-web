@@ -36,7 +36,7 @@ export function PartConfigEditor({
         부품 설정 ({parts.length}개)
       </h3>
 
-      <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+      <div className="space-y-2 pr-1">
         {parts.map((part, i) => (
           <div
             key={part.id}

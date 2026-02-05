@@ -330,22 +330,155 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* 설정 단계 */}
+          {/* 설정 단계: 좌(렌더링+폼 고정) / 우(부품설정 스크롤) */}
           {(step === 'configure' || step === 'uploading') && glbUrl && (
-            <div className="mt-6 grid lg:grid-cols-2 gap-6">
-              {/* 좌: 미리보기 */}
-              <div className="space-y-4">
-                <ModelPreview
-                  glbUrl={glbUrl}
-                  parts={parts}
-                  scale={scale}
-                  cameraPosition={cameraPosition}
-                  cameraTarget={cameraTarget}
-                  isDarkMode={isDarkMode}
-                  selectedPartId={selectedPartId}
-                  onSelectPart={setSelectedPartId}
-                />
+            <div className="mt-6 flex gap-6" style={{ height: 'calc(100vh - 12rem)' }}>
+              {/* 좌: 렌더링(상) + 입력폼(하) — 고정 */}
+              <div className="w-1/2 flex-shrink-0 flex flex-col gap-4 overflow-hidden">
+                {/* 3D 미리보기 */}
+                <div className="flex-1 min-h-0">
+                  <ModelPreview
+                    glbUrl={glbUrl}
+                    parts={parts}
+                    scale={scale}
+                    cameraPosition={cameraPosition}
+                    cameraTarget={cameraTarget}
+                    isDarkMode={isDarkMode}
+                    selectedPartId={selectedPartId}
+                    onSelectPart={setSelectedPartId}
+                  />
+                </div>
 
+                {/* 모델 정보 입력 */}
+                <div className="flex-shrink-0 space-y-3 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelClass}>모델 이름 *</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="예: V4 엔진"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>카테고리</label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className={inputClass}
+                      >
+                        {MODEL_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {category === '기타' && (
+                    <div>
+                      <input
+                        type="text"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        placeholder="카테고리 직접 입력"
+                        className={inputClass}
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className={labelClass}>설명</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="모델에 대한 간단한 설명"
+                      rows={2}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <label className={labelClass}>스케일</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.01"
+                        value={scale}
+                        onChange={(e) => setScale(parseFloat(e.target.value) || 1)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>카메라 X</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={cameraPosition[0]}
+                        onChange={(e) => setCameraPosition([parseFloat(e.target.value) || 0, cameraPosition[1], cameraPosition[2]])}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>카메라 Y</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={cameraPosition[1]}
+                        onChange={(e) => setCameraPosition([cameraPosition[0], parseFloat(e.target.value) || 0, cameraPosition[2]])}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>카메라 Z</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={cameraPosition[2]}
+                        onChange={(e) => setCameraPosition([cameraPosition[0], cameraPosition[1], parseFloat(e.target.value) || 0])}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isPublic}
+                        onChange={(e) => setIsPublic(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-600 peer-checked:bg-green-500 rounded-full peer-focus:ring-2 peer-focus:ring-green-500/30 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                    </label>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      커뮤니티에 공개
+                    </span>
+
+                    <button
+                      onClick={handleSubmit}
+                      disabled={step === 'uploading' || !name.trim()}
+                      className={`ml-auto px-6 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        step === 'uploading' || !name.trim()
+                          ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-500 text-white'
+                      }`}
+                    >
+                      {step === 'uploading' ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          업로드 중...
+                        </span>
+                      ) : editingModel ? '수정 저장' : '업로드'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 우: 부품 설정 — 독립 스크롤 */}
+              <div className="w-1/2 overflow-y-auto pr-1">
                 <PartConfigEditor
                   parts={parts}
                   onChange={setParts}
@@ -353,134 +486,6 @@ export default function UploadPage() {
                   selectedPartId={selectedPartId}
                   onSelectPart={setSelectedPartId}
                 />
-              </div>
-
-              {/* 우: 폼 */}
-              <div className="space-y-4">
-                <div>
-                  <label className={labelClass}>모델 이름 *</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="예: V4 엔진"
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>설명</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="모델에 대한 간단한 설명"
-                    rows={3}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>카테고리</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className={inputClass}
-                  >
-                    {MODEL_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  {category === '기타' && (
-                    <input
-                      type="text"
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                      placeholder="직접 입력"
-                      className={`mt-2 ${inputClass}`}
-                    />
-                  )}
-                </div>
-
-                <div>
-                  <label className={labelClass}>스케일</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.01"
-                    value={scale}
-                    onChange={(e) => setScale(parseFloat(e.target.value) || 1)}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className={labelClass}>카메라 X</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={cameraPosition[0]}
-                      onChange={(e) => setCameraPosition([parseFloat(e.target.value) || 0, cameraPosition[1], cameraPosition[2]])}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>카메라 Y</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={cameraPosition[1]}
-                      onChange={(e) => setCameraPosition([cameraPosition[0], parseFloat(e.target.value) || 0, cameraPosition[2]])}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>카메라 Z</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={cameraPosition[2]}
-                      onChange={(e) => setCameraPosition([cameraPosition[0], cameraPosition[1], parseFloat(e.target.value) || 0])}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isPublic}
-                      onChange={(e) => setIsPublic(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-600 peer-checked:bg-green-500 rounded-full peer-focus:ring-2 peer-focus:ring-green-500/30 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
-                  </label>
-                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    커뮤니티에 공개
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleSubmit}
-                  disabled={step === 'uploading' || !name.trim()}
-                  className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
-                    step === 'uploading' || !name.trim()
-                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white'
-                  }`}
-                >
-                  {step === 'uploading' ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      업로드 중...
-                    </span>
-                  ) : editingModel ? (
-                    '수정 저장'
-                  ) : (
-                    '업로드'
-                  )}
-                </button>
               </div>
             </div>
           )}
