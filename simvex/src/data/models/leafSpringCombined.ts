@@ -24,7 +24,11 @@ export const leafSpringCombinedModel: CombinedModelConfig = {
    - 자체 감쇠: 마찰에 의한 에너지 소산
    - 높은 하중 지지력: 트럭, 버스에 적합`,
   category: '자동차',
-  thumbnail: '/models/leaf-spring/thumbnail.png',
+  thumbnail: '/models/leaf-spring-combined/thumbnails/assembly-1.png',
+  thumbnails: [
+    '/models/leaf-spring-combined/thumbnails/assembly-1.png',
+    '/models/leaf-spring-combined/thumbnails/assembly-2.png',
+  ],
   glbPath: '/models/leaf-spring-combined/leaf-spring-combined.glb',
   scale: 0.1,
   cameraPosition: [0.11, 0.08, 0.11],

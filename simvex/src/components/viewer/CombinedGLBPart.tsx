@@ -40,6 +40,7 @@ export interface CombinedModelConfig {
   theory: string;
   category: string;
   thumbnail: string;
+  thumbnails?: string[];      // 슬라이드쇼용 썸네일 배열
   glbPath: string;            // 통합 GLB 파일 경로
   scale?: number;             // 모델 전체 스케일 (기본값 1)
   cameraPosition?: [number, number, number];

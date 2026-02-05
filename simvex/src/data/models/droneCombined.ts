@@ -25,7 +25,17 @@ export const droneCombinedModel: CombinedModelConfig = {
 - 각 모터의 회전 속도를 조절하여 상승, 하강, 기울기 제어
 - 대각선 모터는 같은 방향, 인접 모터는 반대 방향으로 회전하여 토크 상쇄`,
   category: '항공',
-  thumbnail: '/models/drone-combined/thumbnail.png',
+  thumbnail: '/models/drone-combined/thumbnails/assembly-1.png',
+  thumbnails: [
+    '/models/drone-combined/thumbnails/assembly-1.png',
+    '/models/drone-combined/thumbnails/assembly-2.png',
+    '/models/drone-combined/thumbnails/assembly-3.png',
+    '/models/drone-combined/thumbnails/assembly-4.png',
+    '/models/drone-combined/thumbnails/assembly-5.png',
+    '/models/drone-combined/thumbnails/assembly-6.png',
+    '/models/drone-combined/thumbnails/assembly-7.png',
+    '/models/drone-combined/thumbnails/assembly-8.png',
+  ],
   glbPath: '/models/drone-combined/drone-combined.glb',
   cameraPosition: [5, 5, 5],
   cameraTarget: [0, 0.3, 0],
