@@ -16,7 +16,8 @@ export const suspensionModel: ModelConfig = {
    - 감쇠력: F = -cv (댐퍼 힘)
    - 고유 진동수: ω = √(k/m)`,
   category: '자동차',
-  thumbnail: '/models/suspension/thumbnail.png',
+  thumbnail: '/models/suspension/thumbnails/assembly-1.png',
+  thumbnails: ['/models/suspension/thumbnails/assembly-1.png'],
   basePath: '/models/suspension',
   cameraPosition: [0.5, 0.3, 0.5],
   cameraTarget: [0, 0, 0],

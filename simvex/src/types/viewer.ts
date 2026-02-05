@@ -22,6 +22,7 @@ export interface ModelConfig {
   theory: string;
   category: string;
   thumbnail: string;
+  thumbnails?: string[];
   basePath: string;
   parts: PartConfig[];
   cameraPosition?: [number, number, number];
