@@ -7,6 +7,9 @@ import { combinedModels } from '@/data/models';
 import { suspensionModel } from '@/data/models/suspension';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { useViewerStore } from '@/lib/store/viewerStore';
+import { useUser } from '@/hooks/useUser';
+import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
+import type { UserModelRow } from '@/types/userModel';
 
 function ThumbnailSlideshow({ images, isDarkMode }: { images: string[]; isDarkMode: boolean }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -69,11 +72,19 @@ function ThumbnailSlideshow({ images, isDarkMode }: { images: string[]; isDarkMo
 
 export default function Home() {
   const { isDarkMode, toggleDarkMode } = useViewerStore();
+  const { user } = useUser();
+  const { models: myModels, fetchPublicModels } = useUserModels(user);
+  const [communityModels, setCommunityModels] = useState<UserModelRow[]>([]);
 
   // Zustand store hydration (SSR 호환)
   useEffect(() => {
     useViewerStore.persist.rehydrate();
   }, []);
+
+  // 공개 모델 로드
+  useEffect(() => {
+    fetchPublicModels(6).then(setCommunityModels);
+  }, [fetchPublicModels]);
 
   // 3D 부품 뷰어에 표시할 모델 목록: 통합 모델 + 서스펜션
   const viewerModels = [
@@ -226,6 +237,140 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* 커뮤니티 모델 섹션 */}
+      {(() => {
+        // 공개 모델 + 본인 비공개 모델 합산 (중복 제거)
+        const publicIds = new Set(communityModels.map((m) => m.id));
+        const privateModels = user
+          ? myModels.filter((m) => !m.is_public && !publicIds.has(m.id))
+          : [];
+        const allUserModels = [...communityModels, ...privateModels];
+
+        if (allUserModels.length === 0) return null;
+
+        return (
+          <section className="px-6 pb-20">
+            <div className="max-w-6xl mx-auto">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-sm font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  커뮤니티 모델
+                </h3>
+                {user && (
+                  <Link
+                    href="/upload"
+                    className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                      isDarkMode
+                        ? 'text-blue-400 hover:bg-gray-800'
+                        : 'text-blue-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    내 모델 관리
+                  </Link>
+                )}
+              </div>
+              <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                사용자들이 업로드한 3D 모델
+              </p>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {allUserModels.map((model) => {
+                  const thumbnailUrl = model.thumbnail_storage_path
+                    ? getPublicUrl(model.thumbnail_storage_path)
+                    : null;
+                  const partsCount = (model.parts_config as unknown[]).length;
+
+                  return (
+                    <Link
+                      key={model.id}
+                      href={`/viewer/u-${model.id}`}
+                      className="group"
+                    >
+                      <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+                        isDarkMode
+                          ? 'border-purple-800/50 bg-gray-900/50 backdrop-blur-sm hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10'
+                          : 'border-purple-200 bg-white shadow-sm hover:border-purple-400 hover:shadow-lg'
+                      }`}>
+                        {/* 썸네일 */}
+                        <div className={`aspect-video flex items-center justify-center ${
+                          isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
+                        }`}>
+                          {thumbnailUrl ? (
+                            <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className={`font-semibold transition-colors ${
+                              isDarkMode ? 'text-white group-hover:text-purple-400' : 'text-gray-900 group-hover:text-purple-600'
+                            }`}>
+                              {model.name}
+                            </h4>
+                            <span className={`px-1.5 py-0.5 text-xs rounded ${
+                              isDarkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-600'
+                            }`}>
+                              {partsCount}개 부품
+                            </span>
+                          </div>
+                          <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {model.description || '설명 없음'}
+                          </p>
+                        </div>
+
+                        {/* 카테고리 + 공개 배지 */}
+                        <div className="absolute top-3 right-3 flex gap-1">
+                          {!model.is_public && (
+                            <span className={`px-2 py-0.5 text-xs rounded ${
+                              isDarkMode ? 'bg-gray-800/80 backdrop-blur text-yellow-400' : 'bg-yellow-50 text-yellow-600'
+                            }`}>
+                              비공개
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 text-xs rounded ${
+                            isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {model.category}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* 업로드 CTA */}
+      {user && (
+        <section className="px-6 pb-20">
+          <div className="max-w-6xl mx-auto">
+            <Link
+              href="/upload"
+              className={`block p-6 rounded-xl border-2 border-dashed text-center transition-all hover:scale-[1.01] ${
+                isDarkMode
+                  ? 'border-gray-800 hover:border-blue-500/50 text-gray-500 hover:text-blue-400'
+                  : 'border-gray-200 hover:border-blue-400 text-gray-400 hover:text-blue-600'
+              }`}
+            >
+              <svg className="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+              </svg>
+              <p className="font-medium">내 3D 모델 업로드하기</p>
+              <p className="text-sm mt-1 opacity-60">GLB 또는 FBX 파일을 업로드하여 커뮤니티에 공유하세요</p>
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* 푸터 */}
       <footer className={`px-6 py-8 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>

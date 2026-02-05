@@ -16,6 +16,8 @@ import { AuthButton } from '@/components/auth/AuthButton';
 import { useUser } from '@/hooks/useUser';
 import { PartConfig, ModelConfig } from '@/types/viewer';
 import { CombinedModelConfig, CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
+import { createClient } from '@/lib/supabase/client';
+import { userModelToConfig } from '@/types/userModel';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
@@ -45,9 +47,35 @@ export default function ViewerPage() {
   const modelId = params.model as string;
   const { user } = useUser();
 
+  // 사용자 업로드 모델 (u-{uuid} 형식)
+  const isUserModel = modelId.startsWith('u-');
+  const [userModel, setUserModel] = useState<CombinedModelConfig | null>(null);
+  const [userModelLoading, setUserModelLoading] = useState(isUserModel);
+
+  useEffect(() => {
+    if (!isUserModel) return;
+    const uuid = modelId.slice(2);
+    const supabase = createClient();
+    supabase
+      .from('user_models')
+      .select('*')
+      .eq('id', uuid)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const { data: urlData } = supabase.storage
+            .from('user-models')
+            .getPublicUrl(data.glb_storage_path);
+          const config = userModelToConfig(data, urlData.publicUrl);
+          setUserModel(config);
+        }
+        setUserModelLoading(false);
+      });
+  }, [isUserModel, modelId]);
+
   // 일반 모델 또는 통합 모델 조회
-  const originalModel = getModelById(modelId);
-  const combinedModel = getCombinedModelById(modelId);
+  const originalModel = isUserModel ? undefined : getModelById(modelId);
+  const combinedModel = isUserModel ? userModel : getCombinedModelById(modelId);
   const isCombinedModel = !originalModel && !!combinedModel;
 
   const {
@@ -213,6 +241,18 @@ export default function ViewerPage() {
     setCameraPosition(position);
     setCameraTarget(target);
   }, []);
+
+  // 사용자 모델 로딩 중
+  if (userModelLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">모델 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 모델이 없으면 에러 페이지
   if (!currentModelInfo) {
