@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { getModelById } from '@/data/models';
+import { getModelById, getCombinedModelById } from '@/data/models';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { ExplodeSlider } from '@/components/viewer/ExplodeSlider';
 import { ProductInfo } from '@/components/viewer/ProductInfo';
@@ -12,11 +12,20 @@ import { PartInfo } from '@/components/viewer/PartInfo';
 import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { DebugPanel } from '@/components/viewer/DebugPanel';
+import { AuthButton } from '@/components/auth/AuthButton';
+import { useUser } from '@/hooks/useUser';
 import { PartConfig, ModelConfig } from '@/types/viewer';
+import { CombinedModelConfig, CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
   () => import('@/components/viewer/ModelViewer').then((mod) => mod.ModelViewer),
+  { ssr: false, loading: () => <ViewerSkeleton /> }
+);
+
+// 통합 GLB 뷰어 (Canvas 포함)
+const CombinedModelViewer = dynamic(
+  () => import('@/components/viewer/CombinedGLBPart').then((mod) => mod.CombinedModelViewer),
   { ssr: false, loading: () => <ViewerSkeleton /> }
 );
 
@@ -33,12 +42,21 @@ function ViewerSkeleton() {
 
 export default function ViewerPage() {
   const params = useParams();
-  const router = useRouter();
   const modelId = params.model as string;
+  const { user } = useUser();
+
+  // 일반 모델 또는 통합 모델 조회
   const originalModel = getModelById(modelId);
+  const combinedModel = getCombinedModelById(modelId);
+  const isCombinedModel = !originalModel && !!combinedModel;
 
   const {
     selectedPartId,
+    setSelectedPartId,
+    hoveredPartId,
+    setHoveredPartId,
+    explodeValue,
+    visibleParts,
     setCurrentModel,
     setAllPartsVisible,
     isDarkMode,
@@ -47,17 +65,84 @@ export default function ViewerPage() {
 
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
+  const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
+  const isResizing = useRef(false);
+  const isSidebarResizing = useRef(false);
+
+  // 노트 패널 리사이즈 핸들러
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizing.current = true;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
+    document.body.appendChild(overlay);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setNotesPanelWidth(Math.max(320, Math.min(800, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      overlay.remove();
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // 우측 사이드바 리사이즈 핸들러
+  const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isSidebarResizing.current = true;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    // 리사이즈 중 전체 화면 위에 투명 오버레이를 생성하여 3D Canvas 이벤트 차단
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
+    document.body.appendChild(overlay);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isSidebarResizing.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setSidebarWidth(Math.max(240, Math.min(600, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      isSidebarResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      overlay.remove();
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // 디버그용 오버라이드 상태
   const [partOverrides, setPartOverrides] = useState<Map<string, Partial<PartConfig>>>(new Map());
   const [cameraPosition, setCameraPosition] = useState<[number, number, number]>(
-    originalModel?.cameraPosition || [5, 3, 5]
+    originalModel?.cameraPosition || combinedModel?.cameraPosition || [5, 3, 5]
   );
   const [cameraTarget, setCameraTarget] = useState<[number, number, number]>(
-    originalModel?.cameraTarget || [0, 0, 0]
+    originalModel?.cameraTarget || combinedModel?.cameraTarget || [0, 0, 0]
   );
 
-  // 오버라이드가 적용된 모델 생성
+  // 오버라이드가 적용된 일반 모델 생성
   const model: ModelConfig | undefined = originalModel ? {
     ...originalModel,
     parts: originalModel.parts.map(part => {
@@ -66,6 +151,38 @@ export default function ViewerPage() {
     })
   } : undefined;
 
+  // 현재 모델 정보 (통합 또는 일반)
+  const currentModelInfo = useMemo(() => {
+    if (isCombinedModel && combinedModel) {
+      return {
+        id: combinedModel.id,
+        name: combinedModel.name,
+        nameKo: combinedModel.nameKo,
+        description: combinedModel.description,
+        theory: combinedModel.theory,
+        category: combinedModel.category,
+        parts: combinedModel.parts,
+      };
+    }
+    if (model) {
+      return {
+        id: model.id,
+        name: model.name,
+        nameKo: model.nameKo,
+        description: model.description,
+        theory: model.theory,
+        category: model.category,
+        parts: model.parts,
+      };
+    }
+    return null;
+  }, [isCombinedModel, combinedModel, model]);
+
+  // Zustand store hydration (SSR 호환)
+  useEffect(() => {
+    useViewerStore.persist.rehydrate();
+  }, []);
+
   // 모델 초기화
   useEffect(() => {
     if (originalModel) {
@@ -73,8 +190,13 @@ export default function ViewerPage() {
       setAllPartsVisible(originalModel.parts.map((p) => p.id));
       setCameraPosition(originalModel.cameraPosition || [5, 3, 5]);
       setCameraTarget(originalModel.cameraTarget || [0, 0, 0]);
+    } else if (combinedModel) {
+      setCurrentModel(combinedModel.id);
+      setAllPartsVisible(combinedModel.parts.map((p) => p.id));
+      setCameraPosition(combinedModel.cameraPosition || [5, 3, 5]);
+      setCameraTarget(combinedModel.cameraTarget || [0, 0, 0]);
     }
-  }, [originalModel, setCurrentModel, setAllPartsVisible]);
+  }, [originalModel, combinedModel, setCurrentModel, setAllPartsVisible]);
 
   // 부품 업데이트 핸들러
   const handleUpdatePart = useCallback((partId: string, updates: Partial<PartConfig>) => {
@@ -93,7 +215,7 @@ export default function ViewerPage() {
   }, []);
 
   // 모델이 없으면 에러 페이지
-  if (!model || !originalModel) {
+  if (!currentModelInfo) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -109,7 +231,8 @@ export default function ViewerPage() {
     );
   }
 
-  const selectedPart = model.parts.find((p) => p.id === selectedPartId) || null;
+  // 선택된 부품 찾기
+  const selectedPart = currentModelInfo.parts.find((p) => p.id === selectedPartId) || null;
 
   return (
     <div className={`viewer-page min-h-screen ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
@@ -131,16 +254,18 @@ export default function ViewerPage() {
             </div>
             <div>
               <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {model.nameKo}
+                {currentModelInfo.nameKo}
               </h1>
               <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {model.name}
+                {currentModelInfo.name}
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <AuthButton />
+
           {/* 디버그 모드 토글 */}
           <button
             onClick={() => setDebugMode(!debugMode)}
@@ -194,60 +319,94 @@ export default function ViewerPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <div className="h-[calc(100vh-3.5rem)] flex">
+      <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden">
         {/* 3D 뷰포트 */}
-        <div className="flex-1 p-4">
-          <ModelViewer
-            model={model}
-            debugMode={debugMode}
-            overrideParts={partOverrides}
-            cameraPosition={cameraPosition}
-            cameraTarget={cameraTarget}
-          />
+        <div className="flex-1 min-w-0 p-4">
+          {isCombinedModel && combinedModel ? (
+            <CombinedModelViewer
+              model={combinedModel}
+              explodeValue={explodeValue}
+              selectedPartId={selectedPartId}
+              hoveredPartId={hoveredPartId}
+              visibleParts={visibleParts}
+              onSelectPart={setSelectedPartId}
+              onHoverPart={setHoveredPartId}
+              cameraPosition={cameraPosition}
+              cameraTarget={cameraTarget}
+              isDarkMode={isDarkMode}
+            />
+          ) : model ? (
+            <ModelViewer
+              model={model}
+              debugMode={debugMode}
+              overrideParts={partOverrides}
+              cameraPosition={cameraPosition}
+              cameraTarget={cameraTarget}
+            />
+          ) : null}
+        </div>
+
+        {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}
+        <div
+          className={`w-1.5 flex-shrink-0 cursor-ew-resize group relative z-20 ${
+            isDarkMode ? 'bg-gray-900' : 'bg-white'
+          }`}
+          onMouseDown={handleSidebarResizeStart}
+        >
+          <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-all group-hover:w-1 ${
+            isDarkMode ? 'group-hover:bg-blue-400' : 'group-hover:bg-blue-500'
+          }`} />
         </div>
 
         {/* 우측 패널 */}
-        <div className={`w-80 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} p-4 overflow-y-auto`}>
-          <div className="space-y-4">
-            {/* 분해/조립 슬라이더 */}
-            <ExplodeSlider />
+        <div
+          className={`flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} overflow-y-auto p-4 space-y-4`}
+          style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
+        >
+          {/* 분해/조립 슬라이더 */}
+          <ExplodeSlider />
 
-            {/* 제품 정보 */}
-            <ProductInfo model={model} />
+          {/* 제품 정보 */}
+          <ProductInfo model={currentModelInfo} />
 
-            {/* 부품 정보 */}
-            <PartInfo part={selectedPart} />
+          {/* 부품 정보 */}
+          <PartInfo part={selectedPart} />
 
-            {/* 부품 목록 */}
-            <PartsList parts={model.parts} />
-          </div>
+          {/* 부품 목록 */}
+          <PartsList parts={currentModelInfo.parts} />
         </div>
 
         {/* 노트 패널 (슬라이드) */}
         <div
-          className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] w-96 ${
+          className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
             isDarkMode ? 'bg-gray-900' : 'bg-white'
           } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
           transform transition-transform duration-300 ease-in-out z-50
           ${isNotesPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          style={{ width: notesPanelWidth }}
         >
+          {/* 리사이즈 핸들 */}
+          <div
+            className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 transition-colors ${
+              isDarkMode ? 'hover:bg-blue-400' : 'hover:bg-blue-500'
+            }`}
+            onMouseDown={handleResizeStart}
+          />
           <div className="h-full p-4">
-            <NotesPanel />
+            <NotesPanel
+              modelInfo={currentModelInfo}
+              selectedPart={selectedPart}
+              user={user}
+              modelId={modelId}
+            />
           </div>
         </div>
 
-        {/* 오버레이 */}
-        {isNotesPanelOpen && (
-          <div
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setIsNotesPanelOpen(false)}
-            style={{ top: '3.5rem' }}
-          />
-        )}
+{/* 오버레이 제거 - 3D 뷰어 조작을 위해 */}
       </div>
 
-      {/* 디버그 패널 */}
-      {debugMode && (
+      {/* 디버그 패널 (일반 모델만 지원) */}
+      {debugMode && model && !isCombinedModel && (
         <DebugPanel
           model={model}
           onUpdatePart={handleUpdatePart}

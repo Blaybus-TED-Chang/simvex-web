@@ -18,7 +18,12 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
       ...initialState,
 
       setCurrentModel: (modelId) =>
-        set({ currentModel: modelId, selectedPartId: null, explodeValue: 0 }),
+        set((state) => ({
+          currentModel: modelId,
+          selectedPartId: null,
+          // 같은 모델이면 저장된 explodeValue 유지
+          ...(state.currentModel !== modelId ? { explodeValue: 0 } : {}),
+        })),
 
       setExplodeValue: (value) =>
         set({ explodeValue: Math.max(0, Math.min(1, value)) }),
@@ -57,7 +62,10 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
       partialize: (state) => ({
         notes: state.notes,
         isDarkMode: state.isDarkMode,
+        explodeValue: state.explodeValue,
+        currentModel: state.currentModel,
       }),
+      skipHydration: true,
     }
   )
 );
