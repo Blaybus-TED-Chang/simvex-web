@@ -12,6 +12,8 @@ import { PartInfo } from '@/components/viewer/PartInfo';
 import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { DebugPanel } from '@/components/viewer/DebugPanel';
+import { AuthButton } from '@/components/auth/AuthButton';
+import { useUser } from '@/hooks/useUser';
 import { PartConfig, ModelConfig } from '@/types/viewer';
 import { CombinedModelConfig, CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
 
@@ -41,6 +43,7 @@ function ViewerSkeleton() {
 export default function ViewerPage() {
   const params = useParams();
   const modelId = params.model as string;
+  const { user } = useUser();
 
   // 일반 모델 또는 통합 모델 조회
   const originalModel = getModelById(modelId);
@@ -221,6 +224,8 @@ export default function ViewerPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <AuthButton />
+
           {/* 디버그 모드 토글 */}
           <button
             onClick={() => setDebugMode(!debugMode)}
@@ -338,6 +343,8 @@ export default function ViewerPage() {
             <NotesPanel
               modelInfo={currentModelInfo}
               selectedPart={selectedPart}
+              user={user}
+              modelId={modelId}
             />
           </div>
         </div>
