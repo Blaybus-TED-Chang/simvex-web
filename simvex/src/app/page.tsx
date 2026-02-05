@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { models, combinedModels } from '@/data/models';
+import { combinedModels } from '@/data/models';
+import { suspensionModel } from '@/data/models/suspension';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { useViewerStore } from '@/lib/store/viewerStore';
 
@@ -42,7 +43,7 @@ function ThumbnailSlideshow({ images, isDarkMode }: { images: string[]; isDarkMo
         <Image
           key={src}
           src={src}
-          alt={`Assembly view ${i + 1}`}
+          alt={`조립도 ${i + 1}`}
           fill
           className={`object-cover transition-opacity duration-500 ${
             i === currentIndex ? 'opacity-100' : 'opacity-0'
@@ -69,8 +70,8 @@ function ThumbnailSlideshow({ images, isDarkMode }: { images: string[]; isDarkMo
 const simulations = [
   {
     id: 'robot-arm',
-    title: 'Robot Arm Simulator',
-    description: '6-axis robot arm with FK/IK controls, path programming, and trajectory visualization',
+    title: '로봇 암 시뮬레이터',
+    description: '6축 로봇 암의 순운동학/역운동학 제어, 경로 프로그래밍, 궤적 시각화를 체험할 수 있습니다',
     href: '/robot-arm',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,12 +79,12 @@ const simulations = [
       </svg>
     ),
     gradient: 'from-blue-500 to-purple-600',
-    features: ['Forward Kinematics', 'Inverse Kinematics', 'Path Programming', 'Waypoint Recording'],
+    features: ['순운동학', '역운동학', '경로 프로그래밍', '웨이포인트 기록'],
   },
   {
     id: 'jet-engine',
-    title: 'Turbofan Engine',
-    description: 'Interactive jet engine visualization with airflow particles and real-time performance metrics',
+    title: '터보팬 엔진',
+    description: '제트 엔진의 인터랙티브 시각화와 기류 파티클, 실시간 성능 지표를 확인할 수 있습니다',
     href: '/jet-engine',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +92,7 @@ const simulations = [
       </svg>
     ),
     gradient: 'from-orange-500 to-red-600',
-    features: ['Airflow Visualization', 'Throttle Control', 'Performance Gauges', 'Component Details'],
+    features: ['기류 시각화', '스로틀 제어', '성능 게이지', '부품 상세'],
     isNew: true,
   },
 ];
@@ -105,13 +106,37 @@ export default function Home() {
     useViewerStore.persist.rehydrate();
   }, []);
 
+  // 3D 부품 뷰어에 표시할 모델 목록: 통합 모델 + 서스펜션
+  const viewerModels = [
+    ...combinedModels.map((m) => ({
+      id: m.id,
+      href: `/viewer/${m.id}`,
+      nameKo: m.nameKo,
+      name: m.name,
+      description: m.description,
+      category: m.category,
+      partsCount: m.parts.length,
+      thumbnails: m.thumbnails,
+    })),
+    {
+      id: suspensionModel.id,
+      href: `/viewer/${suspensionModel.id}`,
+      nameKo: suspensionModel.nameKo,
+      name: suspensionModel.name,
+      description: suspensionModel.description,
+      category: suspensionModel.category,
+      partsCount: suspensionModel.parts.length,
+      thumbnails: suspensionModel.thumbnails,
+    },
+  ];
+
   return (
     <div className={`min-h-screen bg-gradient-to-br ${
       isDarkMode
         ? 'from-gray-900 via-gray-950 to-black text-white'
         : 'from-gray-50 via-white to-gray-100 text-gray-900'
     }`}>
-      {/* Header */}
+      {/* 헤더 */}
       <header className="pt-8 pb-4 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -119,8 +144,8 @@ export default function Home() {
               <span className="text-2xl font-bold text-white">S</span>
             </div>
             <div>
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>SiMVEX</h1>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Engineering Simulation Platform</p>
+              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>SIMVEX</h1>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>공학 시뮬레이션 플랫폼</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -146,26 +171,98 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* 히어로 */}
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto text-center">
           <h2 className={`text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r ${
             isDarkMode ? 'from-white to-gray-400' : 'from-gray-900 to-gray-500'
           } bg-clip-text text-transparent`}>
-            Interactive Engineering Simulations
+            인터랙티브 공학 시뮬레이션
           </h2>
           <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Explore complex engineering systems through interactive 3D visualizations.
-            Learn by doing, not just reading.
+            3D 시각화를 통해 복잡한 공학 시스템을 탐구하세요.
+            읽기만 하지 말고, 직접 체험하며 배우세요.
           </p>
         </div>
       </section>
 
-      {/* Simulations Grid */}
+      {/* 3D 부품 뷰어 섹션 (시뮬레이션보다 위에 배치) */}
+      <section className="px-6 pb-20">
+        <div className="max-w-6xl mx-auto">
+          <h3 className={`text-sm font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            3D 부품 뷰어
+          </h3>
+          <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            기계 부품의 3D 구조를 분해/조립하며 학습하세요
+          </p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {viewerModels.map((model) => (
+              <Link
+                key={model.id}
+                href={model.href}
+                className="group"
+              >
+                <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+                  isDarkMode
+                    ? 'border-green-800/50 bg-gray-900/50 backdrop-blur-sm hover:border-green-500/50 hover:shadow-xl hover:shadow-green-500/10'
+                    : 'border-green-200 bg-white shadow-sm hover:border-green-400 hover:shadow-lg'
+                }`}>
+                  {/* 썸네일 슬라이드쇼 */}
+                  {model.thumbnails && model.thumbnails.length > 0 ? (
+                    <ThumbnailSlideshow images={model.thumbnails} isDarkMode={isDarkMode} />
+                  ) : (
+                    <div className={`aspect-video flex items-center justify-center ${
+                      isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
+                    }`}>
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 콘텐츠 */}
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className={`font-semibold transition-colors ${
+                        isDarkMode ? 'text-white group-hover:text-green-400' : 'text-gray-900 group-hover:text-green-600'
+                      }`}>
+                        {model.nameKo}
+                      </h4>
+                      <span className={`px-1.5 py-0.5 text-xs rounded ${
+                        isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'
+                      }`}>
+                        {model.partsCount}개 부품
+                      </span>
+                    </div>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{model.name}</p>
+                    <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {model.description}
+                    </p>
+                  </div>
+
+                  {/* 카테고리 배지 */}
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-2 py-0.5 text-xs rounded ${
+                      isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {model.category}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 시뮬레이션 섹션 */}
       <section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
           <h3 className={`text-sm font-medium uppercase tracking-wider mb-6 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            Available Simulations
+            시뮬레이션
           </h3>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -191,7 +288,7 @@ export default function Home() {
                     : ''
                   }
                 `}>
-                  {/* New Badge */}
+                  {/* New 배지 */}
                   {sim.isNew && (
                     <div className={`absolute top-4 right-4 px-2 py-1 rounded-full ${
                       isDarkMode ? 'bg-green-500/20 border border-green-500/50' : 'bg-green-50 border border-green-200'
@@ -200,9 +297,9 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Content */}
+                  {/* 콘텐츠 */}
                   <div className="p-6">
-                    {/* Icon */}
+                    {/* 아이콘 */}
                     <div className={`
                       w-16 h-16 rounded-xl bg-gradient-to-br ${sim.gradient}
                       flex items-center justify-center mb-4
@@ -212,7 +309,7 @@ export default function Home() {
                       {sim.icon}
                     </div>
 
-                    {/* Title & Description */}
+                    {/* 제목 & 설명 */}
                     <h4 className={`text-xl font-semibold mb-2 transition-colors ${
                       isDarkMode ? 'group-hover:text-white' : 'group-hover:text-gray-900'
                     }`}>
@@ -222,7 +319,7 @@ export default function Home() {
                       {sim.description}
                     </p>
 
-                    {/* Features */}
+                    {/* 기능 태그 */}
                     <div className="flex flex-wrap gap-2">
                       {sim.features.map((feature) => (
                         <span
@@ -237,7 +334,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Bottom CTA */}
+                  {/* 하단 CTA */}
                   <div className={`
                     flex items-center justify-between px-6 py-4
                     border-t transition-colors duration-300
@@ -246,7 +343,7 @@ export default function Home() {
                       : `border-gray-100 bg-gray-50/50 ${hoveredId === sim.id ? 'bg-gray-100/50' : ''}`
                     }
                   `}>
-                    <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Launch Simulation</span>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>시뮬레이션 시작</span>
                     <svg
                       className={`w-5 h-5 transition-transform duration-300 ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-400'
@@ -268,147 +365,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3D Parts Viewer Section */}
-      <section className="px-6 pb-20">
-        <div className="max-w-6xl mx-auto">
-          <h3 className={`text-sm font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            3D Parts Viewer
-          </h3>
-          <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            기계 부품의 3D 구조를 분해/조립하며 학습하세요
-          </p>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* 통합 GLB 모델 (NEW 뱃지 추가) */}
-            {combinedModels.map((model) => (
-              <Link
-                key={model.id}
-                href={`/viewer/${model.id}`}
-                className="group"
-              >
-                <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                  isDarkMode
-                    ? 'border-green-800/50 bg-gray-900/50 backdrop-blur-sm hover:border-green-500/50 hover:shadow-xl hover:shadow-green-500/10'
-                    : 'border-green-200 bg-white shadow-sm hover:border-green-400 hover:shadow-lg'
-                }`}>
-                  {/* Thumbnail slideshow */}
-                  {model.thumbnails && model.thumbnails.length > 0 ? (
-                    <ThumbnailSlideshow images={model.thumbnails} isDarkMode={isDarkMode} />
-                  ) : (
-                    <div className={`aspect-video flex items-center justify-center ${
-                      isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                    }`}>
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className={`font-semibold transition-colors ${
-                        isDarkMode ? 'text-white group-hover:text-green-400' : 'text-gray-900 group-hover:text-green-600'
-                      }`}>
-                        {model.nameKo}
-                      </h4>
-                      <span className={`px-1.5 py-0.5 text-xs rounded ${
-                        isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'
-                      }`}>
-                        {model.parts.length}개 부품
-                      </span>
-                    </div>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{model.name}</p>
-                    <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {model.description}
-                    </p>
-                  </div>
-
-                  {/* Category badge + NEW badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-2">
-                    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                      isDarkMode
-                        ? 'bg-green-500/20 border border-green-500/50 text-green-400'
-                        : 'bg-green-50 border border-green-200 text-green-600'
-                    }`}>
-                      NEW
-                    </span>
-                    <span className={`px-2 py-0.5 text-xs rounded ${
-                      isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {model.category}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-
-            {/* 개별 GLB 모델 */}
-            {models.map((model) => (
-              <Link
-                key={model.id}
-                href={`/viewer/${model.id}`}
-                className="group"
-              >
-                <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                  isDarkMode
-                    ? 'border-gray-800 bg-gray-900/50 backdrop-blur-sm hover:border-gray-600 hover:shadow-xl'
-                    : 'border-gray-200 bg-white shadow-sm hover:border-gray-300 hover:shadow-lg'
-                }`}>
-                  {/* Thumbnail placeholder */}
-                  <div className={`h-32 flex items-center justify-center ${
-                    isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                  }`}>
-                    <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className={`font-semibold transition-colors ${
-                        isDarkMode ? 'text-white group-hover:text-cyan-400' : 'text-gray-900 group-hover:text-cyan-600'
-                      }`}>
-                        {model.nameKo}
-                      </h4>
-                      <span className={`px-1.5 py-0.5 text-xs rounded ${
-                        isDarkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-50 text-cyan-600'
-                      }`}>
-                        {model.parts.length}개 부품
-                      </span>
-                    </div>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{model.name}</p>
-                    <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {model.description}
-                    </p>
-                  </div>
-
-                  {/* Category badge */}
-                  <div className="absolute top-3 right-3">
-                    <span className={`px-2 py-0.5 text-xs rounded ${
-                      isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {model.category}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
+      {/* 푸터 */}
       <footer className={`px-6 py-8 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
         <div className={`max-w-6xl mx-auto flex items-center justify-between text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-          <p>SiMVEX - Engineering Learning Platform</p>
-          <p>Built for education and exploration</p>
+          <p>SIMVEX - 공학 학습 플랫폼</p>
+          <p>교육과 탐구를 위해 만들어졌습니다</p>
         </div>
       </footer>
     </div>
