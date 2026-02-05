@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -307,6 +307,33 @@ interface CombinedModelViewerProps {
   isDarkMode?: boolean;
 }
 
+// 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
+function CameraSync({
+  position,
+  target,
+}: {
+  position: [number, number, number];
+  target: [number, number, number];
+}) {
+  const { camera, controls } = useThree();
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    // 첫 렌더링 시에는 Canvas 초기화가 처리하므로 스킵
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    camera.position.set(...position);
+    if (controls && 'target' in controls) {
+      (controls as unknown as { target: THREE.Vector3; update: () => void }).target.set(...target);
+      (controls as unknown as { update: () => void }).update();
+    }
+  }, [position, target, camera, controls]);
+
+  return null;
+}
+
 function LoadingFallback() {
   return (
     <mesh>
@@ -434,6 +461,9 @@ export function CombinedModelViewer({
           maxDistance={30}
           target={finalCameraTarget}
         />
+
+        {/* 카메라 위치 동기화 (prop 변경 시) */}
+        <CameraSync position={finalCameraPosition} target={finalCameraTarget} />
       </Canvas>
     </div>
   );

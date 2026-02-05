@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { CombinedModelConfig } from '@/components/viewer/CombinedGLBPart';
 import type { UserModelPartConfig } from '@/types/userModel';
@@ -31,6 +31,8 @@ export function ModelPreview({
   selectedPartId,
   onSelectPart,
 }: ModelPreviewProps) {
+  const [explodeValue, setExplodeValue] = useState(0);
+
   const previewModel: CombinedModelConfig = useMemo(
     () => ({
       id: 'preview',
@@ -59,19 +61,43 @@ export function ModelPreview({
   );
 
   return (
-    <div className="w-full aspect-video rounded-xl overflow-hidden">
-      <CombinedModelViewer
-        model={previewModel}
-        explodeValue={0}
-        selectedPartId={selectedPartId}
-        hoveredPartId={null}
-        visibleParts={[]}
-        onSelectPart={onSelectPart}
-        onHoverPart={() => {}}
-        cameraPosition={cameraPosition}
-        cameraTarget={cameraTarget}
-        isDarkMode={isDarkMode}
-      />
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 rounded-xl overflow-hidden">
+        <CombinedModelViewer
+          model={previewModel}
+          explodeValue={explodeValue}
+          selectedPartId={selectedPartId}
+          hoveredPartId={null}
+          visibleParts={[]}
+          onSelectPart={onSelectPart}
+          onHoverPart={() => {}}
+          cameraPosition={cameraPosition}
+          cameraTarget={cameraTarget}
+          isDarkMode={isDarkMode}
+        />
+      </div>
+
+      {/* 분해도 슬라이더 */}
+      <div className="mt-3 flex-shrink-0 flex items-center gap-3">
+        <span className={`text-xs flex-shrink-0 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+          조립
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={explodeValue}
+          onChange={(e) => setExplodeValue(parseFloat(e.target.value))}
+          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-gray-700 accent-blue-500"
+        />
+        <span className={`text-xs flex-shrink-0 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+          분해
+        </span>
+        <span className={`text-xs w-10 text-right tabular-nums ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          {Math.round(explodeValue * 100)}%
+        </span>
+      </div>
     </div>
   );
 }
