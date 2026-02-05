@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useViewerStore } from '@/lib/store/viewerStore';
+import { useSupabaseNotes } from '@/hooks/useSupabaseNotes';
+import { useSupabaseChat } from '@/hooks/useSupabaseChat';
+import type { User } from '@supabase/supabase-js';
 
 type TabType = 'notes' | 'ai';
 
@@ -28,14 +31,25 @@ interface PartInfo {
 interface NotesPanelProps {
   modelInfo?: ModelInfo | null;
   selectedPart?: PartInfo | null;
+  user?: User | null;
+  modelId?: string;
 }
 
-export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
+export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('notes');
-  const { notes, setNotes } = useViewerStore();
+  const localStore = useViewerStore();
+
+  // Supabase 훅 (user가 있을 때만 활성)
+  const supabaseNotes = useSupabaseNotes(user ?? null, modelId ?? '');
+  const supabaseChat = useSupabaseChat(user ?? null, modelId ?? '');
+
+  // 로그인 시 Supabase, 비로그인 시 localStorage
+  const notes = user ? supabaseNotes.notes : localStore.notes;
+  const setNotes = user ? supabaseNotes.saveNotes : localStore.setNotes;
 
   // AI 채팅 상태
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const messages = user ? supabaseChat.messages : localMessages;
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +73,15 @@ export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
       content: inputValue.trim(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedWithUser = [...messages, userMessage];
+
+    // 유저 메시지 먼저 UI에 반영
+    if (user) {
+      supabaseChat.saveMessages(updatedWithUser);
+    } else {
+      setLocalMessages(updatedWithUser);
+    }
+
     setInputValue('');
     setIsLoading(true);
     setError(null);
@@ -71,7 +93,7 @@ export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map((m) => ({
+          messages: updatedWithUser.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -91,7 +113,12 @@ export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
         content: data.message,
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      const updatedWithAssistant = [...updatedWithUser, assistantMessage];
+      if (user) {
+        supabaseChat.saveMessages(updatedWithAssistant);
+      } else {
+        setLocalMessages(updatedWithAssistant);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
     } finally {
@@ -109,7 +136,11 @@ export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
 
   // 대화 초기화
   const clearChat = () => {
-    setMessages([]);
+    if (user) {
+      supabaseChat.clearMessages();
+    } else {
+      setLocalMessages([]);
+    }
     setError(null);
   };
 
@@ -162,7 +193,7 @@ export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
                        focus:outline-none focus:border-blue-500 transition-colors"
             />
             <p className="mt-2 text-xs text-gray-500 text-right">
-              자동 저장됨
+              {user ? '클라우드에 자동 저장됨' : '자동 저장됨 (로컬)'}
             </p>
           </div>
         ) : (
@@ -197,19 +228,19 @@ export function NotesPanel({ modelInfo, selectedPart }: NotesPanelProps) {
                         onClick={() => setInputValue('이 부품의 역할이 뭐야?')}
                         className="block w-full text-xs text-blue-400 hover:text-blue-300 py-1"
                       >
-                        "이 부품의 역할이 뭐야?"
+                        &quot;이 부품의 역할이 뭐야?&quot;
                       </button>
                       <button
                         onClick={() => setInputValue('작동 원리를 설명해줘')}
                         className="block w-full text-xs text-blue-400 hover:text-blue-300 py-1"
                       >
-                        "작동 원리를 설명해줘"
+                        &quot;작동 원리를 설명해줘&quot;
                       </button>
                       <button
                         onClick={() => setInputValue('실제로 어디에 사용돼?')}
                         className="block w-full text-xs text-blue-400 hover:text-blue-300 py-1"
                       >
-                        "실제로 어디에 사용돼?"
+                        &quot;실제로 어디에 사용돼?&quot;
                       </button>
                     </div>
                   </div>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { models, combinedModels } from '@/data/models';
+import { AuthButton } from '@/components/auth/AuthButton';
 
 const simulations = [
   {
@@ -41,14 +42,17 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black text-white">
       {/* Header */}
       <header className="pt-8 pb-4 px-6">
-        <div className="max-w-6xl mx-auto flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <span className="text-2xl font-bold">S</span>
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <span className="text-2xl font-bold">S</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">SiMVEX</h1>
+              <p className="text-sm text-gray-400">Engineering Simulation Platform</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">SiMVEX</h1>
-            <p className="text-sm text-gray-400">Engineering Simulation Platform</p>
-          </div>
+          <AuthButton />
         </div>
       </header>
 
