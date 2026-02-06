@@ -393,7 +393,7 @@ export function CombinedModelViewer({
   onHoverPart,
   cameraPosition,
   cameraTarget,
-  isDarkMode = true,
+  isDarkMode = false,
   onCameraChange,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);

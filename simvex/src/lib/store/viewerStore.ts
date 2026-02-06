@@ -9,7 +9,7 @@ const initialState: ViewerState = {
   visibleParts: [],
   hoveredPartId: null,
   notes: '',
-  isDarkMode: true,
+  isDarkMode: false,
   modelStates: {},
 };
 
