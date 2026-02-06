@@ -20,7 +20,7 @@ interface ChatRequest {
     description: string;
     material?: string;
   };
-  aiModel?: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano';
+  aiModel?: string;
 }
 
 function buildSystemPrompt(modelInfo?: ChatRequest['modelInfo'], selectedPart?: ChatRequest['selectedPart']): string {
@@ -116,7 +116,10 @@ export async function POST(request: NextRequest) {
           { role: 'system', content: systemPrompt },
           ...messages,
         ],
-        max_completion_tokens: 16000,
+        // GPT-5 계열은 max_completion_tokens, GPT-4 계열은 max_tokens 사용
+        ...(aiModel.startsWith('gpt-5')
+          ? { max_completion_tokens: 16000 }
+          : { max_tokens: 4096 }),
       }),
     });
 
