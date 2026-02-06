@@ -7,6 +7,13 @@ import { useSupabaseChat } from '@/hooks/useSupabaseChat';
 import type { User } from '@supabase/supabase-js';
 
 type TabType = 'notes' | 'ai';
+type AIModelType = 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano';
+
+const AI_MODELS: { id: AIModelType; name: string; description: string }[] = [
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: '가장 빠름' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: '균형' },
+  { id: 'gpt-5', name: 'GPT-5', description: '고품질' },
+];
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -56,6 +63,21 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // AI 모델 선택 (localStorage에서 불러오기)
+  const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>('gpt-5-nano');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ai-model-preference');
+    if (saved && ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'].includes(saved)) {
+      setSelectedAIModel(saved as AIModelType);
+    }
+  }, []);
+
+  const handleModelChange = (model: AIModelType) => {
+    setSelectedAIModel(model);
+    localStorage.setItem('ai-model-preference', model);
+  };
+
   // 메시지 목록 자동 스크롤
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,6 +122,7 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
           })),
           modelInfo: modelInfo || undefined,
           selectedPart: selectedPart || undefined,
+          aiModel: selectedAIModel,
         }),
       });
 
@@ -298,6 +321,29 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
 
             {/* 입력창 */}
             <div className="mt-auto">
+              {/* 모델 선택 */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>모델:</span>
+                <div className="flex gap-1">
+                  {AI_MODELS.map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => handleModelChange(model.id)}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        selectedAIModel === model.id
+                          ? 'bg-blue-500 text-white'
+                          : isDarkMode
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                      }`}
+                      title={model.description}
+                    >
+                      {model.id === 'gpt-5-nano' ? 'Nano' : model.id === 'gpt-5-mini' ? 'Mini' : 'Full'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <input
                   type="text"

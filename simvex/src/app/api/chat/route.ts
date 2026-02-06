@@ -20,6 +20,7 @@ interface ChatRequest {
     description: string;
     material?: string;
   };
+  aiModel?: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano';
 }
 
 function buildSystemPrompt(modelInfo?: ChatRequest['modelInfo'], selectedPart?: ChatRequest['selectedPart']): string {
@@ -80,17 +81,17 @@ ${selectedPart.material ? `- **재질**: ${selectedPart.material}` : ''}
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY_LHH || process.env.OPENAI_API_KEY;
 
     if (!apiKey || apiKey === 'your-openai-api-key-here') {
       return NextResponse.json(
-        { error: 'OpenAI API 키가 설정되지 않았습니다. .env.local 파일에 OPENAI_API_KEY를 설정해주세요.' },
+        { error: 'OpenAI API 키가 설정되지 않았습니다. .env.local 파일에 OPENAI_API_KEY_LHH를 설정해주세요.' },
         { status: 500 }
       );
     }
 
     const body: ChatRequest = await request.json();
-    const { messages, modelInfo, selectedPart } = body;
+    const { messages, modelInfo, selectedPart, aiModel = 'gpt-5-nano' } = body;
 
     if (!messages || messages.length === 0) {
       return NextResponse.json(
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: aiModel,
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages,
