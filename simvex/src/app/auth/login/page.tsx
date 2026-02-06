@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -57,10 +58,14 @@ export default function LoginPage() {
         {/* 로고 */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-xl font-bold text-white">S</span>
-            </div>
-            <span className="text-xl font-bold text-white">SiMVEX</span>
+            <Image
+              src="/logo.png"
+              alt="SIMVEX"
+              width={40}
+              height={40}
+              className="rounded-xl"
+            />
+            <span className="text-xl font-bold text-white">SIMVEX</span>
           </Link>
         </div>
 

@@ -120,9 +120,13 @@ export default function Home() {
       <header className="pt-8 pb-4 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <span className="text-2xl font-bold text-white">S</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="SIMVEX Logo"
+              width={48}
+              height={48}
+              className="rounded-xl shadow-lg"
+            />
             <div>
               <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>SIMVEX</h1>
               <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>공학 시뮬레이션 플랫폼</p>

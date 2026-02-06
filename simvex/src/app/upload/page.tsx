@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useUser } from '@/hooks/useUser';
 import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
 import { useViewerStore } from '@/lib/store/viewerStore';
@@ -242,9 +243,13 @@ export default function UploadPage() {
             </svg>
           </Link>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="SIMVEX"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
             <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               모델 업로드
             </h1>
