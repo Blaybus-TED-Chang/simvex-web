@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SiMVEX - Robot Arm Simulator",
-  description: "Interactive 6-axis robot arm simulator for learning robot kinematics",
+  title: "SIMVEX - 3D 공학 시뮬레이션",
+  description: "공학 학습을 위한 인터랙티브 3D 시뮬레이션 플랫폼",
 };
 
 export default function RootLayout({

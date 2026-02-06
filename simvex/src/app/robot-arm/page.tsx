@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRobotStore } from '@/lib/store/robotStore';
 import Header from '@/components/layout/Header';
 import ControlPanel from '@/components/layout/ControlPanel';
@@ -47,11 +48,15 @@ export default function RobotArmPage() {
           <div className="w-px h-6 bg-gray-300 dark:bg-gray-700" />
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="SIMVEX"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              SiMVEX <span className="text-gray-500 dark:text-gray-400 font-normal">Robot Arm Simulator</span>
+              SIMVEX <span className="text-gray-500 dark:text-gray-400 font-normal">Robot Arm Simulator</span>
             </h1>
           </div>
         </div>

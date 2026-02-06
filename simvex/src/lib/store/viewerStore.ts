@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ViewerState, ViewerActions } from '@/types/viewer';
+import { ViewerState, ViewerActions, ModelViewState } from '@/types/viewer';
 
 const initialState: ViewerState = {
   currentModel: null,
@@ -9,12 +9,13 @@ const initialState: ViewerState = {
   visibleParts: [],
   hoveredPartId: null,
   notes: '',
-  isDarkMode: true,
+  isDarkMode: false,
+  modelStates: {},
 };
 
 export const useViewerStore = create<ViewerState & ViewerActions>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       setCurrentModel: (modelId) =>
@@ -56,6 +57,21 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
           selectedPartId: null,
           hoveredPartId: null,
         }),
+
+      getModelState: (modelId: string) => {
+        return get().modelStates[modelId];
+      },
+
+      setModelState: (modelId: string, state: Partial<ModelViewState>) =>
+        set((prev) => ({
+          modelStates: {
+            ...prev.modelStates,
+            [modelId]: {
+              ...prev.modelStates[modelId],
+              ...state,
+            } as ModelViewState,
+          },
+        })),
     }),
     {
       name: 'viewer-storage',
@@ -64,6 +80,7 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
         isDarkMode: state.isDarkMode,
         explodeValue: state.explodeValue,
         currentModel: state.currentModel,
+        modelStates: state.modelStates,
       }),
       skipHydration: true,
     }
