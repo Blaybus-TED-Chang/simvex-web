@@ -4,11 +4,12 @@ import { useUser } from '@/hooks/useUser';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useViewerStore } from '@/lib/store/viewerStore';
+import { ViewerState, ViewerActions } from '@/types/viewer';
 
 export function AuthButton() {
   const { user, loading } = useUser();
   const router = useRouter();
-  const isDarkMode = useViewerStore((s) => s.isDarkMode);
+  const isDarkMode = useViewerStore((s: ViewerState & ViewerActions) => s.isDarkMode);
 
   const handleSignOut = async () => {
     const supabase = createClient();
