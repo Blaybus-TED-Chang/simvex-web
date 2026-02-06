@@ -29,6 +29,14 @@ export interface ModelConfig {
   cameraTarget?: [number, number, number];
 }
 
+// 모델별 뷰 상태 (저장용)
+export interface ModelViewState {
+  cameraPosition: [number, number, number];
+  cameraTarget: [number, number, number];
+  explodeValue: number;
+  selectedPartId: string | null;
+}
+
 // 뷰어 상태
 export interface ViewerState {
   currentModel: string | null;
@@ -38,6 +46,7 @@ export interface ViewerState {
   hoveredPartId: string | null;
   notes: string;
   isDarkMode: boolean;
+  modelStates: Record<string, ModelViewState>;
 }
 
 // 뷰어 액션
@@ -51,4 +60,6 @@ export interface ViewerActions {
   setNotes: (notes: string) => void;
   toggleDarkMode: () => void;
   resetViewer: () => void;
+  getModelState: (modelId: string) => ModelViewState | undefined;
+  setModelState: (modelId: string, state: Partial<ModelViewState>) => void;
 }

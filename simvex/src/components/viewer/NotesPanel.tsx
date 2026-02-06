@@ -8,6 +8,22 @@ import type { User } from '@supabase/supabase-js';
 
 type TabType = 'notes' | 'ai';
 
+const AI_MODELS = [
+  // GPT-5 계열
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', group: 'GPT-5' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', group: 'GPT-5' },
+  { id: 'gpt-5', name: 'GPT-5', group: 'GPT-5' },
+  // GPT-4.1 계열
+  { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', group: 'GPT-4.1' },
+  { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', group: 'GPT-4.1' },
+  { id: 'gpt-4.1', name: 'GPT-4.1', group: 'GPT-4.1' },
+  // GPT-4o 계열
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', group: 'GPT-4o' },
+  { id: 'gpt-4o', name: 'GPT-4o', group: 'GPT-4o' },
+] as const;
+
+type AIModelType = typeof AI_MODELS[number]['id'];
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -56,6 +72,22 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // AI 모델 선택 (localStorage에서 불러오기)
+  const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>('gpt-5-nano');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ai-model-preference');
+    if (saved && AI_MODELS.some((m) => m.id === saved)) {
+      setSelectedAIModel(saved as AIModelType);
+    }
+  }, []);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const model = e.target.value as AIModelType;
+    setSelectedAIModel(model);
+    localStorage.setItem('ai-model-preference', model);
+  };
+
   // 메시지 목록 자동 스크롤
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,6 +132,7 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
           })),
           modelInfo: modelInfo || undefined,
           selectedPart: selectedPart || undefined,
+          aiModel: selectedAIModel,
         }),
       });
 
@@ -298,6 +331,35 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
 
             {/* 입력창 */}
             <div className="mt-auto">
+              {/* 모델 선택 드롭다운 */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>모델:</span>
+                <select
+                  value={selectedAIModel}
+                  onChange={handleModelChange}
+                  className={`flex-1 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    isDarkMode
+                      ? 'bg-gray-700 text-gray-200 border border-gray-600'
+                      : 'bg-white text-gray-700 border border-gray-300'
+                  }`}
+                >
+                  <optgroup label="GPT-5 (추론 모델)">
+                    <option value="gpt-5-nano">GPT-5 Nano (가장 빠름)</option>
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="gpt-5">GPT-5 (고품질)</option>
+                  </optgroup>
+                  <optgroup label="GPT-4.1">
+                    <option value="gpt-4.1-nano">GPT-4.1 Nano (가장 빠름)</option>
+                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                    <option value="gpt-4.1">GPT-4.1</option>
+                  </optgroup>
+                  <optgroup label="GPT-4o">
+                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                  </optgroup>
+                </select>
+              </div>
+
               <div className="flex gap-2">
                 <input
                   type="text"
