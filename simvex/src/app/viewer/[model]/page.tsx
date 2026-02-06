@@ -12,13 +12,12 @@ import { ProductInfo } from '@/components/viewer/ProductInfo';
 import { PartInfo } from '@/components/viewer/PartInfo';
 import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
-import { DebugPanel } from '@/components/viewer/DebugPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { QuizPanel } from '@/components/quiz/QuizPanel';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import { useUser } from '@/hooks/useUser';
-import { PartConfig, ModelConfig } from '@/types/viewer';
-import { CombinedModelConfig, CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
+import { ModelConfig } from '@/types/viewer';
+import { CombinedModelConfig } from '@/components/viewer/CombinedGLBPart';
 import { createClient } from '@/lib/supabase/client';
 import { userModelToConfig } from '@/types/userModel';
 import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
@@ -127,7 +126,6 @@ export default function ViewerPage() {
 
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
   const [isQuizPanelOpen, setIsQuizPanelOpen] = useState(false);
-  const [debugMode, setDebugMode] = useState(false);
   const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
   const isResizing = useRef(false);
@@ -196,8 +194,6 @@ export default function ViewerPage() {
     document.addEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // 디버그용 오버라이드 상태
-  const [partOverrides, setPartOverrides] = useState<Map<string, Partial<PartConfig>>>(new Map());
   const [cameraPosition, setCameraPosition] = useState<[number, number, number]>(
     originalModel?.cameraPosition || combinedModel?.cameraPosition || [5, 3, 5]
   );
@@ -205,14 +201,8 @@ export default function ViewerPage() {
     originalModel?.cameraTarget || combinedModel?.cameraTarget || [0, 0, 0]
   );
 
-  // 오버라이드가 적용된 일반 모델 생성
-  const model: ModelConfig | undefined = originalModel ? {
-    ...originalModel,
-    parts: originalModel.parts.map(part => {
-      const overrides = partOverrides.get(part.id);
-      return overrides ? { ...part, ...overrides } : part;
-    })
-  } : undefined;
+  // 일반 모델
+  const model: ModelConfig | undefined = originalModel;
 
   // 현재 모델 정보 (통합 또는 일반)
   const currentModelInfo = useMemo(() => {
@@ -327,16 +317,6 @@ export default function ViewerPage() {
     });
   }, [explodeValue, selectedPartId, currentModelInfo, setModelState]);
 
-  // 부품 업데이트 핸들러
-  const handleUpdatePart = useCallback((partId: string, updates: Partial<PartConfig>) => {
-    setPartOverrides(prev => {
-      const next = new Map(prev);
-      const existing = next.get(partId) || {};
-      next.set(partId, { ...existing, ...updates });
-      return next;
-    });
-  }, []);
-
   // 카메라 업데이트 핸들러
   const handleUpdateCamera = useCallback((position: [number, number, number], target: [number, number, number]) => {
     setCameraPosition(position);
@@ -446,24 +426,6 @@ export default function ViewerPage() {
             </button>
           )}
 
-          {/* 디버그 모드 토글 */}
-          <button
-            onClick={() => setDebugMode(!debugMode)}
-            className={`p-2 rounded-lg transition-colors ${
-              debugMode
-                ? 'bg-purple-500 text-white'
-                : isDarkMode
-                  ? 'hover:bg-gray-800 text-gray-400'
-                  : 'hover:bg-gray-100 text-gray-600'
-            }`}
-            title="Debug Mode"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-
           {/* 노트 패널 토글 */}
           <button
             onClick={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
@@ -519,8 +481,6 @@ export default function ViewerPage() {
           ) : model ? (
             <ModelViewer
               model={model}
-              debugMode={debugMode}
-              overrideParts={partOverrides}
               cameraPosition={cameraPosition}
               cameraTarget={cameraTarget}
             />
@@ -606,16 +566,6 @@ export default function ViewerPage() {
         )}
       </div>
 
-      {/* 디버그 패널 (일반 모델만 지원) */}
-      {debugMode && model && !isCombinedModel && (
-        <DebugPanel
-          model={model}
-          onUpdatePart={handleUpdatePart}
-          onUpdateCamera={handleUpdateCamera}
-          cameraPosition={cameraPosition}
-          cameraTarget={cameraTarget}
-        />
-      )}
     </div>
   );
 }
