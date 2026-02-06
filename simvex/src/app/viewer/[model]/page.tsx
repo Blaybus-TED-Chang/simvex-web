@@ -13,11 +13,14 @@ import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { DebugPanel } from '@/components/viewer/DebugPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
+import { QuizPanel } from '@/components/quiz/QuizPanel';
+import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import { useUser } from '@/hooks/useUser';
 import { PartConfig, ModelConfig } from '@/types/viewer';
 import { CombinedModelConfig, CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
 import { createClient } from '@/lib/supabase/client';
 import { userModelToConfig } from '@/types/userModel';
+import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
@@ -39,6 +42,32 @@ function ViewerSkeleton() {
         <p className="text-gray-400">3D 모델 로딩 중...</p>
       </div>
     </div>
+  );
+}
+
+// 디바운스 훅
+function useDebouncedCallback<T extends (...args: Parameters<T>) => void>(
+  callback: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+
+  // 항상 최신 콜백을 참조
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  return useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callbackRef.current(...args);
+      }, delay);
+    },
+    [delay]
   );
 }
 
@@ -84,14 +113,19 @@ export default function ViewerPage() {
     hoveredPartId,
     setHoveredPartId,
     explodeValue,
+    setExplodeValue,
     visibleParts,
     setCurrentModel,
     setAllPartsVisible,
     isDarkMode,
     toggleDarkMode,
+    notes,
+    getModelState,
+    setModelState,
   } = useViewerStore();
 
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
+  const [isQuizPanelOpen, setIsQuizPanelOpen] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
@@ -206,25 +240,91 @@ export default function ViewerPage() {
     return null;
   }, [isCombinedModel, combinedModel, model]);
 
-  // Zustand store hydration (SSR 호환)
-  useEffect(() => {
-    useViewerStore.persist.rehydrate();
+  // 퀴즈 데이터
+  const quiz = useMemo(() => {
+    if (!currentModelInfo) return undefined;
+    return getQuizByModelId(currentModelInfo.id);
+  }, [currentModelInfo]);
+
+  const modelHasQuiz = useMemo(() => {
+    if (!currentModelInfo) return false;
+    return hasQuiz(currentModelInfo.id);
+  }, [currentModelInfo]);
+
+  // 퀴즈에서 부품 선택 요청 시 (향후 부품 하이라이트에 사용 가능)
+  const handleQuizRequestPartSelect = useCallback((_partId: string) => {
+    // TODO: 퀴즈 진행 중 해당 부품 하이라이트 기능 추가 가능
   }, []);
 
-  // 모델 초기화
+  const handleQuizClearPartSelect = useCallback(() => {
+    // TODO: 하이라이트 해제
+  }, []);
+
+  // Zustand store hydration (SSR 호환)
+  const [isHydrated, setIsHydrated] = useState(false);
+  const isInitializedRef = useRef(false);
+
   useEffect(() => {
-    if (originalModel) {
-      setCurrentModel(originalModel.id);
-      setAllPartsVisible(originalModel.parts.map((p) => p.id));
-      setCameraPosition(originalModel.cameraPosition || [5, 3, 5]);
-      setCameraTarget(originalModel.cameraTarget || [0, 0, 0]);
-    } else if (combinedModel) {
-      setCurrentModel(combinedModel.id);
-      setAllPartsVisible(combinedModel.parts.map((p) => p.id));
-      setCameraPosition(combinedModel.cameraPosition || [5, 3, 5]);
-      setCameraTarget(combinedModel.cameraTarget || [0, 0, 0]);
+    useViewerStore.persist.rehydrate();
+    setIsHydrated(true);
+  }, []);
+
+  // 모델 상태 저장 (디바운스)
+  const saveModelStateDebounced = useDebouncedCallback(
+    useCallback(
+      (pos: [number, number, number], target: [number, number, number]) => {
+        if (!currentModelInfo) return;
+        setModelState(currentModelInfo.id, {
+          cameraPosition: pos,
+          cameraTarget: target,
+          explodeValue,
+          selectedPartId,
+        });
+      },
+      [currentModelInfo, explodeValue, selectedPartId, setModelState]
+    ),
+    500
+  );
+
+  // 모델 초기화 및 저장된 상태 복원
+  useEffect(() => {
+    // hydration이 완료되지 않았으면 대기
+    if (!isHydrated) return;
+
+    const model = originalModel || combinedModel;
+    if (!model) return;
+
+    setCurrentModel(model.id);
+    setAllPartsVisible(model.parts.map((p) => p.id));
+
+    // 저장된 상태 복원
+    const savedState = getModelState(model.id);
+    if (savedState) {
+      setCameraPosition(savedState.cameraPosition);
+      setCameraTarget(savedState.cameraTarget);
+      setExplodeValue(savedState.explodeValue);
+      if (savedState.selectedPartId) {
+        setSelectedPartId(savedState.selectedPartId);
+      }
+    } else {
+      setCameraPosition(model.cameraPosition || [5, 3, 5]);
+      setCameraTarget(model.cameraTarget || [0, 0, 0]);
     }
-  }, [originalModel, combinedModel, setCurrentModel, setAllPartsVisible]);
+
+    // 초기화 완료 표시 (다음 프레임에서 저장 활성화)
+    requestAnimationFrame(() => {
+      isInitializedRef.current = true;
+    });
+  }, [isHydrated, originalModel, combinedModel, setCurrentModel, setAllPartsVisible, getModelState, setExplodeValue, setSelectedPartId]);
+
+  // explodeValue, selectedPartId 변경 시 저장 (초기화 완료 후에만)
+  useEffect(() => {
+    if (!currentModelInfo || !isInitializedRef.current) return;
+    setModelState(currentModelInfo.id, {
+      explodeValue,
+      selectedPartId,
+    });
+  }, [explodeValue, selectedPartId, currentModelInfo, setModelState]);
 
   // 부품 업데이트 핸들러
   const handleUpdatePart = useCallback((partId: string, updates: Partial<PartConfig>) => {
@@ -240,7 +340,8 @@ export default function ViewerPage() {
   const handleUpdateCamera = useCallback((position: [number, number, number], target: [number, number, number]) => {
     setCameraPosition(position);
     setCameraTarget(target);
-  }, []);
+    saveModelStateDebounced(position, target);
+  }, [saveModelStateDebounced]);
 
   // 사용자 모델 로딩 중
   if (userModelLoading) {
@@ -305,6 +406,40 @@ export default function ViewerPage() {
 
         <div className="flex items-center gap-2">
           <AuthButton />
+
+          {/* PDF 내보내기 버튼 */}
+          <ExportPdfButton
+            modelNameKo={currentModelInfo.nameKo}
+            modelName={currentModelInfo.name}
+            description={currentModelInfo.description}
+            theory={currentModelInfo.theory}
+            parts={currentModelInfo.parts.map((p) => ({
+              nameKo: p.nameKo,
+              name: p.name,
+              description: p.description,
+            }))}
+            notes={notes}
+            isDarkMode={isDarkMode}
+          />
+
+          {/* 퀴즈 버튼 */}
+          {modelHasQuiz && (
+            <button
+              onClick={() => setIsQuizPanelOpen(!isQuizPanelOpen)}
+              className={`p-2 rounded-lg transition-colors ${
+                isQuizPanelOpen
+                  ? 'bg-green-500 text-white'
+                  : isDarkMode
+                    ? 'hover:bg-gray-800 text-gray-400'
+                    : 'hover:bg-gray-100 text-gray-600'
+              }`}
+              title="퀴즈"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </button>
+          )}
 
           {/* 디버그 모드 토글 */}
           <button
@@ -374,6 +509,7 @@ export default function ViewerPage() {
               cameraPosition={cameraPosition}
               cameraTarget={cameraTarget}
               isDarkMode={isDarkMode}
+              onCameraChange={handleUpdateCamera}
             />
           ) : model ? (
             <ModelViewer
@@ -442,7 +578,27 @@ export default function ViewerPage() {
           </div>
         </div>
 
-{/* 오버레이 제거 - 3D 뷰어 조작을 위해 */}
+        {/* 퀴즈 패널 (슬라이드) */}
+        {quiz && (
+          <div
+            className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
+              isDarkMode ? 'bg-gray-900' : 'bg-white'
+            } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
+            transform transition-transform duration-300 ease-in-out z-50
+            ${isQuizPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            style={{ width: 420 }}
+          >
+            <QuizPanel
+              quiz={quiz}
+              modelId={currentModelInfo.id}
+              isDarkMode={isDarkMode}
+              onClose={() => setIsQuizPanelOpen(false)}
+              selectedPartId={selectedPartId}
+              onRequestPartSelect={handleQuizRequestPartSelect}
+              onClearPartSelect={handleQuizClearPartSelect}
+            />
+          </div>
+        )}
       </div>
 
       {/* 디버그 패널 (일반 모델만 지원) */}

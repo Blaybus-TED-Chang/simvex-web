@@ -305,18 +305,22 @@ interface CombinedModelViewerProps {
   cameraPosition?: [number, number, number];
   cameraTarget?: [number, number, number];
   isDarkMode?: boolean;
+  onCameraChange?: (position: [number, number, number], target: [number, number, number]) => void;
 }
 
 // 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
 function CameraSync({
   position,
   target,
+  onCameraChange,
 }: {
   position: [number, number, number];
   target: [number, number, number];
+  onCameraChange?: (position: [number, number, number], target: [number, number, number]) => void;
 }) {
   const { camera, controls } = useThree();
   const isFirstRender = useRef(true);
+  const lastReportedPosition = useRef<string>('');
 
   useEffect(() => {
     // 첫 렌더링 시에는 Canvas 초기화가 처리하므로 스킵
@@ -330,6 +334,42 @@ function CameraSync({
       (controls as unknown as { update: () => void }).update();
     }
   }, [position, target, camera, controls]);
+
+  // 카메라 변경 감지 및 콜백 호출
+  useEffect(() => {
+    if (!onCameraChange || !controls) return;
+
+    const orbitControls = controls as unknown as {
+      target: THREE.Vector3;
+      addEventListener: (type: string, listener: () => void) => void;
+      removeEventListener: (type: string, listener: () => void) => void;
+    };
+
+    const handleChange = () => {
+      const pos: [number, number, number] = [
+        Math.round(camera.position.x * 100) / 100,
+        Math.round(camera.position.y * 100) / 100,
+        Math.round(camera.position.z * 100) / 100,
+      ];
+      const tgt: [number, number, number] = [
+        Math.round(orbitControls.target.x * 100) / 100,
+        Math.round(orbitControls.target.y * 100) / 100,
+        Math.round(orbitControls.target.z * 100) / 100,
+      ];
+
+      // 동일한 값이면 스킵
+      const key = `${pos.join(',')}_${tgt.join(',')}`;
+      if (key === lastReportedPosition.current) return;
+      lastReportedPosition.current = key;
+
+      onCameraChange(pos, tgt);
+    };
+
+    orbitControls.addEventListener('end', handleChange);
+    return () => {
+      orbitControls.removeEventListener('end', handleChange);
+    };
+  }, [camera, controls, onCameraChange]);
 
   return null;
 }
@@ -354,6 +394,7 @@ export function CombinedModelViewer({
   cameraPosition,
   cameraTarget,
   isDarkMode = true,
+  onCameraChange,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -463,7 +504,7 @@ export function CombinedModelViewer({
         />
 
         {/* 카메라 위치 동기화 (prop 변경 시) */}
-        <CameraSync position={finalCameraPosition} target={finalCameraTarget} />
+        <CameraSync position={finalCameraPosition} target={finalCameraTarget} onCameraChange={onCameraChange} />
       </Canvas>
     </div>
   );

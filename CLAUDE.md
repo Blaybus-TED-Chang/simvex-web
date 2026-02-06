@@ -199,6 +199,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
     │   ├── components/
     │   │   ├── auth/
     │   │   │   └── AuthButton.tsx     # 로그인/로그아웃 버튼
+    │   │   ├── export/
+    │   │   │   └── ExportPdfButton.tsx # PDF 내보내기 버튼
+    │   │   ├── quiz/
+    │   │   │   ├── QuizPanel.tsx       # 퀴즈 메인 패널
+    │   │   │   ├── QuestionCard.tsx    # 문제 카드 (객관식/O/X/부품클릭)
+    │   │   │   └── ScoreDisplay.tsx    # 결과 표시
     │   │   ├── upload/
     │   │   │   ├── FileDropzone.tsx   # 파일 드래그앤드롭
     │   │   │   ├── ModelPreview.tsx   # 3D 미리보기 + 분해 슬라이더
@@ -215,6 +221,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
     │   │   │   └── NotesPanel.tsx         # 노트 + AI 채팅
     │   │   ├── three/       # 레거시 3D 컴포넌트
     │   │   └── layout/      # 레거시 레이아웃
+    │   ├── data/
+    │   │   ├── models/
+    │   │   │   └── ...              # 모델 설정 파일들
+    │   │   └── quizzes/
+    │   │       ├── types.ts          # 퀴즈 타입 정의
+    │   │       ├── index.ts          # 퀴즈 export
+    │   │       └── drone-combined.ts # 드론 퀴즈 (10문제)
     │   ├── data/models/
     │   │   ├── index.ts               # 모델 목록 + 헬퍼 함수
     │   │   ├── droneCombined.ts       # 드론 통합 (36부품)
@@ -241,8 +254,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
     │   │   │   ├── fbxToGlb.ts        # FBX→GLB 변환
     │   │   │   ├── autoExplodeConfig.ts # 자동 분해 설정
     │   │   │   └── thumbnailCapture.ts  # 썸네일 캡처
+    │   │   ├── export/
+    │   │   │   └── pdfGenerator.ts    # PDF 생성 (jsPDF)
     │   │   └── store/
-    │   │       └── viewerStore.ts     # 뷰어 상태 (Zustand)
+    │   │       ├── viewerStore.ts     # 뷰어 상태 (Zustand)
+    │   │       └── quizStore.ts       # 퀴즈 진행 상태 (Zustand)
     │   ├── types/
     │   │   ├── viewer.ts              # 뷰어/모델 타입
     │   │   └── userModel.ts           # 업로드 모델 타입
@@ -364,6 +380,51 @@ interface UserModelRow {
 // 카테고리: '자동차' | '로봇' | '항공' | '기계' | '전자' | '기타'
 ```
 
+### 뷰 상태 저장 타입 (src/types/viewer.ts)
+
+```typescript
+// 모델별 뷰 상태 (localStorage에 저장)
+interface ModelViewState {
+  cameraPosition: [number, number, number];
+  cameraTarget: [number, number, number];
+  explodeValue: number;
+  selectedPartId: string | null;
+}
+```
+
+### 퀴즈 타입 (src/data/quizzes/types.ts)
+
+```typescript
+type QuestionType = 'multiple-choice' | 'true-false' | 'identify-part';
+
+interface QuizQuestion {
+  id: string;
+  type: QuestionType;
+  question: string;
+  options?: string[];           // 객관식용
+  correctAnswer: string | number;
+  partId?: string;              // identify-part 문제용
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+interface ModelQuiz {
+  modelId: string;
+  titleKo: string;
+  description: string;
+  questions: QuizQuestion[];
+}
+
+interface QuizProgress {
+  currentIndex: number;
+  answers: Record<string, string | number>;
+  score: number;
+  completed: boolean;
+  startedAt: number;
+  completedAt?: number;
+}
+```
+
 ---
 
 ## 데이터베이스 (Supabase)
@@ -406,15 +467,16 @@ Storage 경로: `{user_id}/{model_id}/model.glb`, `{user_id}/{model_id}/thumbnai
 15. 모델 수정/삭제/공개 토글
 16. 커뮤니티 모델 섹션 (홈페이지)
 17. 디버그 모드 (개별 모델 부품 조정)
+18. **뷰 상태 저장** - 카메라 위치/타겟, 분해도, 선택 부품 모델별 localStorage 저장/복원
+19. **퀴즈 기능** - 드론 모델 10문제 (객관식, O/X, 부품 클릭), 진행상황 저장
+20. **PDF 출력** - 3D 스크린샷 + 모델 정보 + 부품 목록 + 노트 문서화
 
 ### ⚠️ 부분 완료
-- **사용자 데이터 저장**: 노트, 다크모드, 분해도 저장됨 / 카메라 상태 미저장
 - **모델 추가**: V4 엔진, 로봇 집게, 공작 바이스 설정 파일 존재하나 홈페이지 미노출 (통합 GLB 미제작)
+- **퀴즈 데이터**: 드론 모델만 퀴즈 문제 존재 (다른 모델 추가 필요)
 
 ### ❌ 미구현
-- 퀴즈 기능
 - 워크플로우 차트
-- PDF 출력
 
 ---
 
