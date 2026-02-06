@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getModelById, getCombinedModelById } from '@/data/models';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { ExplodeSlider } from '@/components/viewer/ExplodeSlider';
@@ -390,9 +391,13 @@ export default function ViewerPage() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="SIMVEX"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
             <div>
               <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 {currentModelInfo.nameKo}
