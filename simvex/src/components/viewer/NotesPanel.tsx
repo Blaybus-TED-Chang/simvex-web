@@ -7,13 +7,22 @@ import { useSupabaseChat } from '@/hooks/useSupabaseChat';
 import type { User } from '@supabase/supabase-js';
 
 type TabType = 'notes' | 'ai';
-type AIModelType = 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano';
 
-const AI_MODELS: { id: AIModelType; name: string; description: string }[] = [
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: '가장 빠름' },
-  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: '균형' },
-  { id: 'gpt-5', name: 'GPT-5', description: '고품질' },
-];
+const AI_MODELS = [
+  // GPT-5 계열
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', group: 'GPT-5' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', group: 'GPT-5' },
+  { id: 'gpt-5', name: 'GPT-5', group: 'GPT-5' },
+  // GPT-4.1 계열
+  { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', group: 'GPT-4.1' },
+  { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', group: 'GPT-4.1' },
+  { id: 'gpt-4.1', name: 'GPT-4.1', group: 'GPT-4.1' },
+  // GPT-4o 계열
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', group: 'GPT-4o' },
+  { id: 'gpt-4o', name: 'GPT-4o', group: 'GPT-4o' },
+] as const;
+
+type AIModelType = typeof AI_MODELS[number]['id'];
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -68,12 +77,13 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
 
   useEffect(() => {
     const saved = localStorage.getItem('ai-model-preference');
-    if (saved && ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'].includes(saved)) {
+    if (saved && AI_MODELS.some((m) => m.id === saved)) {
       setSelectedAIModel(saved as AIModelType);
     }
   }, []);
 
-  const handleModelChange = (model: AIModelType) => {
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const model = e.target.value as AIModelType;
     setSelectedAIModel(model);
     localStorage.setItem('ai-model-preference', model);
   };
@@ -321,27 +331,33 @@ export function NotesPanel({ modelInfo, selectedPart, user, modelId }: NotesPane
 
             {/* 입력창 */}
             <div className="mt-auto">
-              {/* 모델 선택 */}
+              {/* 모델 선택 드롭다운 */}
               <div className="flex items-center gap-2 mb-2">
                 <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>모델:</span>
-                <div className="flex gap-1">
-                  {AI_MODELS.map((model) => (
-                    <button
-                      key={model.id}
-                      onClick={() => handleModelChange(model.id)}
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        selectedAIModel === model.id
-                          ? 'bg-blue-500 text-white'
-                          : isDarkMode
-                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                      }`}
-                      title={model.description}
-                    >
-                      {model.id === 'gpt-5-nano' ? 'Nano' : model.id === 'gpt-5-mini' ? 'Mini' : 'Full'}
-                    </button>
-                  ))}
-                </div>
+                <select
+                  value={selectedAIModel}
+                  onChange={handleModelChange}
+                  className={`flex-1 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    isDarkMode
+                      ? 'bg-gray-700 text-gray-200 border border-gray-600'
+                      : 'bg-white text-gray-700 border border-gray-300'
+                  }`}
+                >
+                  <optgroup label="GPT-5 (추론 모델)">
+                    <option value="gpt-5-nano">GPT-5 Nano (가장 빠름)</option>
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="gpt-5">GPT-5 (고품질)</option>
+                  </optgroup>
+                  <optgroup label="GPT-4.1">
+                    <option value="gpt-4.1-nano">GPT-4.1 Nano (가장 빠름)</option>
+                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                    <option value="gpt-4.1">GPT-4.1</option>
+                  </optgroup>
+                  <optgroup label="GPT-4o">
+                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                  </optgroup>
+                </select>
               </div>
 
               <div className="flex gap-2">
