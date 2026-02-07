@@ -34,6 +34,90 @@ const CombinedModelViewer = dynamic(
   { ssr: false, loading: () => <ViewerSkeleton /> }
 );
 
+function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+  const isDarkMode = useViewerStore((s) => s.isDarkMode);
+  return (
+    <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      {children}
+      {show && (
+        <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap z-50 shadow-lg pointer-events-none ${
+          isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-800 text-white'
+        }`}>
+          {label}
+          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent ${
+            isDarkMode ? 'border-b-gray-700' : 'border-b-gray-800'
+          }`} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ControlsHelp({ show, onDismiss, isDarkMode }: { show: boolean; onDismiss: () => void; isDarkMode: boolean }) {
+  const [visible, setVisible] = useState(false);
+  const [opacity, setOpacity] = useState(0);
+
+  useEffect(() => {
+    if (show) {
+      setVisible(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setOpacity(1));
+      });
+    } else {
+      setOpacity(0);
+      const t = setTimeout(() => setVisible(false), 500);
+      return () => clearTimeout(t);
+    }
+  }, [show]);
+
+  if (!visible) return null;
+
+  const controls = [
+    { icon: '🖱️ 좌클릭 드래그', desc: '회전' },
+    { icon: '🖱️ 우클릭 드래그', desc: '이동 (팬)' },
+    { icon: '🔄 스크롤', desc: '줌 인/아웃' },
+    { icon: '👆 부품 클릭', desc: '선택 및 정보 표시' },
+  ];
+
+  return (
+    <div
+      className="absolute bottom-4 left-4 z-30 pointer-events-auto select-none"
+      style={{ opacity, transition: 'opacity 0.5s ease-in-out' }}
+    >
+      <div className={`rounded-xl px-4 py-3 backdrop-blur-md shadow-lg ${
+        isDarkMode
+          ? 'bg-gray-800/80 border border-gray-700/50'
+          : 'bg-white/80 border border-gray-200/50'
+      }`}>
+        <div className="flex items-center justify-between mb-2">
+          <p className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            조작 가이드
+          </p>
+          <button
+            onClick={onDismiss}
+            className={`p-0.5 rounded transition-colors ${
+              isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="space-y-1.5">
+          {controls.map((c) => (
+            <div key={c.desc} className="flex items-center gap-2 text-xs">
+              <span className={`w-28 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{c.icon}</span>
+              <span className={isDarkMode ? 'text-gray-200' : 'text-gray-700'}>{c.desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ViewerSkeleton() {
   return (
     <div className="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center">
@@ -123,6 +207,9 @@ export default function ViewerPage() {
     getModelState,
     setModelState,
   } = useViewerStore();
+
+  // 조작 가이드 오버레이 (페이지 진입 시 항상 표시)
+  const [showControls, setShowControls] = useState(true);
 
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
   const [isQuizPanelOpen, setIsQuizPanelOpen] = useState(false);
@@ -361,14 +448,16 @@ export default function ViewerPage() {
       {/* 헤더 */}
       <header className={`h-14 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 flex items-center justify-between`}>
         <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
+          <Tooltip label="홈으로 돌아가기">
+            <Link
+              href="/"
+              className={`p-2 rounded-lg block ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+          </Tooltip>
 
           <div className="flex items-center gap-3">
             <Image
@@ -390,80 +479,105 @@ export default function ViewerPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <AuthButton />
+          <Tooltip label="로그인 / 계정 관리">
+            <AuthButton />
+          </Tooltip>
+
+          {/* 조작 가이드 버튼 */}
+          <Tooltip label="3D 뷰어 조작 방법 안내">
+            <button
+              onClick={() => setShowControls(true)}
+              className={`p-2 rounded-lg transition-colors ${
+                isDarkMode
+                  ? 'hover:bg-gray-800 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </Tooltip>
 
           {/* PDF 내보내기 버튼 */}
-          <ExportPdfButton
-            modelNameKo={currentModelInfo.nameKo}
-            modelName={currentModelInfo.name}
-            description={currentModelInfo.description}
-            theory={currentModelInfo.theory}
-            parts={currentModelInfo.parts.map((p) => ({
-              nameKo: p.nameKo,
-              name: p.name,
-              description: p.description,
-            }))}
-            notes={notes}
-            isDarkMode={isDarkMode}
-          />
+          <Tooltip label="모델 정보를 PDF로 내보내기">
+            <ExportPdfButton
+              modelNameKo={currentModelInfo.nameKo}
+              modelName={currentModelInfo.name}
+              description={currentModelInfo.description}
+              theory={currentModelInfo.theory}
+              parts={currentModelInfo.parts.map((p) => ({
+                nameKo: p.nameKo,
+                name: p.name,
+                description: p.description,
+              }))}
+              notes={notes}
+              isDarkMode={isDarkMode}
+            />
+          </Tooltip>
 
           {/* 퀴즈 버튼 */}
           {modelHasQuiz && (
+            <Tooltip label="학습 퀴즈 풀기">
+              <button
+                onClick={() => setIsQuizPanelOpen(!isQuizPanelOpen)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isQuizPanelOpen
+                    ? 'bg-green-500 text-white'
+                    : isDarkMode
+                      ? 'hover:bg-gray-800 text-gray-400'
+                      : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </button>
+            </Tooltip>
+          )}
+
+          {/* 노트 패널 토글 */}
+          <Tooltip label="노트 / AI 어시스턴트">
             <button
-              onClick={() => setIsQuizPanelOpen(!isQuizPanelOpen)}
+              onClick={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
               className={`p-2 rounded-lg transition-colors ${
-                isQuizPanelOpen
-                  ? 'bg-green-500 text-white'
+                isNotesPanelOpen
+                  ? 'bg-blue-500 text-white'
                   : isDarkMode
                     ? 'hover:bg-gray-800 text-gray-400'
                     : 'hover:bg-gray-100 text-gray-600'
               }`}
-              title="퀴즈"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
-          )}
-
-          {/* 노트 패널 토글 */}
-          <button
-            onClick={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
-            className={`p-2 rounded-lg transition-colors ${
-              isNotesPanelOpen
-                ? 'bg-blue-500 text-white'
-                : isDarkMode
-                  ? 'hover:bg-gray-800 text-gray-400'
-                  : 'hover:bg-gray-100 text-gray-600'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
+          </Tooltip>
 
           {/* 다크모드 토글 */}
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            {isDarkMode ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </button>
+          <Tooltip label={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}>
+            <button
+              onClick={toggleDarkMode}
+              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+            >
+              {isDarkMode ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+          </Tooltip>
         </div>
       </header>
 
       {/* 메인 컨텐츠 */}
       <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden">
         {/* 3D 뷰포트 */}
-        <div className="flex-1 min-w-0 p-4">
+        <div className="flex-1 min-w-0 p-4 relative">
           {isCombinedModel && combinedModel ? (
             <CombinedModelViewer
               model={combinedModel}
@@ -485,6 +599,7 @@ export default function ViewerPage() {
               cameraTarget={cameraTarget}
             />
           ) : null}
+          <ControlsHelp show={showControls} onDismiss={() => setShowControls(false)} isDarkMode={isDarkMode} />
         </div>
 
         {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}
