@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import DroneControls from '@/components/drone-simulator/DroneControls';
@@ -23,6 +23,34 @@ const DroneSimScene = dynamic(
 
 export default function DroneSimulatorPage() {
   const [showLearning, setShowLearning] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(384);
+  const isResizing = useRef(false);
+
+  const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'resize-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
+    document.body.appendChild(overlay);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = window.innerWidth - ev.clientX;
+      setSidebarWidth(Math.max(240, Math.min(600, newWidth)));
+    };
+
+    const onMouseUp = () => {
+      isResizing.current = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      overlay.remove();
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   return (
     <div className="simulator-page h-screen flex flex-col bg-gray-950">
@@ -82,7 +110,7 @@ export default function DroneSimulatorPage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* 3D Viewport */}
-        <div className="flex-1 relative">
+        <div className="flex-1 min-w-0 relative">
           <DroneSimScene />
 
           {/* Overlay Info */}
@@ -96,8 +124,19 @@ export default function DroneSimulatorPage() {
           </div>
         </div>
 
+        {/* Resize Handle */}
+        <div
+          className="w-1.5 flex-shrink-0 cursor-ew-resize bg-gray-800 hover:bg-blue-600 active:bg-blue-500 transition-colors"
+          onMouseDown={handleSidebarResizeStart}
+        />
+
         {/* Control Panel */}
-        <DroneControls />
+        <div
+          className="flex-shrink-0 overflow-hidden"
+          style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
+        >
+          <DroneControls />
+        </div>
       </div>
 
       {/* Learning Panel */}
