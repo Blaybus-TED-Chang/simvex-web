@@ -10,6 +10,9 @@ import { machineViceModel } from './machineVice';
 import { droneCombinedModel } from './droneCombined';
 import { robotArmCombinedModel } from './robotArmCombined';
 import { leafSpringCombinedModel } from './leafSpringCombined';
+import { v4EngineCombinedModel } from './v4EngineCombined';
+import { robotGripperCombinedModel } from './robotGripperCombined';
+import { machineViceCombinedModel } from './machineViceCombined';
 
 // 개별 GLB 모델 목록
 export const models: ModelConfig[] = [
@@ -27,6 +30,9 @@ export const combinedModels: CombinedModelConfig[] = [
   droneCombinedModel,
   robotArmCombinedModel,
   leafSpringCombinedModel,
+  v4EngineCombinedModel,
+  robotGripperCombinedModel,
+  machineViceCombinedModel,
 ];
 
 // ID로 개별 모델 찾기

@@ -2,7 +2,11 @@
 
 import { useRobotStore } from '@/lib/store/robotStore';
 
-export default function BottomBar() {
+interface BottomBarProps {
+  isDarkMode: boolean;
+}
+
+export default function BottomBar({ isDarkMode }: BottomBarProps) {
   const {
     waypoints,
     currentWaypointIndex,
@@ -33,16 +37,16 @@ export default function BottomBar() {
   const speeds = [0.25, 0.5, 1, 2, 4];
 
   return (
-    <div className="h-16 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center justify-between px-4">
+    <div className={`h-16 border-t ${isDarkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'} flex items-center justify-between px-4`}>
       {/* Playback Controls */}
       <div className="flex items-center gap-2">
         <button
           onClick={handlePrevious}
           disabled={waypoints.length === 0 || currentWaypointIndex <= 0}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
           title="Previous"
         >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+          <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 20 20">
             <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
           </svg>
         </button>
@@ -73,10 +77,10 @@ export default function BottomBar() {
         <button
           onClick={stop}
           disabled={waypoints.length === 0}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
           title="Stop"
         >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+          <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
           </svg>
         </button>
@@ -84,21 +88,21 @@ export default function BottomBar() {
         <button
           onClick={handleNext}
           disabled={waypoints.length === 0 || currentWaypointIndex >= waypoints.length - 1}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
           title="Next"
         >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+          <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 20 20">
             <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z" />
           </svg>
         </button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-2" />
+        <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} mx-2`} />
 
         {/* Loop Mode */}
         <select
           value={loopMode}
           onChange={(e) => setLoopMode(e.target.value as 'once' | 'loop' | 'pingpong')}
-          className="text-sm bg-gray-100 dark:bg-gray-800 border-0 rounded-lg px-2 py-1 text-gray-700 dark:text-gray-300"
+          className={`text-sm ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'} border-0 rounded-lg px-2 py-1`}
         >
           <option value="once">Once</option>
           <option value="loop">Loop</option>
@@ -109,7 +113,7 @@ export default function BottomBar() {
         <select
           value={playbackSpeed}
           onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-          className="text-sm bg-gray-100 dark:bg-gray-800 border-0 rounded-lg px-2 py-1 text-gray-700 dark:text-gray-300"
+          className={`text-sm ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'} border-0 rounded-lg px-2 py-1`}
         >
           {speeds.map(s => (
             <option key={s} value={s}>{s}x</option>
@@ -129,7 +133,7 @@ export default function BottomBar() {
           Save WP
         </button>
 
-        <span className="text-sm text-gray-600 dark:text-gray-400">
+        <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {waypoints.length > 0
             ? `WP: ${currentWaypointIndex >= 0 ? currentWaypointIndex + 1 : '-'} / ${waypoints.length}`
             : 'No waypoints'}
