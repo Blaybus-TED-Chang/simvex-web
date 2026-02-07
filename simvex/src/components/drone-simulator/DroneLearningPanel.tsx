@@ -11,30 +11,31 @@ const tabs = [
 interface DroneLearningPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  isDarkMode: boolean;
 }
 
-export default function DroneLearningPanel({ isOpen, onClose }: DroneLearningPanelProps) {
+export default function DroneLearningPanel({ isOpen, onClose, isDarkMode }: DroneLearningPanelProps) {
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-gray-900 shadow-2xl z-50 flex flex-col border-l border-gray-800">
+    <div className={`fixed inset-y-0 right-0 w-[420px] ${isDarkMode ? 'bg-gray-900' : 'bg-white'} shadow-2xl z-50 flex flex-col border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">쿼드콥터 드론</h2>
+      <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+        <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>쿼드콥터 드론</h2>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-gray-800 rounded transition-colors"
+          className={`p-1 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} rounded transition-colors`}
         >
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-800">
+      <div className={`flex border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -42,7 +43,9 @@ export default function DroneLearningPanel({ isOpen, onClose }: DroneLearningPan
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-500 hover:text-gray-300'
+                : isDarkMode
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             {tab.label}
@@ -52,28 +55,28 @@ export default function DroneLearningPanel({ isOpen, onClose }: DroneLearningPan
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'overview' && <OverviewContent />}
-        {activeTab === 'components' && <ComponentsContent />}
-        {activeTab === 'physics' && <PhysicsContent />}
+        {activeTab === 'overview' && <OverviewContent isDarkMode={isDarkMode} />}
+        {activeTab === 'components' && <ComponentsContent isDarkMode={isDarkMode} />}
+        {activeTab === 'physics' && <PhysicsContent isDarkMode={isDarkMode} />}
       </div>
     </div>
   );
 }
 
-function OverviewContent() {
+function OverviewContent({ isDarkMode }: { isDarkMode: boolean }) {
   return (
     <div className="space-y-4 text-sm">
-      <h3 className="text-lg font-semibold text-white">쿼드콥터 비행 원리</h3>
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>쿼드콥터 비행 원리</h3>
 
-      <p className="text-gray-400 leading-relaxed">
+      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} leading-relaxed`}>
         쿼드콥터는 4개의 로터(프로펠러)를 사용하여 양력, 방향, 기울기를 제어하는
         멀티로터 항공기입니다. 기존 헬리콥터와 달리 각 로터의 속도만으로
         모든 비행 제어가 가능합니다.
       </p>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-3">비행 제어 4가지</h4>
-        <ol className="space-y-2 text-gray-400">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3`}>비행 제어 4가지</h4>
+        <ol className={`space-y-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           <li className="flex items-start gap-2">
             <span className="text-green-400 font-mono">1.</span>
             <span><strong className="text-green-400">Throttle (스로틀)</strong> — 4개 모터 전체 출력. 상승/하강 제어</span>
@@ -93,18 +96,18 @@ function OverviewContent() {
         </ol>
       </div>
 
-      <div className="bg-blue-900/30 rounded-lg p-4">
-        <h4 className="font-medium text-blue-300 mb-2">토크 밸런스</h4>
-        <p className="text-blue-200/80">
+      <div className={`${isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'} mb-2`}>토크 밸런스</h4>
+        <p className={isDarkMode ? 'text-blue-200/80' : 'text-blue-700/80'}>
           대각선 위치의 모터는 같은 방향(CW/CCW)으로 회전합니다.
           인접한 모터는 반대 방향으로 회전하여 반작용 토크를 상쇄합니다.
           이를 통해 안정적인 호버링이 가능합니다.
         </p>
       </div>
 
-      <div className="bg-green-900/30 rounded-lg p-4">
-        <h4 className="font-medium text-green-300 mb-2">직접 해보세요!</h4>
-        <p className="text-green-200/80">
+      <div className={`${isDarkMode ? 'bg-green-900/30' : 'bg-green-50'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'} mb-2`}>직접 해보세요!</h4>
+        <p className={isDarkMode ? 'text-green-200/80' : 'text-green-700/80'}>
           스로틀을 올려 모터를 가동한 후, 요/피치/롤 슬라이더를 조절하여
           각 모터의 RPM 변화와 드론 기울기를 관찰하세요.
         </p>
@@ -113,7 +116,7 @@ function OverviewContent() {
   );
 }
 
-function ComponentsContent() {
+function ComponentsContent({ isDarkMode }: { isDarkMode: boolean }) {
   const components = [
     {
       name: '모터 (BLDC)',
@@ -154,31 +157,31 @@ function ComponentsContent() {
 
   return (
     <div className="space-y-3 text-sm">
-      <h3 className="text-lg font-semibold text-white mb-4">드론 구성요소</h3>
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>드론 구성요소</h3>
       {components.map((comp) => (
-        <div key={comp.name} className="bg-gray-800 rounded-lg p-4">
+        <div key={comp.name} className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
           <div className="flex items-center gap-2 mb-2">
             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: comp.color }} />
-            <h4 className="font-medium text-white">{comp.name}</h4>
+            <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comp.name}</h4>
           </div>
-          <p className="text-gray-400">{comp.description}</p>
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{comp.description}</p>
         </div>
       ))}
     </div>
   );
 }
 
-function PhysicsContent() {
+function PhysicsContent({ isDarkMode }: { isDarkMode: boolean }) {
   return (
     <div className="space-y-4 text-sm">
-      <h3 className="text-lg font-semibold text-white">비행 물리</h3>
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>비행 물리</h3>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">모터 믹싱 매트릭스</h4>
-        <div className="bg-gray-900 rounded p-3 font-mono text-xs text-gray-300 overflow-x-auto">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>모터 믹싱 매트릭스</h4>
+        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded p-3 font-mono text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} overflow-x-auto`}>
           <table className="w-full">
             <thead>
-              <tr className="text-gray-500">
+              <tr className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>
                 <td className="pr-2"></td>
                 <td className="px-2 text-center">M1(NW)</td>
                 <td className="px-2 text-center">M2(NE)</td>
@@ -186,7 +189,7 @@ function PhysicsContent() {
                 <td className="px-2 text-center">M4(SW)</td>
               </tr>
             </thead>
-            <tbody className="text-gray-300">
+            <tbody className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
               <tr><td className="pr-2 text-green-400">Throttle</td><td className="text-center">+</td><td className="text-center">+</td><td className="text-center">+</td><td className="text-center">+</td></tr>
               <tr><td className="pr-2 text-blue-400">Pitch</td><td className="text-center">-</td><td className="text-center">-</td><td className="text-center">+</td><td className="text-center">+</td></tr>
               <tr><td className="pr-2 text-orange-400">Roll</td><td className="text-center">+</td><td className="text-center">-</td><td className="text-center">-</td><td className="text-center">+</td></tr>
@@ -194,45 +197,45 @@ function PhysicsContent() {
             </tbody>
           </table>
         </div>
-        <p className="text-gray-400 mt-2">
+        <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
           각 파라미터의 +/- 부호는 해당 모터의 RPM을 기본값 대비 증감시킵니다.
         </p>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">추력 공식</h4>
-        <div className="bg-gray-900 rounded p-3 font-mono text-sm text-gray-300">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>추력 공식</h4>
+        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded p-3 font-mono text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
           T = k_T &times; &rho; &times; n&sup2; &times; D&sup4;
         </div>
-        <p className="text-gray-400 mt-2">
+        <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
           추력(T)은 회전속도(n)의 제곱에 비례합니다.
           k_T는 추력계수, &rho;는 공기밀도, D는 프로펠러 직경입니다.
         </p>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">토크 밸런스</h4>
-        <p className="text-gray-400">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>토크 밸런스</h4>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
           CW 회전 모터(M1, M3)와 CCW 회전 모터(M2, M4)의 토크 합이 0이면
           기체는 수평 회전하지 않습니다. Yaw 입력은 이 밸런스를 의도적으로
           깨뜨려 수평 회전을 발생시킵니다.
         </p>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">호버링 조건</h4>
-        <div className="bg-gray-900 rounded p-3 font-mono text-sm text-gray-300">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>호버링 조건</h4>
+        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded p-3 font-mono text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
           &Sigma;T &times; cos(&theta;) = m &times; g
         </div>
-        <p className="text-gray-400 mt-2">
+        <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
           총 추력의 수직 성분이 드론 무게와 같을 때 호버링합니다.
           기울어지면 cos(&theta;)로 양력이 감소하므로 스로틀을 올려야 합니다.
         </p>
       </div>
 
-      <div className="bg-purple-900/30 rounded-lg p-4">
-        <h4 className="font-medium text-purple-300 mb-2">핵심 관계</h4>
-        <ul className="text-purple-200/80 space-y-1">
+      <div className={`${isDarkMode ? 'bg-purple-900/30' : 'bg-purple-50'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'} mb-2`}>핵심 관계</h4>
+        <ul className={`${isDarkMode ? 'text-purple-200/80' : 'text-purple-700/80'} space-y-1`}>
           <li>• Throttle ↑ → 전체 RPM ↑ → 추력 ↑ → 상승</li>
           <li>• Yaw ↑ → CW 모터 ↑, CCW 모터 ↓ → 수평 회전</li>
           <li>• Pitch ↑ → 후방 모터 ↑, 전방 모터 ↓ → 전진</li>

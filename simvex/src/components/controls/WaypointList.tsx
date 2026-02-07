@@ -2,7 +2,11 @@
 
 import { useRobotStore } from '@/lib/store/robotStore';
 
-export default function WaypointList() {
+interface WaypointListProps {
+  isDarkMode: boolean;
+}
+
+export default function WaypointList({ isDarkMode }: WaypointListProps) {
   const {
     waypoints,
     currentWaypointIndex,
@@ -14,10 +18,10 @@ export default function WaypointList() {
   if (waypoints.length === 0) {
     return (
       <div className="text-center py-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           No waypoints saved yet.
         </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+        <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} mt-1`}>
           Use the &quot;Save WP&quot; button to record positions.
         </p>
       </div>
@@ -27,7 +31,7 @@ export default function WaypointList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+        <h3 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           Waypoints ({waypoints.length})
         </h3>
         <button
@@ -48,17 +52,17 @@ export default function WaypointList() {
             key={wp.id}
             className={`flex items-center justify-between p-2 rounded-lg ${
               currentWaypointIndex === index
-                ? 'bg-blue-100 dark:bg-blue-900/30'
-                : 'bg-gray-50 dark:bg-gray-800'
+                ? isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'
+                : isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-5">
+              <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-5`}>
                 {index + 1}.
               </span>
               <div>
-                <span className="text-sm text-gray-900 dark:text-white">{wp.name}</span>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{wp.name}</span>
+                <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   ({wp.position.x.toFixed(2)}, {wp.position.y.toFixed(2)}, {wp.position.z.toFixed(2)})
                 </div>
               </div>
@@ -67,7 +71,7 @@ export default function WaypointList() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => goToWaypoint(index)}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                className={`p-1 ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} rounded`}
                 title="Go to"
               >
                 <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +81,7 @@ export default function WaypointList() {
               </button>
               <button
                 onClick={() => removeWaypoint(wp.id)}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                className={`p-1 ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} rounded`}
                 title="Delete"
               >
                 <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
