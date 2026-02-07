@@ -12,30 +12,31 @@ const tabs = [
 interface EngineLearningPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  isDarkMode: boolean;
 }
 
-export default function EngineLearningPanel({ isOpen, onClose }: EngineLearningPanelProps) {
+export default function EngineLearningPanel({ isOpen, onClose, isDarkMode }: EngineLearningPanelProps) {
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-gray-900 shadow-2xl z-50 flex flex-col border-l border-gray-800">
+    <div className={`fixed inset-y-0 right-0 w-[420px] ${isDarkMode ? 'bg-gray-900' : 'bg-white'} shadow-2xl z-50 flex flex-col border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">Turbofan Engine</h2>
+      <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+        <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Turbofan Engine</h2>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-gray-800 rounded transition-colors"
+          className={`p-1 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} rounded transition-colors`}
         >
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-800">
+      <div className={`flex border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -43,7 +44,9 @@ export default function EngineLearningPanel({ isOpen, onClose }: EngineLearningP
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-500 hover:text-gray-300'
+                : isDarkMode
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             {tab.label}
@@ -53,27 +56,27 @@ export default function EngineLearningPanel({ isOpen, onClose }: EngineLearningP
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'overview' && <OverviewContent />}
-        {activeTab === 'components' && <ComponentsContent />}
-        {activeTab === 'physics' && <PhysicsContent />}
+        {activeTab === 'overview' && <OverviewContent isDarkMode={isDarkMode} />}
+        {activeTab === 'components' && <ComponentsContent isDarkMode={isDarkMode} />}
+        {activeTab === 'physics' && <PhysicsContent isDarkMode={isDarkMode} />}
       </div>
     </div>
   );
 }
 
-function OverviewContent() {
+function OverviewContent({ isDarkMode }: { isDarkMode: boolean }) {
   return (
     <div className="space-y-4 text-sm">
-      <h3 className="text-lg font-semibold text-white">How a Turbofan Engine Works</h3>
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>How a Turbofan Engine Works</h3>
 
-      <p className="text-gray-400 leading-relaxed">
+      <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} leading-relaxed`}>
         A turbofan engine is the most common type of jet engine used in commercial aviation.
         It combines a ducted fan with a turbojet core to provide high efficiency at subsonic speeds.
       </p>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-3">The Brayton Cycle</h4>
-        <ol className="space-y-2 text-gray-400">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3`}>The Brayton Cycle</h4>
+        <ol className={`space-y-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           <li className="flex items-start gap-2">
             <span className="text-blue-400 font-mono">1.</span>
             <span><strong className="text-blue-400">Intake</strong> - Air enters the engine</span>
@@ -97,17 +100,17 @@ function OverviewContent() {
         </ol>
       </div>
 
-      <div className="bg-blue-900/30 rounded-lg p-4">
-        <h4 className="font-medium text-blue-300 mb-2">Bypass Ratio</h4>
-        <p className="text-blue-200/80">
+      <div className={`${isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'} mb-2`}>Bypass Ratio</h4>
+        <p className={isDarkMode ? 'text-blue-200/80' : 'text-blue-700/80'}>
           Modern turbofans have high bypass ratios (8:1 to 12:1), meaning most air goes around
           the core. This improves fuel efficiency and reduces noise.
         </p>
       </div>
 
-      <div className="bg-green-900/30 rounded-lg p-4">
-        <h4 className="font-medium text-green-300 mb-2">Try It!</h4>
-        <p className="text-green-200/80">
+      <div className={`${isDarkMode ? 'bg-green-900/30' : 'bg-green-50'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'} mb-2`}>Try It!</h4>
+        <p className={isDarkMode ? 'text-green-200/80' : 'text-green-700/80'}>
           Adjust the throttle and watch how the engine parameters change.
           Click on engine sections to learn more about each component.
         </p>
@@ -116,21 +119,21 @@ function OverviewContent() {
   );
 }
 
-function ComponentsContent() {
+function ComponentsContent({ isDarkMode }: { isDarkMode: boolean }) {
   return (
     <div className="space-y-3 text-sm">
-      <h3 className="text-lg font-semibold text-white mb-4">Engine Components</h3>
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Engine Components</h3>
 
       {ENGINE_SECTIONS.map(section => (
-        <div key={section.id} className="bg-gray-800 rounded-lg p-4">
+        <div key={section.id} className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
           <div className="flex items-center gap-2 mb-2">
             <div
               className="w-4 h-4 rounded-full"
               style={{ backgroundColor: section.color }}
             />
-            <h4 className="font-medium text-white">{section.name}</h4>
+            <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{section.name}</h4>
           </div>
-          <p className="text-gray-400">{getComponentDescription(section.id)}</p>
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{getComponentDescription(section.id)}</p>
         </div>
       ))}
     </div>
@@ -151,50 +154,50 @@ function getComponentDescription(id: string): string {
   return descriptions[id] || 'Component description not available.';
 }
 
-function PhysicsContent() {
+function PhysicsContent({ isDarkMode }: { isDarkMode: boolean }) {
   return (
     <div className="space-y-4 text-sm">
-      <h3 className="text-lg font-semibold text-white">Engine Physics</h3>
+      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Engine Physics</h3>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">Thrust Equation</h4>
-        <div className="bg-gray-900 rounded p-3 font-mono text-sm text-gray-300">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Thrust Equation</h4>
+        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded p-3 font-mono text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
           F = ṁ × (V_exit - V_inlet)
         </div>
-        <p className="text-gray-400 mt-2">
+        <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
           Thrust equals mass flow rate times the change in velocity.
         </p>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">Specific Fuel Consumption</h4>
-        <div className="bg-gray-900 rounded p-3 font-mono text-sm text-gray-300">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Specific Fuel Consumption</h4>
+        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded p-3 font-mono text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
           SFC = Fuel Flow / Thrust
         </div>
-        <p className="text-gray-400 mt-2">
+        <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
           Lower SFC means better fuel efficiency. Typical values: 0.3-0.6 kg/(kN·h)
         </p>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">Pressure Ratio</h4>
-        <p className="text-gray-400">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Pressure Ratio</h4>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
           Overall Pressure Ratio (OPR) is the ratio of combustor pressure to inlet pressure.
           Higher OPR generally means higher thermal efficiency. Modern engines achieve 40:1 or higher.
         </p>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-white mb-2">Altitude Effects</h4>
-        <p className="text-gray-400">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Altitude Effects</h4>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
           At higher altitudes, air density decreases exponentially. This reduces both thrust
           and fuel flow, but SFC improves due to lower temperatures.
         </p>
       </div>
 
-      <div className="bg-purple-900/30 rounded-lg p-4">
-        <h4 className="font-medium text-purple-300 mb-2">Key Relationships</h4>
-        <ul className="text-purple-200/80 space-y-1">
+      <div className={`${isDarkMode ? 'bg-purple-900/30' : 'bg-purple-50'} rounded-lg p-4`}>
+        <h4 className={`font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'} mb-2`}>Key Relationships</h4>
+        <ul className={`${isDarkMode ? 'text-purple-200/80' : 'text-purple-700/80'} space-y-1`}>
           <li>• Throttle ↑ → N1, N2, Thrust, Fuel Flow ↑</li>
           <li>• Altitude ↑ → Thrust, Fuel Flow ↓, SFC ↓</li>
           <li>• Mach ↑ → Ram pressure ↑, Thrust ↑</li>

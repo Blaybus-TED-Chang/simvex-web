@@ -2,40 +2,44 @@
 
 import { useRobotStore } from '@/lib/store/robotStore';
 
-export default function PositionDisplay() {
+interface PositionDisplayProps {
+  isDarkMode: boolean;
+}
+
+export default function PositionDisplay({ isDarkMode }: PositionDisplayProps) {
   const { endEffectorPosition } = useRobotStore();
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+    <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-4`}>
+      <h3 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3`}>
         End Effector Position
       </h3>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500 dark:text-gray-400">X</span>
-          <span className="font-mono text-sm text-gray-900 dark:text-white">
+          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>X</span>
+          <span className={`font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {endEffectorPosition.x.toFixed(3)} m
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Y</span>
-          <span className="font-mono text-sm text-gray-900 dark:text-white">
+          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Y</span>
+          <span className={`font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {endEffectorPosition.y.toFixed(3)} m
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Z</span>
-          <span className="font-mono text-sm text-gray-900 dark:text-white">
+          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Z</span>
+          <span className={`font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {endEffectorPosition.z.toFixed(3)} m
           </span>
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+      <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Distance</span>
-          <span className="font-mono text-sm text-gray-900 dark:text-white">
+          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Distance</span>
+          <span className={`font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {Math.sqrt(
               endEffectorPosition.x ** 2 +
               endEffectorPosition.y ** 2 +

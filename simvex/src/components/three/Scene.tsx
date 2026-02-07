@@ -9,8 +9,12 @@ import WorkspaceVisualizer from './WorkspaceVisualizer';
 import TrajectoryLine from './TrajectoryLine';
 import PlaybackController from './PlaybackController';
 
-export default function Scene() {
-  const { isDarkMode, mode, showWorkspace, showTrajectory } = useRobotStore();
+interface SceneProps {
+  isDarkMode?: boolean;
+}
+
+export default function Scene({ isDarkMode = true }: SceneProps) {
+  const { mode, showWorkspace, showTrajectory } = useRobotStore();
 
   return (
     <Canvas
@@ -19,10 +23,10 @@ export default function Scene() {
       style={{ background: isDarkMode ? '#0f172a' : '#f8fafc' }}
     >
       {/* Lighting */}
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={isDarkMode ? 0.5 : 0.7} />
       <directionalLight
         position={[5, 10, 5]}
-        intensity={1}
+        intensity={isDarkMode ? 1 : 1.3}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -32,7 +36,7 @@ export default function Scene() {
         shadow-camera-top={10}
         shadow-camera-bottom={-10}
       />
-      <directionalLight position={[-5, 5, -5]} intensity={0.3} />
+      <directionalLight position={[-5, 5, -5]} intensity={isDarkMode ? 0.3 : 0.5} />
 
       {/* Environment */}
       <Grid
