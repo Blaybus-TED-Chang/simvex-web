@@ -14,12 +14,12 @@ export default function EngineGauges({ isDarkMode }: EngineGaugesProps) {
       <h3 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Engine Parameters</h3>
 
       <div className="grid grid-cols-2 gap-3">
-        <GaugeCard label="Thrust" value={output.thrust.toFixed(1)} unit="kN" max={300} current={output.thrust} color="#22c55e" isDarkMode={isDarkMode} />
+        <GaugeCard label="Thrust" value={output.thrust.toFixed(1)} unit="kN" max={150} current={output.thrust} color="#22c55e" isDarkMode={isDarkMode} />
         <GaugeCard label="Fuel Flow" value={output.fuelFlow.toFixed(0)} unit="kg/h" max={4000} current={output.fuelFlow} color="#f59e0b" isDarkMode={isDarkMode} />
         <GaugeCard label="N1" value={output.n1.toFixed(1)} unit="%" max={100} current={output.n1} color="#3b82f6" warning={95} danger={100} isDarkMode={isDarkMode} />
         <GaugeCard label="N2" value={output.n2.toFixed(1)} unit="%" max={100} current={output.n2} color="#8b5cf6" warning={95} danger={100} isDarkMode={isDarkMode} />
         <GaugeCard label="EGT" value={output.egt.toFixed(0)} unit="°C" max={900} current={output.egt} color="#ef4444" warning={800} danger={870} isDarkMode={isDarkMode} />
-        <GaugeCard label="SFC" value={output.sfc.toFixed(2)} unit="kg/kN·h" max={20} current={output.sfc} color="#06b6d4" isDarkMode={isDarkMode} />
+        <GaugeCard label="SFC" value={output.sfc.toFixed(1)} unit="kg/kN·h" max={80} current={output.sfc} color="#06b6d4" isDarkMode={isDarkMode} />
       </div>
 
       {/* Additional Info */}
