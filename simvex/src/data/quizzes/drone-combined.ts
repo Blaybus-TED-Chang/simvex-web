@@ -114,11 +114,11 @@ export const droneCombinedQuiz: ModelQuiz = {
     {
       id: 'q11',
       type: 'identify-part',
-      question: '프로펠러를 회전시키는 모터를 클릭하세요.',
-      partId: 'motor-1',
-      correctAnswer: 'motor-1',
+      question: '동력 전달을 위한 기어링 장치를 클릭하세요.',
+      partId: 'gearing-1',
+      correctAnswer: 'gearing-1',
       explanation:
-        'BLDC(브러시리스 DC) 모터는 전기 에너지를 회전 에너지로 변환하여 프로펠러를 돌립니다.',
+        '기어링은 모터에서 발생한 동력을 프로펠러에 효율적으로 전달하는 감속 기어 장치입니다.',
       difficulty: 'easy',
     },
     {
@@ -139,21 +139,21 @@ export const droneCombinedQuiz: ModelQuiz = {
     {
       id: 'q13',
       type: 'true-false',
-      question: '드론의 랜딩 기어는 착륙 시 충격을 흡수한다.',
+      question: '드론의 비터 디스크는 모터 진동을 감쇠시키는 역할을 한다.',
       options: ['O', 'X'],
       correctAnswer: 0, // O (True)
       explanation:
-        '랜딩 기어(랜딩 레그)는 착륙 시 충격을 흡수하고 기체를 지면에서 띄워 프로펠러와 카메라를 보호합니다.',
+        '비터 디스크는 고무 재질로 모터에서 발생하는 진동이 프레임으로 전달되는 것을 줄여 비행 안정성을 높입니다.',
       difficulty: 'easy',
     },
     {
       id: 'q14',
       type: 'identify-part',
-      question: '드론의 착륙 다리(랜딩 레그)를 클릭하세요.',
-      partId: 'landing-leg-1',
-      correctAnswer: 'landing-leg-1',
+      question: '드론의 유리 커버를 클릭하세요.',
+      partId: 'glass-1',
+      correctAnswer: 'glass-1',
       explanation:
-        '랜딩 레그는 착륙 시 기체를 지지하고 충격을 흡수하는 역할을 합니다.',
+        '유리 커버는 모터 상부를 보호하는 투명 커버로, 강화 유리로 제작됩니다.',
       difficulty: 'easy',
     },
     {
@@ -179,11 +179,11 @@ export const droneCombinedQuiz: ModelQuiz = {
     {
       id: 'q17',
       type: 'identify-part',
-      question: '모터를 고정하는 모터 마운트를 클릭하세요.',
-      partId: 'motor-mount-1',
-      correctAnswer: 'motor-mount-1',
+      question: '메인 프레임을 지지하는 프레임 미러 구조를 클릭하세요.',
+      partId: 'main-frame-mir-1',
+      correctAnswer: 'main-frame-mir-1',
       explanation:
-        '모터 마운트는 모터를 프레임에 단단히 고정하여 진동을 최소화합니다.',
+        '프레임 미러는 메인 프레임의 대칭 지지 구조물로, 카본 파이버로 제작되어 구조적 강성을 제공합니다.',
       difficulty: 'medium',
     },
     {
@@ -214,11 +214,11 @@ export const droneCombinedQuiz: ModelQuiz = {
     {
       id: 'q20',
       type: 'identify-part',
-      question: '드론 상단의 덮개 플레이트를 클릭하세요.',
-      partId: 'top-plate',
-      correctAnswer: 'top-plate',
+      question: '진동 감쇠를 위한 비터 디스크를 클릭하세요.',
+      partId: 'beater-disc',
+      correctAnswer: 'beater-disc',
       explanation:
-        '상단 플레이트는 내부 전자 부품을 보호하고 구조적 강성을 제공합니다.',
+        '비터 디스크는 고무 재질로, 모터 진동이 프레임에 전달되는 것을 감쇠시키는 역할을 합니다.',
       difficulty: 'easy',
     },
     {
@@ -249,11 +249,11 @@ export const droneCombinedQuiz: ModelQuiz = {
     {
       id: 'q23',
       type: 'identify-part',
-      question: '드론 하단의 베이스 플레이트를 클릭하세요.',
-      partId: 'bottom-plate',
-      correctAnswer: 'bottom-plate',
+      question: '프레임 미러의 중앙 지지 구조를 클릭하세요.',
+      partId: 'main-frame-mir4',
+      correctAnswer: 'main-frame-mir4',
       explanation:
-        '하단 플레이트는 배터리와 전자부품을 장착하는 베이스 역할을 합니다.',
+        '프레임 미러 중앙부는 4개의 프레임 암이 교차하는 지점을 보강하는 카본 파이버 구조물입니다.',
       difficulty: 'easy',
     },
     {

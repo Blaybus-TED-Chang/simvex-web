@@ -175,7 +175,7 @@ function PhysicsContent({ isDarkMode }: { isDarkMode: boolean }) {
           SFC = Fuel Flow / Thrust
         </div>
         <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
-          Lower SFC means better fuel efficiency. Typical values: 0.3-0.6 kg/(kN·h)
+          Lower SFC means better fuel efficiency. Typical values: 30-60 kg/(kN·h) for turbofan engines
         </p>
       </div>
 

@@ -12,7 +12,7 @@ export const robotGripperCombinedModel: CombinedModelConfig = {
    - 기어비에 따라 파지력과 속도가 결정됨
 
 2. 파지력 계산:
-   - F_grip = τ × (r_gear / r_finger)
+   - F_grip = (τ × G) / r_finger (τ: 모터 토크, G: 기어비, r_finger: 핑거 반경)
    - 마찰력: F_friction = μ × F_normal
 
 3. 그리퍼 종류:
