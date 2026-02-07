@@ -1,28 +1,35 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { useJetEngineStore } from '@/lib/store/jetEngineStore';
 import JetEngineModel from './JetEngineModel';
 import AirflowParticles from './AirflowParticles';
 
-export default function JetEngineScene() {
+interface JetEngineSceneProps {
+  isDarkMode?: boolean;
+}
+
+export default function JetEngineScene({ isDarkMode = true }: JetEngineSceneProps) {
   const { showParticles, showCutaway } = useJetEngineStore();
+
+  const groundColor = isDarkMode ? '#1a1a2e' : '#e2e8f0';
+  const fogColor = isDarkMode ? '#0f172a' : '#f1f5f9';
 
   return (
     <Canvas shadows>
       <PerspectiveCamera makeDefault position={[4, 2, 4]} fov={50} />
 
-      {/* Lighting - Bright setup */}
-      <ambientLight intensity={1.2} />
+      {/* Lighting */}
+      <ambientLight intensity={isDarkMode ? 1.2 : 1.5} />
       <directionalLight
         position={[10, 10, 5]}
-        intensity={2}
+        intensity={isDarkMode ? 2 : 2.5}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
       />
-      <directionalLight position={[-5, 5, -5]} intensity={1.5} />
+      <directionalLight position={[-5, 5, -5]} intensity={isDarkMode ? 1.5 : 1.8} />
       <directionalLight position={[0, -5, 5]} intensity={0.8} />
       <pointLight position={[0, 0, 3]} intensity={1} color="#ffffff" />
       <pointLight position={[2, 2, 0]} intensity={0.8} color="#ffffff" />
@@ -38,7 +45,7 @@ export default function JetEngineScene() {
       {/* Ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.5, 0]} receiveShadow>
         <planeGeometry args={[20, 20]} />
-        <meshStandardMaterial color="#1a1a2e" />
+        <meshStandardMaterial color={groundColor} />
       </mesh>
 
       {/* Controls */}
@@ -52,8 +59,7 @@ export default function JetEngineScene() {
         dampingFactor={0.05}
       />
 
-      {/* Environment */}
-      <fog attach="fog" args={['#0f172a', 10, 30]} />
+      <fog attach="fog" args={[fogColor, 10, 30]} />
     </Canvas>
   );
 }

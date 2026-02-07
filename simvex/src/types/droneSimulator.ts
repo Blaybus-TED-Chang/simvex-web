@@ -44,7 +44,7 @@ export const MOTOR_CONFIGS: MotorConfig[] = [
 ];
 
 export const DEFAULT_DRONE_PARAMS: DroneParams = {
-  throttle: 0,
+  throttle: 50,
   yaw: 0,
   pitch: 0,
   roll: 0,
