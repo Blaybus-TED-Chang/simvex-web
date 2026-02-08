@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import DroneSimModel from './DroneSimModel';
 
 function LoadingFallback() {
@@ -69,6 +69,11 @@ export default function DroneSimScene({ isDarkMode = true }: DroneSimSceneProps)
         minDistance={0.1}
         maxDistance={30}
       />
+
+      {/* 축 인디케이터 (Gizmo) */}
+      <GizmoHelper alignment="top-right" margin={[72, 72]}>
+        <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
+      </GizmoHelper>
 
       <fog attach="fog" args={[fogColor, 15, 40]} />
     </Canvas>

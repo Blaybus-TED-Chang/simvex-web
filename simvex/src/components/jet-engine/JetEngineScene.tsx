@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import { useJetEngineStore } from '@/lib/store/jetEngineStore';
 import JetEngineModel from './JetEngineModel';
 import AirflowParticles from './AirflowParticles';
@@ -58,6 +58,11 @@ export default function JetEngineScene({ isDarkMode = true }: JetEngineSceneProp
         enableDamping
         dampingFactor={0.05}
       />
+
+      {/* 축 인디케이터 (Gizmo) */}
+      <GizmoHelper alignment="top-right" margin={[72, 72]}>
+        <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
+      </GizmoHelper>
 
       <fog attach="fog" args={[fogColor, 10, 30]} />
     </Canvas>
