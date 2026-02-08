@@ -110,7 +110,7 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
   ];
 
   return (
-    <div className={`backdrop-blur rounded-lg p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
+    <div className={`relative z-10 backdrop-blur rounded-lg p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
@@ -218,7 +218,7 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
           {showColorPicker && (
             <div
               ref={colorPickerRef}
-              className={`absolute left-0 mt-2 p-3 rounded-lg shadow-lg border z-10 ${
+              className={`absolute left-0 mt-2 p-3 rounded-lg shadow-lg border z-50 ${
                 isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}
             >
