@@ -42,7 +42,7 @@ export function ScoreDisplay({
 
   function getAnswerLabel(q: QuizQuestion, answer: string | number): string {
     if (q.type === 'true-false') {
-      return answer === 'true' ? 'O (참)' : 'X (거짓)';
+      return answer === 0 ? 'O (참)' : 'X (거짓)';
     }
     if (q.type === 'multiple-choice' && q.options && typeof answer === 'number') {
       return q.options[answer] || String(answer);
@@ -55,7 +55,7 @@ export function ScoreDisplay({
 
   function getCorrectLabel(q: QuizQuestion): string {
     if (q.type === 'true-false') {
-      return q.correctAnswer === 'true' ? 'O (참)' : 'X (거짓)';
+      return q.correctAnswer === 0 ? 'O (참)' : 'X (거짓)';
     }
     if (q.type === 'multiple-choice' && q.options && typeof q.correctAnswer === 'number') {
       return q.options[q.correctAnswer] || String(q.correctAnswer);
