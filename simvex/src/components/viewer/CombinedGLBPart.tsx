@@ -339,9 +339,11 @@ interface CombinedModelViewerProps {
   // 주석 관련 props
   annotations?: import('@/types/annotation').AnnotationRow[];
   activeAnnotationId?: string | null;
+  showAllAnnotations?: boolean;
   isPlacingPin?: boolean;
   onPlacePin?: (point: [number, number, number], partId?: string) => void;
   onAnnotationPinClick?: (id: string) => void;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 // 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
@@ -433,9 +435,11 @@ export function CombinedModelViewer({
   onCameraChange,
   annotations,
   activeAnnotationId,
+  showAllAnnotations,
   isPlacingPin = false,
   onPlacePin,
   onAnnotationPinClick,
+  containerRef,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -462,7 +466,7 @@ export function CombinedModelViewer({
   }
 
   return (
-    <div className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isPlacingPin ? { cursor: 'crosshair' } : undefined}>
+    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isPlacingPin ? { cursor: 'crosshair' } : undefined}>
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -514,6 +518,7 @@ export function CombinedModelViewer({
           <AnnotationPins
             annotations={annotations}
             activeAnnotationId={activeAnnotationId ?? null}
+            showAllAnnotations={showAllAnnotations}
             explodeValue={explodeValue}
             parts={model.parts}
             modelScale={model.scale || 1}

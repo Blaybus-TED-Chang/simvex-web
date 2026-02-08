@@ -8,6 +8,7 @@ import type { CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
 interface AnnotationPinsProps {
   annotations: AnnotationRow[];
   activeAnnotationId: string | null;
+  showAllAnnotations?: boolean;
   explodeValue: number;
   parts: CombinedPartConfig[];
   modelScale: number;
@@ -17,6 +18,7 @@ interface AnnotationPinsProps {
 function PinMarker({
   annotation,
   isActive,
+  forceShowTooltip,
   explodeValue,
   parts,
   modelScale,
@@ -24,6 +26,7 @@ function PinMarker({
 }: {
   annotation: AnnotationRow;
   isActive: boolean;
+  forceShowTooltip?: boolean;
   explodeValue: number;
   parts: CombinedPartConfig[];
   modelScale: number;
@@ -59,6 +62,7 @@ function PinMarker({
       >
         <div
           className="relative select-none"
+          data-annotation-pin={annotation.id}
           onPointerEnter={() => setHovered(true)}
           onPointerLeave={() => setHovered(false)}
           onClick={(e) => {
@@ -68,6 +72,7 @@ function PinMarker({
         >
           {/* 핀 아이콘 */}
           <div
+            data-pin-icon
             className="flex items-center justify-center rounded-full shadow-lg cursor-pointer transition-transform"
             style={{
               width: isActive ? 28 : 22,
@@ -87,12 +92,15 @@ function PinMarker({
             </svg>
           </div>
 
-          {/* 말풍선 (호버 또는 활성) */}
-          {(hovered || isActive) && (
+          {/* 말풍선 (호버 또는 활성 또는 전체 표시) */}
+          {(hovered || isActive || forceShowTooltip) && (
             <div
               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2"
               style={{ zIndex: 200 }}
               onWheel={(e) => e.stopPropagation()}
+              data-tooltip-box
+              data-title={annotation.title || ''}
+              data-content={annotation.content || ''}
             >
               <div
                 className="rounded-lg px-4 py-3 shadow-xl text-white text-sm"
@@ -145,6 +153,7 @@ function PinMarker({
 export function AnnotationPins({
   annotations,
   activeAnnotationId,
+  showAllAnnotations,
   explodeValue,
   parts,
   modelScale,
@@ -159,6 +168,7 @@ export function AnnotationPins({
           key={ann.id}
           annotation={ann}
           isActive={activeAnnotationId === ann.id}
+          forceShowTooltip={showAllAnnotations}
           explodeValue={explodeValue}
           parts={parts}
           modelScale={modelScale}
