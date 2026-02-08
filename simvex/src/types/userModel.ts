@@ -21,6 +21,7 @@ export interface UserModelRow {
   category: string;
   is_public: boolean;
   glb_storage_path: string;
+  original_fbx_storage_path: string | null;
   thumbnail_storage_path: string | null;
   file_size_bytes: number;
   parts_config: UserModelPartConfig[];

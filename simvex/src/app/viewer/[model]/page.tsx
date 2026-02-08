@@ -14,6 +14,7 @@ import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
+import { DownloadButton } from '@/components/download/DownloadButton';
 import { QuizPanel } from '@/components/quiz/QuizPanel';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import { useUser } from '@/hooks/useUser';
@@ -105,6 +106,7 @@ export default function ViewerPage() {
   const isUserModel = modelId.startsWith('u-');
   const [userModel, setUserModel] = useState<CombinedModelConfig | null>(null);
   const [userModelLoading, setUserModelLoading] = useState(isUserModel);
+  const [userModelFbxUrl, setUserModelFbxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserModel) return;
@@ -122,6 +124,14 @@ export default function ViewerPage() {
             .getPublicUrl(data.glb_storage_path);
           const config = userModelToConfig(data, urlData.publicUrl);
           setUserModel(config);
+
+          // FBX 원본 URL
+          if (data.original_fbx_storage_path) {
+            const { data: fbxUrlData } = supabase.storage
+              .from('user-models')
+              .getPublicUrl(data.original_fbx_storage_path);
+            setUserModelFbxUrl(fbxUrlData.publicUrl);
+          }
         }
         setUserModelLoading(false);
       });
@@ -829,6 +839,20 @@ export default function ViewerPage() {
               size="md"
             />
           </Tooltip>
+
+          {/* 다운로드 버튼 (단일 GLB 모델만) */}
+          {isCombinedModel && combinedModel && (
+            <Tooltip label="3D 모델 다운로드">
+              <DownloadButton
+                modelType={isUserModel ? 'user' : 'builtin'}
+                glbUrl={combinedModel.glbPath}
+                fbxUrl={isUserModel ? (userModelFbxUrl ?? undefined) : undefined}
+                modelName={combinedModel.nameKo || combinedModel.name}
+                isDarkMode={isDarkMode}
+                size="md"
+              />
+            </Tooltip>
+          )}
 
           {/* 조작 가이드 버튼 */}
           <Tooltip label="3D 뷰어 조작 방법 안내">
