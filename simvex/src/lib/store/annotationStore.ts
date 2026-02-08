@@ -11,6 +11,7 @@ interface AnnotationStoreState {
   isAnnotationPanelOpen: boolean;
   activeAnnotationId: string | null;
   pendingAnnotation: PendingAnnotation | null;
+  showAllAnnotations: boolean;
 }
 
 interface AnnotationStoreActions {
@@ -18,6 +19,7 @@ interface AnnotationStoreActions {
   setAnnotationPanelOpen: (open: boolean) => void;
   setActiveAnnotationId: (id: string | null) => void;
   setPendingAnnotation: (pending: PendingAnnotation | null) => void;
+  setShowAllAnnotations: (show: boolean) => void;
   reset: () => void;
 }
 
@@ -26,6 +28,7 @@ const initialState: AnnotationStoreState = {
   isAnnotationPanelOpen: false,
   activeAnnotationId: null,
   pendingAnnotation: null,
+  showAllAnnotations: false,
 };
 
 export const useAnnotationStore = create<AnnotationStoreState & AnnotationStoreActions>()(
@@ -35,6 +38,7 @@ export const useAnnotationStore = create<AnnotationStoreState & AnnotationStoreA
     setAnnotationPanelOpen: (open) => set({ isAnnotationPanelOpen: open }),
     setActiveAnnotationId: (id) => set({ activeAnnotationId: id }),
     setPendingAnnotation: (pending) => set({ pendingAnnotation: pending }),
+    setShowAllAnnotations: (show) => set({ showAllAnnotations: show }),
     reset: () => set(initialState),
   })
 );

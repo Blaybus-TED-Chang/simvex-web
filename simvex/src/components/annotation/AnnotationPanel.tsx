@@ -65,6 +65,7 @@ interface AnnotationPanelProps {
   onCreate: (input: AnnotationInput) => Promise<AnnotationRow | null>;
   onUpdate: (id: string, updates: Partial<Pick<AnnotationRow, 'title' | 'content' | 'color'>>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onScreenshot?: () => void;
 }
 
 export function AnnotationPanel({
@@ -76,6 +77,7 @@ export function AnnotationPanel({
   onCreate,
   onUpdate,
   onDelete,
+  onScreenshot,
 }: AnnotationPanelProps) {
   const {
     isPlacingPin,
@@ -84,6 +86,8 @@ export function AnnotationPanel({
     setActiveAnnotationId,
     pendingAnnotation,
     setPendingAnnotation,
+    showAllAnnotations,
+    setShowAllAnnotations,
   } = useAnnotationStore();
 
   const [formTitle, setFormTitle] = useState('');
@@ -197,7 +201,7 @@ export function AnnotationPanel({
       </div>
 
       {/* 액션 버튼 */}
-      <div className={`p-4 border-b ${border}`}>
+      <div className={`p-4 border-b ${border} space-y-2`}>
         {/* 핀 배치 모드 */}
         <button
           onClick={handleTogglePlacingPin}
@@ -214,6 +218,48 @@ export function AnnotationPanel({
           </svg>
           {isPlacingPin ? '배치 중... (3D 표면 클릭)' : '3D 주석 추가'}
         </button>
+
+        {/* 모두 표시 / 스크린샷 */}
+        {annotations.length > 0 && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAllAnnotations(!showAllAnnotations)}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                showAllAnnotations
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                  : isDarkMode
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {showAllAnnotations ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                )}
+              </svg>
+              {showAllAnnotations ? '숨기기' : '모두 표시'}
+            </button>
+            {onScreenshot && (
+              <button
+                onClick={onScreenshot}
+                className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  isDarkMode
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+                title="주석 포함 스크린샷 저장"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                캡처
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 주석 작성 폼 (pending일 때 표시) */}

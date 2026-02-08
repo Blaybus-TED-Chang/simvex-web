@@ -401,7 +401,10 @@ export default function ViewerPage() {
     pendingAnnotation,
     setPendingAnnotation,
     setPlacingPin,
+    showAllAnnotations,
+    setShowAllAnnotations,
   } = useAnnotationStore();
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   // 핀 배치 콜백 (3D 뷰어에서 클릭 시)
   const handlePlacePin = useCallback((point: [number, number, number], partId?: string) => {
@@ -435,6 +438,155 @@ export default function ViewerPage() {
       setActiveAnnotationId(null);
     }
   }, [isAnnotationPanelOpen, setAnnotationPanelOpen, setPlacingPin, setPendingAnnotation, setActiveAnnotationId]);
+
+  // 주석 포함 스크린샷 저장
+  const handleAnnotationScreenshot = useCallback(async () => {
+    const container = viewportRef.current;
+    if (!container) return;
+
+    // 모든 주석 표시 상태로 전환
+    const wasShowingAll = showAllAnnotations;
+    if (!wasShowingAll) {
+      setShowAllAnnotations(true);
+    }
+
+    // 렌더링 대기 후 캡처
+    await new Promise((r) => setTimeout(r, 300));
+
+    try {
+      // 1. WebGL 캔버스 가져오기
+      const glCanvas = container.querySelector('canvas') as HTMLCanvasElement | null;
+      if (!glCanvas) return;
+
+      const w = glCanvas.width;
+      const h = glCanvas.height;
+      const dpr = window.devicePixelRatio || 1;
+
+      // 2. 출력 캔버스 생성 + 3D 렌더 그리기
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = w;
+      outCanvas.height = h;
+      const ctx = outCanvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(glCanvas, 0, 0);
+
+      // 3. HTML 오버레이 (drei Html) 의 주석 말풍선 위치/텍스트 읽어 그리기
+      const containerRect = container.getBoundingClientRect();
+      const tooltips = container.querySelectorAll<HTMLElement>('[data-annotation-pin]');
+
+      tooltips.forEach((pin) => {
+        const rect = pin.getBoundingClientRect();
+        // 컨테이너 기준 상대 좌표 → 캔버스 좌표
+        const cx = (rect.left + rect.width / 2 - containerRect.left) * dpr;
+        const cy = (rect.top + rect.height / 2 - containerRect.top) * dpr;
+
+        // 핀 색상
+        const pinIcon = pin.querySelector<HTMLElement>('[data-pin-icon]');
+        const pinColor = pinIcon?.style.backgroundColor || '#3B82F6';
+
+        // 핀 원 그리기
+        const pinR = 12 * dpr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, pinR, 0, Math.PI * 2);
+        ctx.fillStyle = pinColor;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 2 * dpr;
+        ctx.stroke();
+
+        // 핀 내부 아이콘 (간단 원)
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4 * dpr, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+
+        // 말풍선 텍스트
+        const tooltip = pin.querySelector<HTMLElement>('[data-tooltip-box]');
+        if (!tooltip) return;
+        const title = tooltip.getAttribute('data-title') || '';
+        const content = tooltip.getAttribute('data-content') || '';
+        if (!title && !content) return;
+
+        const fontSize = 13 * dpr;
+        const titleFontSize = 14 * dpr;
+        const padding = 10 * dpr;
+        const lineGap = 4 * dpr;
+        ctx.font = `bold ${titleFontSize}px -apple-system, sans-serif`;
+
+        // 텍스트 줄 계산
+        const lines: { text: string; bold: boolean }[] = [];
+        if (title) lines.push({ text: title, bold: true });
+        if (content) {
+          // content를 40자 단위로 줄바꿈
+          const words = content;
+          for (let i = 0; i < words.length; i += 40) {
+            lines.push({ text: words.slice(i, i + 40), bold: false });
+          }
+        }
+
+        // 박스 크기 계산
+        let maxW = 0;
+        lines.forEach((l) => {
+          ctx.font = l.bold ? `bold ${titleFontSize}px -apple-system, sans-serif` : `${fontSize}px -apple-system, sans-serif`;
+          maxW = Math.max(maxW, ctx.measureText(l.text).width);
+        });
+        const boxW = maxW + padding * 2;
+        const boxH = lines.length * (fontSize + lineGap) + padding * 2;
+
+        // 박스 위치 (핀 위)
+        const boxX = cx - boxW / 2;
+        const boxY = cy - pinR - 8 * dpr - boxH;
+
+        // 박스 배경
+        ctx.fillStyle = 'rgba(0,0,0,0.88)';
+        const r = 6 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(boxX + r, boxY);
+        ctx.lineTo(boxX + boxW - r, boxY);
+        ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+        ctx.lineTo(boxX + boxW, boxY + boxH - r);
+        ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+        ctx.lineTo(boxX + r, boxY + boxH);
+        ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+        ctx.lineTo(boxX, boxY + r);
+        ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 꼬리 삼각형
+        ctx.beginPath();
+        ctx.moveTo(cx - 6 * dpr, boxY + boxH);
+        ctx.lineTo(cx + 6 * dpr, boxY + boxH);
+        ctx.lineTo(cx, boxY + boxH + 6 * dpr);
+        ctx.closePath();
+        ctx.fill();
+
+        // 텍스트 그리기
+        ctx.fillStyle = 'white';
+        let textY = boxY + padding + fontSize;
+        lines.forEach((l) => {
+          ctx.font = l.bold ? `bold ${titleFontSize}px -apple-system, sans-serif` : `${fontSize}px -apple-system, sans-serif`;
+          ctx.globalAlpha = l.bold ? 1 : 0.85;
+          ctx.fillText(l.text, boxX + padding, textY);
+          textY += fontSize + lineGap;
+        });
+        ctx.globalAlpha = 1;
+      });
+
+      // 4. 다운로드
+      const link = document.createElement('a');
+      link.download = `${modelId}-annotations.png`;
+      link.href = outCanvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('스크린샷 캡처 실패:', err);
+    }
+
+    // 원래 상태 복원
+    if (!wasShowingAll) {
+      setShowAllAnnotations(false);
+    }
+  }, [modelId, showAllAnnotations, setShowAllAnnotations]);
 
   // 사용자 모델 로딩 중
   if (userModelLoading) {
@@ -683,9 +835,11 @@ export default function ViewerPage() {
                   onCameraChange={handleUpdateCamera}
                   annotations={annotations}
                   activeAnnotationId={activeAnnotationId}
+                  showAllAnnotations={showAllAnnotations}
                   isPlacingPin={isPlacingPin}
                   onPlacePin={handlePlacePin}
                   onAnnotationPinClick={handleAnnotationPinClick}
+                  containerRef={viewportRef}
                 />
               ) : model ? (
                 <ModelViewer
@@ -813,6 +967,7 @@ export default function ViewerPage() {
           onCreate={createAnnotation}
           onUpdate={updateAnnotation}
           onDelete={deleteAnnotation}
+          onScreenshot={handleAnnotationScreenshot}
         />
       </div>
     </div>
