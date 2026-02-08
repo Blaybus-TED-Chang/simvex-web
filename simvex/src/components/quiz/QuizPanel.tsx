@@ -291,9 +291,13 @@ export function QuizPanel({
                       isCurrent
                         ? 'bg-blue-500'
                         : isAnswered
-                        ? isDarkMode
-                          ? 'bg-green-600'
-                          : 'bg-green-500'
+                        ? progress.correctAnswers[q.id]
+                          ? isDarkMode
+                            ? 'bg-green-600'
+                            : 'bg-green-500'
+                          : isDarkMode
+                            ? 'bg-red-600'
+                            : 'bg-red-500'
                         : isDarkMode
                         ? 'bg-gray-700 hover:bg-gray-600'
                         : 'bg-gray-200 hover:bg-gray-300'
@@ -470,6 +474,9 @@ export function QuizPanel({
           <ScoreDisplay
             score={progress.score}
             total={selectedQuestions.length}
+            questions={selectedQuestions}
+            answers={progress.answers}
+            correctAnswers={progress.correctAnswers}
             onRetry={handleRetry}
             onClose={onClose}
             isDarkMode={isDarkMode}
