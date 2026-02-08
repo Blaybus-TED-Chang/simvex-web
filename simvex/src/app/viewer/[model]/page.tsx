@@ -131,8 +131,8 @@ export default function ViewerPage() {
   const simulationMapping = !isUserModel ? getSimulationMapping(modelId) : undefined;
   const simModelInfo = !isUserModel ? getSimulationModelInfo(modelId) : undefined;
 
-  // 탭 바 표시 여부: 사용자 업로드 모델이면 숨김
-  const showTabs = !isUserModel && modelHasSimulation;
+  // 탭 바 표시 여부: 사용자 업로드 모델이면 숨김, 그 외 항상 표시
+  const showTabs = !isUserModel;
 
   // 탭 상태: URL 쿼리 파라미터에서 파생
   const tabFromUrl = searchParams.get('tab');
