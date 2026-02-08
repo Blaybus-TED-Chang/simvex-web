@@ -56,6 +56,23 @@ export function useUserModels(user: User | null) {
     return data ?? [];
   }, []);
 
+  // 공개 모델 페이지네이션 조회
+  const fetchPublicModelsPaginated = useCallback(
+    async (page: number, pageSize = 12): Promise<{ data: UserModelRow[]; count: number }> => {
+      const supabase = getSupabase();
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, count } = await supabase
+        .from('user_models')
+        .select('*', { count: 'exact' })
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      return { data: data ?? [], count: count ?? 0 };
+    },
+    []
+  );
+
   // ID로 단일 모델 조회
   const fetchModelById = useCallback(async (id: string): Promise<UserModelRow | null> => {
     const supabase = getSupabase();
@@ -243,6 +260,7 @@ export function useUserModels(user: User | null) {
     loading,
     fetchMyModels,
     fetchPublicModels,
+    fetchPublicModelsPaginated,
     fetchModelById,
     uploadModel,
     updateModel,
