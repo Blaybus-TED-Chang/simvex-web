@@ -10,6 +10,8 @@ import { useUser } from '@/hooks/useUser';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { ControlsHelp } from '@/components/ui/ControlsHelp';
 import ControlPanel from '@/components/layout/ControlPanel';
 import BottomBar from '@/components/layout/BottomBar';
 import LearningPanel from '@/components/learning/LearningPanel';
@@ -41,11 +43,19 @@ const ROBOT_ARM_PARTS = JOINT_CONFIGS.map((j) => ({
   description: `${j.axis.toUpperCase()}축 회전, 범위: ${j.min}° ~ ${j.max}°`,
 }));
 
+const ROBOT_ARM_CONTROLS_GUIDE = [
+  { icon: '🖱️ 좌클릭 드래그', desc: '회전' },
+  { icon: '🖱️ 우클릭 드래그', desc: '이동 (팬)' },
+  { icon: '🔄 스크롤', desc: '줌 인/아웃' },
+  { icon: '🎮 우측 패널', desc: '관절 각도 조절 (FK/IK)' },
+];
+
 export default function RobotArmPage() {
   const { showLearning, toggleLearning } = useRobotStore();
   const { isDarkMode, toggleDarkMode, notes } = useViewerStore();
   const { user } = useUser();
 
+  const [showControls, setShowControls] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
   const [notesPanelWidth, setNotesPanelWidth] = useState(384);
@@ -117,14 +127,16 @@ export default function RobotArmPage() {
       {/* Header */}
       <header className={`h-14 border-b ${isDarkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'} flex items-center justify-between px-4`}>
         <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
+          <Tooltip label="홈으로 돌아가기">
+            <Link
+              href="/"
+              className={`p-2 rounded-lg block ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+          </Tooltip>
 
           <div className="flex items-center gap-3">
             <Image
@@ -146,66 +158,92 @@ export default function RobotArmPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <AuthButton />
+          <Tooltip label="로그인 / 계정 관리">
+            <AuthButton />
+          </Tooltip>
 
-          <ExportPdfButton
-            modelNameKo={ROBOT_ARM_MODEL_INFO.nameKo}
-            modelName={ROBOT_ARM_MODEL_INFO.name}
-            description={ROBOT_ARM_MODEL_INFO.description}
-            theory={ROBOT_ARM_MODEL_INFO.theory}
-            parts={ROBOT_ARM_PARTS}
-            notes={notes}
-            isDarkMode={isDarkMode}
-          />
-
-          {/* Learn 토글 */}
-          <button
-            onClick={toggleLearning}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
-              showLearning
-                ? 'bg-blue-600 text-white'
-                : isDarkMode
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            <span className="text-sm">Learn</span>
-          </button>
-
-          {/* 노트 패널 토글 */}
-          <button
-            onClick={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
-            className={`p-2 rounded-lg transition-colors ${
-              isNotesPanelOpen
-                ? 'bg-blue-500 text-white'
-                : isDarkMode
+          {/* 조작 가이드 버튼 */}
+          <Tooltip label="3D 뷰어 조작 방법 안내">
+            <button
+              onClick={() => setShowControls(true)}
+              className={`p-2 rounded-lg transition-colors ${
+                isDarkMode
                   ? 'hover:bg-gray-800 text-gray-400'
                   : 'hover:bg-gray-100 text-gray-600'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </Tooltip>
+
+          <Tooltip label="모델 정보를 PDF로 내보내기">
+            <ExportPdfButton
+              modelNameKo={ROBOT_ARM_MODEL_INFO.nameKo}
+              modelName={ROBOT_ARM_MODEL_INFO.name}
+              description={ROBOT_ARM_MODEL_INFO.description}
+              theory={ROBOT_ARM_MODEL_INFO.theory}
+              parts={ROBOT_ARM_PARTS}
+              notes={notes}
+              isDarkMode={isDarkMode}
+            />
+          </Tooltip>
+
+          {/* Learn 토글 */}
+          <Tooltip label="로봇 팔 기구학 학습">
+            <button
+              onClick={toggleLearning}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+                showLearning
+                  ? 'bg-blue-600 text-white'
+                  : isDarkMode
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span className="text-sm">Learn</span>
+            </button>
+          </Tooltip>
+
+          {/* 노트 패널 토글 */}
+          <Tooltip label="노트 / AI 어시스턴트">
+            <button
+              onClick={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
+              className={`p-2 rounded-lg transition-colors ${
+                isNotesPanelOpen
+                  ? 'bg-blue-500 text-white'
+                  : isDarkMode
+                    ? 'hover:bg-gray-800 text-gray-400'
+                    : 'hover:bg-gray-100 text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          </Tooltip>
 
           {/* 다크모드 토글 */}
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            {isDarkMode ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </button>
+          <Tooltip label={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}>
+            <button
+              onClick={toggleDarkMode}
+              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+            >
+              {isDarkMode ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+          </Tooltip>
         </div>
       </header>
 
@@ -214,6 +252,7 @@ export default function RobotArmPage() {
         {/* 3D Viewport */}
         <div className="flex-1 min-w-0 relative">
           <Scene isDarkMode={isDarkMode} />
+          <ControlsHelp show={showControls} onDismiss={() => setShowControls(false)} isDarkMode={isDarkMode} controls={ROBOT_ARM_CONTROLS_GUIDE} />
         </div>
 
         {/* Resize Handle */}
