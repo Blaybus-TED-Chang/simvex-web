@@ -75,7 +75,7 @@ const simulations = [
     id: 'drone-simulator',
     title: '드론 시뮬레이터',
     description: '쿼드콥터 드론의 스로틀/요/피치/롤을 조절하여 비행 원리와 모터 믹싱을 학습할 수 있습니다',
-    href: '/drone-simulator',
+    href: '/viewer/drone-combined?tab=sim',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3l14 9-14 9V3z" />
@@ -89,7 +89,7 @@ const simulations = [
     id: 'jet-engine',
     title: '터보팬 엔진',
     description: '제트 엔진의 인터랙티브 시각화와 기류 파티클, 실시간 성능 지표를 확인할 수 있습니다',
-    href: '/jet-engine',
+    href: '/viewer/jet-engine?tab=sim',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -102,7 +102,7 @@ const simulations = [
     id: 'robot-arm',
     title: '로봇 암 시뮬레이터',
     description: '6축 로봇 암의 순운동학/역운동학 제어, 경로 프로그래밍, 궤적 시각화를 체험할 수 있습니다',
-    href: '/robot-arm',
+    href: '/viewer/robot-arm-combined?tab=sim',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

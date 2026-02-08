@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -26,6 +26,10 @@ import { ControlsHelp } from '@/components/ui/ControlsHelp';
 import { useAnnotations } from '@/hooks/useAnnotations';
 import { useAnnotationStore } from '@/lib/store/annotationStore';
 import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
+import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
+import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
+import { hasSimulation as checkHasSimulation, hasViewer as checkHasViewer, getSimulationMapping } from '@/data/simulationMapping';
+import { getSimulationModelInfo } from '@/data/simulationModelInfo';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
@@ -85,6 +89,8 @@ function useDebouncedCallback<T extends (...args: Parameters<T>) => void>(
 
 export default function ViewerPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const modelId = params.model as string;
   const { user } = useUser();
 
@@ -118,6 +124,36 @@ export default function ViewerPage() {
   const originalModel = isUserModel ? undefined : getModelById(modelId);
   const combinedModel = isUserModel ? userModel : getCombinedModelById(modelId);
   const isCombinedModel = !originalModel && !!combinedModel;
+
+  // 시뮬레이션/뷰어 매핑
+  const modelHasSimulation = !isUserModel && checkHasSimulation(modelId);
+  const modelHasViewer = checkHasViewer(modelId);
+  const simulationMapping = !isUserModel ? getSimulationMapping(modelId) : undefined;
+  const simModelInfo = !isUserModel ? getSimulationModelInfo(modelId) : undefined;
+
+  // 탭 바 표시 여부: 사용자 업로드 모델이면 숨김
+  const showTabs = !isUserModel && modelHasSimulation;
+
+  // 탭 상태: URL 쿼리 파라미터에서 파생
+  const tabFromUrl = searchParams.get('tab');
+  const activeTab: ViewerTabType = useMemo(() => {
+    if (tabFromUrl === 'sim' && modelHasSimulation) return 'simulation';
+    if (!modelHasViewer && modelHasSimulation) return 'simulation';
+    return 'viewer';
+  }, [tabFromUrl, modelHasViewer, modelHasSimulation]);
+
+  const handleTabChange = useCallback((tab: ViewerTabType) => {
+    const url = new URL(window.location.href);
+    if (tab === 'simulation') {
+      url.searchParams.set('tab', 'sim');
+    } else {
+      url.searchParams.delete('tab');
+    }
+    router.replace(url.pathname + url.search, { scroll: false });
+  }, [router]);
+
+  // 시뮬레이션 Learn 패널 상태
+  const [showLearning, setShowLearning] = useState(false);
 
   const {
     selectedPartId,
@@ -245,6 +281,21 @@ export default function ViewerPage() {
     }
     return null;
   }, [isCombinedModel, combinedModel, model]);
+
+  // 헤더에 표시할 모델 정보 (시뮬레이션 전용 모델일 때 simModelInfo 사용)
+  const headerModelInfo = useMemo(() => {
+    if (currentModelInfo) return currentModelInfo;
+    if (simModelInfo) return simModelInfo;
+    return null;
+  }, [currentModelInfo, simModelInfo]);
+
+  // PDF 내보내기용 정보 (현재 활성 탭에 따라)
+  const pdfModelInfo = useMemo(() => {
+    if (activeTab === 'simulation' && simModelInfo) return simModelInfo;
+    if (currentModelInfo) return currentModelInfo;
+    if (simModelInfo) return simModelInfo;
+    return null;
+  }, [activeTab, currentModelInfo, simModelInfo]);
 
   // 퀴즈 데이터
   const quiz = useMemo(() => {
@@ -397,8 +448,8 @@ export default function ViewerPage() {
     );
   }
 
-  // 모델이 없으면 에러 페이지
-  if (!currentModelInfo) {
+  // 모델이 없고 시뮬레이션도 없으면 에러 페이지
+  if (!headerModelInfo) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -415,12 +466,15 @@ export default function ViewerPage() {
   }
 
   // 선택된 부품 찾기
-  const selectedPart = currentModelInfo.parts.find((p) => p.id === selectedPartId) || null;
+  const selectedPart = currentModelInfo?.parts.find((p) => p.id === selectedPartId) || null;
+
+  // 노트에 전달할 모델 정보 (활성 탭에 따라)
+  const notesModelInfo = activeTab === 'simulation' && simModelInfo ? simModelInfo : (currentModelInfo || simModelInfo);
 
   return (
-    <div className={`viewer-page min-h-screen ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
+    <div className={`viewer-page h-screen flex flex-col ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
       {/* 헤더 */}
-      <header className={`h-14 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 flex items-center justify-between`}>
+      <header className={`h-14 flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 flex items-center justify-between`}>
         <div className="flex items-center gap-4">
           <Tooltip label="홈으로 돌아가기">
             <Link
@@ -443,13 +497,27 @@ export default function ViewerPage() {
             />
             <div>
               <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {currentModelInfo.nameKo}
+                {headerModelInfo.nameKo}
               </h1>
               <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {currentModelInfo.name}
+                {headerModelInfo.name}
               </p>
             </div>
           </div>
+
+          {/* 탭 바 (헤더 내, 모델 이름 옆) */}
+          {showTabs && (
+            <div className="ml-4">
+              <ViewerTabs
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                isDarkMode={isDarkMode}
+                hasViewer={modelHasViewer}
+                hasSimulation={modelHasSimulation}
+                simulationName={simulationMapping?.nameKo}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -474,24 +542,26 @@ export default function ViewerPage() {
           </Tooltip>
 
           {/* PDF 내보내기 버튼 */}
-          <Tooltip label="모델 정보를 PDF로 내보내기">
-            <ExportPdfButton
-              modelNameKo={currentModelInfo.nameKo}
-              modelName={currentModelInfo.name}
-              description={currentModelInfo.description}
-              theory={currentModelInfo.theory}
-              parts={currentModelInfo.parts.map((p) => ({
-                nameKo: p.nameKo,
-                name: p.name,
-                description: p.description,
-              }))}
-              notes={notes}
-              isDarkMode={isDarkMode}
-            />
-          </Tooltip>
+          {pdfModelInfo && (
+            <Tooltip label="모델 정보를 PDF로 내보내기">
+              <ExportPdfButton
+                modelNameKo={pdfModelInfo.nameKo}
+                modelName={pdfModelInfo.name}
+                description={pdfModelInfo.description}
+                theory={pdfModelInfo.theory}
+                parts={pdfModelInfo.parts.map((p) => ({
+                  nameKo: p.nameKo,
+                  name: p.name,
+                  description: p.description,
+                }))}
+                notes={notes}
+                isDarkMode={isDarkMode}
+              />
+            </Tooltip>
+          )}
 
-          {/* 주석 버튼 */}
-          {isCombinedModel && (
+          {/* 주석 버튼 — 뷰어 탭에서만 표시 */}
+          {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="3D 주석 (핀 메모)">
               <button
                 onClick={handleToggleAnnotationPanel}
@@ -510,8 +580,8 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
-          {/* 퀴즈 버튼 */}
-          {modelHasQuiz && (
+          {/* 퀴즈 버튼 — 뷰어 탭에서만 표시 */}
+          {activeTab === 'viewer' && modelHasQuiz && (
             <Tooltip label="학습 퀴즈 풀기">
               <button
                 onClick={() => setIsQuizPanelOpen(!isQuizPanelOpen)}
@@ -526,6 +596,27 @@ export default function ViewerPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
+              </button>
+            </Tooltip>
+          )}
+
+          {/* Learn 토글 — 시뮬레이션 탭에서만 표시 */}
+          {activeTab === 'simulation' && modelHasSimulation && (
+            <Tooltip label="학습 패널">
+              <button
+                onClick={() => setShowLearning(!showLearning)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+                  showLearning
+                    ? 'bg-blue-600 text-white'
+                    : isDarkMode
+                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span className="text-sm">Learn</span>
               </button>
             </Tooltip>
           )}
@@ -568,139 +659,162 @@ export default function ViewerPage() {
         </div>
       </header>
 
-      {/* 메인 컨텐츠 */}
-      <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden">
-        {/* 3D 뷰포트 */}
-        <div className="flex-1 min-w-0 p-4 relative">
-          {isCombinedModel && combinedModel ? (
-            <CombinedModelViewer
-              model={combinedModel}
-              explodeValue={explodeValue}
-              selectedPartId={selectedPartId}
-              hoveredPartId={hoveredPartId}
-              visibleParts={visibleParts}
-              onSelectPart={handleSelectPart}
-              onHoverPart={setHoveredPartId}
-              cameraPosition={cameraPosition}
-              cameraTarget={cameraTarget}
-              isDarkMode={isDarkMode}
-              onCameraChange={handleUpdateCamera}
-              annotations={annotations}
-              activeAnnotationId={activeAnnotationId}
-              isPlacingPin={isPlacingPin}
-              onPlacePin={handlePlacePin}
-              onAnnotationPinClick={handleAnnotationPinClick}
-            />
-          ) : model ? (
-            <ModelViewer
-              model={model}
-              cameraPosition={cameraPosition}
-              cameraTarget={cameraTarget}
-            />
-          ) : null}
-          <ControlsHelp show={showControls} onDismiss={() => setShowControls(false)} isDarkMode={isDarkMode} controls={VIEWER_CONTROLS_GUIDE} />
-        </div>
+      {/* 메인 컨텐츠 — 뷰어 탭 */}
+      <div
+        className="flex-1 flex overflow-hidden"
+        style={{ display: activeTab === 'viewer' ? 'flex' : 'none' }}
+      >
+        {modelHasViewer && (
+          <>
+            {/* 3D 뷰포트 */}
+            <div className="flex-1 min-w-0 p-4 relative">
+              {isCombinedModel && combinedModel ? (
+                <CombinedModelViewer
+                  model={combinedModel}
+                  explodeValue={explodeValue}
+                  selectedPartId={selectedPartId}
+                  hoveredPartId={hoveredPartId}
+                  visibleParts={visibleParts}
+                  onSelectPart={handleSelectPart}
+                  onHoverPart={setHoveredPartId}
+                  cameraPosition={cameraPosition}
+                  cameraTarget={cameraTarget}
+                  isDarkMode={isDarkMode}
+                  onCameraChange={handleUpdateCamera}
+                  annotations={annotations}
+                  activeAnnotationId={activeAnnotationId}
+                  isPlacingPin={isPlacingPin}
+                  onPlacePin={handlePlacePin}
+                  onAnnotationPinClick={handleAnnotationPinClick}
+                />
+              ) : model ? (
+                <ModelViewer
+                  model={model}
+                  cameraPosition={cameraPosition}
+                  cameraTarget={cameraTarget}
+                />
+              ) : null}
+              <ControlsHelp show={showControls} onDismiss={() => setShowControls(false)} isDarkMode={isDarkMode} controls={VIEWER_CONTROLS_GUIDE} />
+            </div>
 
-        {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}
+            {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}
+            <div
+              className={`w-1.5 flex-shrink-0 cursor-ew-resize group relative z-20 ${
+                isDarkMode ? 'bg-gray-900' : 'bg-white'
+              }`}
+              onMouseDown={handleSidebarResizeStart}
+            >
+              <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-all group-hover:w-1 ${
+                isDarkMode ? 'group-hover:bg-blue-400' : 'group-hover:bg-blue-500'
+              }`} />
+            </div>
+
+            {/* 우측 패널 */}
+            <div
+              className={`flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} overflow-y-auto p-4 space-y-4`}
+              style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
+            >
+              {/* 분해/조립 슬라이더 */}
+              <ExplodeSlider />
+
+              {/* 제품 정보 */}
+              {currentModelInfo && <ProductInfo model={currentModelInfo} />}
+
+              {/* 부품 정보 */}
+              <PartInfo part={selectedPart} />
+
+              {/* 부품 목록 */}
+              {currentModelInfo && <PartsList parts={currentModelInfo.parts} />}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* 메인 컨텐츠 — 시뮬레이션 탭 */}
+      {modelHasSimulation && (
         <div
-          className={`w-1.5 flex-shrink-0 cursor-ew-resize group relative z-20 ${
-            isDarkMode ? 'bg-gray-900' : 'bg-white'
-          }`}
-          onMouseDown={handleSidebarResizeStart}
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ display: activeTab === 'simulation' ? 'flex' : 'none' }}
         >
-          <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-all group-hover:w-1 ${
-            isDarkMode ? 'group-hover:bg-blue-400' : 'group-hover:bg-blue-500'
-          }`} />
-        </div>
-
-        {/* 우측 패널 */}
-        <div
-          className={`flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} overflow-y-auto p-4 space-y-4`}
-          style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
-        >
-          {/* 분해/조립 슬라이더 */}
-          <ExplodeSlider />
-
-          {/* 제품 정보 */}
-          <ProductInfo model={currentModelInfo} />
-
-          {/* 부품 정보 */}
-          <PartInfo part={selectedPart} />
-
-          {/* 부품 목록 */}
-          <PartsList parts={currentModelInfo.parts} />
-        </div>
-
-        {/* 노트 패널 (슬라이드) */}
-        <div
-          className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
-            isDarkMode ? 'bg-gray-900' : 'bg-white'
-          } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
-          transform transition-transform duration-300 ease-in-out z-50
-          ${isNotesPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-          style={{ width: notesPanelWidth }}
-        >
-          {/* 리사이즈 핸들 */}
-          <div
-            className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 transition-colors ${
-              isDarkMode ? 'hover:bg-blue-400' : 'hover:bg-blue-500'
-            }`}
-            onMouseDown={handleResizeStart}
+          <SimulationTabContent
+            modelId={modelId}
+            isDarkMode={isDarkMode}
+            showLearning={showLearning}
+            onCloseLearning={() => setShowLearning(false)}
           />
-          <div className="h-full p-4">
+        </div>
+      )}
+
+      {/* 노트 패널 (슬라이드) */}
+      <div
+        className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
+          isDarkMode ? 'bg-gray-900' : 'bg-white'
+        } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
+        transform transition-transform duration-300 ease-in-out z-50
+        ${isNotesPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: notesPanelWidth }}
+      >
+        {/* 리사이즈 핸들 */}
+        <div
+          className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 transition-colors ${
+            isDarkMode ? 'hover:bg-blue-400' : 'hover:bg-blue-500'
+          }`}
+          onMouseDown={handleResizeStart}
+        />
+        <div className="h-full p-4">
+          {notesModelInfo && (
             <NotesPanel
-              modelInfo={currentModelInfo}
+              modelInfo={notesModelInfo}
               selectedPart={selectedPart}
               user={user}
               modelId={modelId}
             />
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* 퀴즈 패널 (슬라이드) */}
-        {quiz && (
-          <div
-            className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
-              isDarkMode ? 'bg-gray-900' : 'bg-white'
-            } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
-            transform transition-transform duration-300 ease-in-out z-50
-            ${isQuizPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-            style={{ width: 420 }}
-          >
-            <QuizPanel
-              quiz={quiz}
-              modelId={currentModelInfo.id}
-              isDarkMode={isDarkMode}
-              onClose={() => setIsQuizPanelOpen(false)}
-              selectedPartId={selectedPartId}
-              onRequestPartSelect={handleQuizRequestPartSelect}
-              onClearPartSelect={handleQuizClearPartSelect}
-            />
-          </div>
-        )}
-
-        {/* 주석 패널 (슬라이드) */}
+      {/* 퀴즈 패널 (슬라이드) */}
+      {quiz && currentModelInfo && (
         <div
           className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
             isDarkMode ? 'bg-gray-900' : 'bg-white'
           } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
           transform transition-transform duration-300 ease-in-out z-50
-          ${isAnnotationPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-          style={{ width: 380 }}
+          ${isQuizPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          style={{ width: 420 }}
         >
-          <AnnotationPanel
-            modelId={modelId}
-            annotations={annotations}
+          <QuizPanel
+            quiz={quiz}
+            modelId={currentModelInfo.id}
             isDarkMode={isDarkMode}
-            isLoggedIn={!!user}
-            onClose={handleToggleAnnotationPanel}
-            onCreate={createAnnotation}
-            onUpdate={updateAnnotation}
-            onDelete={deleteAnnotation}
+            onClose={() => setIsQuizPanelOpen(false)}
+            selectedPartId={selectedPartId}
+            onRequestPartSelect={handleQuizRequestPartSelect}
+            onClearPartSelect={handleQuizClearPartSelect}
           />
         </div>
-      </div>
+      )}
 
+      {/* 주석 패널 (슬라이드) */}
+      <div
+        className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
+          isDarkMode ? 'bg-gray-900' : 'bg-white'
+        } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
+        transform transition-transform duration-300 ease-in-out z-50
+        ${isAnnotationPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: 380 }}
+      >
+        <AnnotationPanel
+          modelId={modelId}
+          annotations={annotations}
+          isDarkMode={isDarkMode}
+          isLoggedIn={!!user}
+          onClose={handleToggleAnnotationPanel}
+          onCreate={createAnnotation}
+          onUpdate={updateAnnotation}
+          onDelete={deleteAnnotation}
+        />
+      </div>
     </div>
   );
 }
