@@ -6,6 +6,7 @@ import JointSlider from '../controls/JointSlider';
 import PositionDisplay from '../controls/PositionDisplay';
 import TargetInput from '../controls/TargetInput';
 import WaypointList from '../controls/WaypointList';
+import { InlineTooltip } from '@/components/ui/Tooltip';
 
 interface ControlPanelProps {
   isDarkMode: boolean;
@@ -18,30 +19,34 @@ export default function ControlPanel({ isDarkMode }: ControlPanelProps) {
     <div className={`w-full h-full border-l ${isDarkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'} flex flex-col overflow-hidden`}>
       {/* Mode Tabs */}
       <div className={`flex border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-        <button
-          onClick={() => setMode('fk')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
-            mode === 'fk'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : isDarkMode
-                ? 'text-gray-500 hover:text-gray-300'
-                : 'text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          FK Mode
-        </button>
-        <button
-          onClick={() => setMode('ik')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
-            mode === 'ik'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : isDarkMode
-                ? 'text-gray-500 hover:text-gray-300'
-                : 'text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          IK Mode
-        </button>
+        <InlineTooltip label="정기구학: 각 관절 각도를 직접 조절">
+          <button
+            onClick={() => setMode('fk')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              mode === 'fk'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : isDarkMode
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            FK Mode
+          </button>
+        </InlineTooltip>
+        <InlineTooltip label="역기구학: 목표 좌표를 지정하면 자동 계산">
+          <button
+            onClick={() => setMode('ik')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              mode === 'ik'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : isDarkMode
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            IK Mode
+          </button>
+        </InlineTooltip>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -87,7 +92,9 @@ export default function ControlPanel({ isDarkMode }: ControlPanelProps) {
                 onChange={toggleWorkspace}
                 className={`w-4 h-4 rounded ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'} text-blue-500 focus:ring-blue-500`}
               />
-              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Show Workspace</span>
+              <InlineTooltip label="로봇 팔이 도달 가능한 작업 영역 표시">
+                <span className={`text-sm cursor-help ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Show Workspace</span>
+              </InlineTooltip>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -96,7 +103,9 @@ export default function ControlPanel({ isDarkMode }: ControlPanelProps) {
                 onChange={toggleTrajectory}
                 className={`w-4 h-4 rounded ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'} text-blue-500 focus:ring-blue-500`}
               />
-              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Show Trajectory</span>
+              <InlineTooltip label="엔드 이펙터의 이동 경로 궤적 표시">
+                <span className={`text-sm cursor-help ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Show Trajectory</span>
+              </InlineTooltip>
             </label>
           </div>
         </div>

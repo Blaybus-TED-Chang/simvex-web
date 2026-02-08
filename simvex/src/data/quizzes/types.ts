@@ -25,6 +25,7 @@ export interface ModelQuiz {
 export interface QuizProgress {
   currentIndex: number;
   answers: Record<string, string | number>;
+  correctAnswers: Record<string, boolean>; // 문제별 정답 여부
   score: number;
   completed: boolean;
   startedAt: number;

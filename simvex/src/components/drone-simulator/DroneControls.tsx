@@ -2,6 +2,7 @@
 
 import { useDroneSimulatorStore } from '@/lib/store/droneSimulatorStore';
 import { MOTOR_CONFIGS } from '@/types/droneSimulator';
+import { InlineTooltip } from '@/components/ui/Tooltip';
 
 interface DroneControlsProps {
   isDarkMode: boolean;
@@ -59,7 +60,9 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
         {/* Throttle */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Throttle</label>
+            <InlineTooltip label="모터 출력 (0%=정지, 100%=최대 추력)">
+              <label className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Throttle</label>
+            </InlineTooltip>
             <span className="text-lg font-mono text-green-400">{params.throttle.toFixed(0)}%</span>
           </div>
           <input
@@ -83,6 +86,7 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
         {/* Yaw */}
         <BipolarSlider
           label="Yaw"
+          tooltip="수평 회전 (반시계 CCW ↔ 시계 CW)"
           value={params.yaw}
           onChange={setYaw}
           leftLabel="CCW"
@@ -94,6 +98,7 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
         {/* Pitch */}
         <BipolarSlider
           label="Pitch"
+          tooltip="전후 기울기 (앞으로 숙임 ↔ 뒤로 젖힘)"
           value={params.pitch}
           onChange={setPitch}
           leftLabel="NOSE DOWN"
@@ -105,6 +110,7 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
         {/* Roll */}
         <BipolarSlider
           label="Roll"
+          tooltip="좌우 기울기 (왼쪽 ↔ 오른쪽 기울임)"
           value={params.roll}
           onChange={setRoll}
           leftLabel="LEFT"
@@ -116,7 +122,9 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
         {/* Motor RPM Gauges */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Motor RPM</h3>
+            <InlineTooltip label="각 모터의 분당 회전수 (RPM)">
+              <h3 className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Motor RPM</h3>
+            </InlineTooltip>
             <button
               onClick={toggleMotorLabels}
               className={`text-xs px-2 py-0.5 rounded ${
@@ -164,12 +172,14 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
 
         {/* Flight Data */}
         <div>
-          <h3 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Flight Data</h3>
+          <InlineTooltip label="현재 비행 상태 수치">
+            <h3 className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3`}>Flight Data</h3>
+          </InlineTooltip>
           <div className="grid grid-cols-2 gap-2">
-            <DataCell label="Total Thrust" value={`${output.totalThrust.toFixed(1)} N`} color="text-cyan-400" isDarkMode={isDarkMode} />
-            <DataCell label="Lift Force" value={`${output.liftForce.toFixed(1)} N`} color="text-green-400" isDarkMode={isDarkMode} />
-            <DataCell label="Yaw Rate" value={`${output.yawRate.toFixed(1)} °/s`} color="text-purple-400" isDarkMode={isDarkMode} />
-            <DataCell label="Power" value={`${output.powerConsumption.toFixed(0)} W`} color="text-orange-400" isDarkMode={isDarkMode} />
+            <DataCell label="Total Thrust" tooltip="4개 모터의 총 추력 합계 (N)" value={`${output.totalThrust.toFixed(1)} N`} color="text-cyan-400" isDarkMode={isDarkMode} />
+            <DataCell label="Lift Force" tooltip="중력 반대 방향 양력 (N)" value={`${output.liftForce.toFixed(1)} N`} color="text-green-400" isDarkMode={isDarkMode} />
+            <DataCell label="Yaw Rate" tooltip="수평 회전 각속도 (°/s)" value={`${output.yawRate.toFixed(1)} °/s`} color="text-purple-400" isDarkMode={isDarkMode} />
+            <DataCell label="Power" tooltip="모터 총 전력 소비량 (W)" value={`${output.powerConsumption.toFixed(0)} W`} color="text-orange-400" isDarkMode={isDarkMode} />
           </div>
         </div>
 
@@ -183,7 +193,9 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
               onChange={toggleRunning}
               className={`w-4 h-4 rounded ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'} text-blue-500 focus:ring-blue-500`}
             />
-            <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Animation Running</span>
+            <InlineTooltip label="프로펠러 회전 애니메이션 켜기/끄기">
+              <span className={`text-sm cursor-help ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Animation Running</span>
+            </InlineTooltip>
           </label>
         </div>
 
@@ -211,6 +223,7 @@ export default function DroneControls({ isDarkMode }: DroneControlsProps) {
 
 function BipolarSlider({
   label,
+  tooltip,
   value,
   onChange,
   leftLabel,
@@ -219,6 +232,7 @@ function BipolarSlider({
   isDarkMode,
 }: {
   label: string;
+  tooltip?: string;
   value: number;
   onChange: (v: number) => void;
   leftLabel: string;
@@ -235,7 +249,13 @@ function BipolarSlider({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{label}</label>
+        {tooltip ? (
+          <InlineTooltip label={tooltip}>
+            <label className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{label}</label>
+          </InlineTooltip>
+        ) : (
+          <label className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{label}</label>
+        )}
         <span className="text-sm font-mono" style={{ color }}>
           {value > 0 ? '+' : ''}{value.toFixed(0)}
         </span>
@@ -266,10 +286,16 @@ function BipolarSlider({
 
 // ── Small data display cell ──
 
-function DataCell({ label, value, color, isDarkMode }: { label: string; value: string; color: string; isDarkMode: boolean }) {
+function DataCell({ label, tooltip, value, color, isDarkMode }: { label: string; tooltip?: string; value: string; color: string; isDarkMode: boolean }) {
   return (
     <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded p-2`}>
-      <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</div>
+      {tooltip ? (
+        <InlineTooltip label={tooltip}>
+          <div className={`text-xs cursor-help ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</div>
+        </InlineTooltip>
+      ) : (
+        <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</div>
+      )}
       <div className={`text-base font-mono ${color}`}>{value}</div>
     </div>
   );

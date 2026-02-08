@@ -83,7 +83,7 @@ export default function Scene({ isDarkMode = true }: SceneProps) {
       />
 
       {/* Gizmo */}
-      <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+      <GizmoHelper alignment="top-right" margin={[72, 72]}>
         <GizmoViewport
           axisColors={['#ef4444', '#22c55e', '#3b82f6']}
           labelColor="white"
