@@ -8,6 +8,7 @@ import { suspensionModel } from '@/data/models/suspension';
 import { hasSimulation } from '@/data/simulationMapping';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
+import { ShareButton } from '@/components/share/ShareButton';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { useUser } from '@/hooks/useUser';
 import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
@@ -267,13 +268,18 @@ export default function Home() {
                     </p>
                   </div>
 
-                  {/* 카테고리 배지 + 스크랩 */}
+                  {/* 카테고리 배지 + 스크랩 + 공유 */}
                   <div className="absolute top-3 right-3 flex items-center gap-1">
                     <ScrapButton
                       user={user}
                       isScraped={isScraped('builtin', model.id)}
                       scrapInput={{ model_type: 'builtin', model_id: model.id }}
                       onToggle={toggleScrap}
+                      isDarkMode={isDarkMode}
+                      size="sm"
+                    />
+                    <ShareButton
+                      modelId={model.id}
                       isDarkMode={isDarkMode}
                       size="sm"
                     />
@@ -377,13 +383,18 @@ export default function Home() {
                           </p>
                         </div>
 
-                        {/* 카테고리 + 공개 배지 + 스크랩 */}
+                        {/* 카테고리 + 공개 배지 + 스크랩 + 공유 */}
                         <div className="absolute top-3 right-3 flex items-center gap-1">
                           <ScrapButton
                             user={user}
                             isScraped={isScraped('user', model.id)}
                             scrapInput={{ model_type: 'user', model_id: model.id, user_model_id: model.id }}
                             onToggle={toggleScrap}
+                            isDarkMode={isDarkMode}
+                            size="sm"
+                          />
+                          <ShareButton
+                            modelId={`u-${model.id}`}
                             isDarkMode={isDarkMode}
                             size="sm"
                           />

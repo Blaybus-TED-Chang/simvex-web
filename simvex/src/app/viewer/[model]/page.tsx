@@ -14,6 +14,7 @@ import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
+import { ShareButton } from '@/components/share/ShareButton';
 import { DownloadButton } from '@/components/download/DownloadButton';
 import { QuizPanel } from '@/components/quiz/QuizPanel';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
@@ -835,6 +836,15 @@ export default function ViewerPage() {
                   : { model_type: 'builtin', model_id: modelId }
               }
               onToggle={toggleScrap}
+              isDarkMode={isDarkMode}
+              size="md"
+            />
+          </Tooltip>
+
+          {/* 공유 버튼 */}
+          <Tooltip label="공유 링크 복사">
+            <ShareButton
+              modelId={modelId}
               isDarkMode={isDarkMode}
               size="md"
             />
