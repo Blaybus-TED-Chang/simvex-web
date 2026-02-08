@@ -71,6 +71,7 @@ interface CombinedGLBViewerProps {
   onPlacePin?: (point: [number, number, number], partId?: string) => void;
   focusedPartId?: string | null;
   onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
+  globalOpacity?: number;
 }
 
 // Individual part mesh component
@@ -210,6 +211,7 @@ export function CombinedGLBViewer({
   onPlacePin,
   focusedPartId,
   onMeshPositions,
+  globalOpacity = 1,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
@@ -317,8 +319,8 @@ export function CombinedGLBViewer({
         const isSelected = selectedPartId === partConfig.id;
         const isHovered = hoveredPartId === partConfig.id;
         const opacity = focusedPartId
-          ? (focusedPartId === partConfig.id ? 1 : 0.15)
-          : 1;
+          ? (focusedPartId === partConfig.id ? globalOpacity : Math.min(0.15, globalOpacity))
+          : globalOpacity;
 
         return (
           <PartMesh
@@ -381,6 +383,8 @@ interface CombinedModelViewerProps {
   // 부품 트리 탐색기 관련
   focusedPartId?: string | null;
   onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
+  // 투명도
+  globalOpacity?: number;
 }
 
 // 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
@@ -479,6 +483,7 @@ export function CombinedModelViewer({
   containerRef,
   focusedPartId,
   onMeshPositions,
+  globalOpacity,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -551,6 +556,7 @@ export function CombinedModelViewer({
             onPlacePin={onPlacePin}
             focusedPartId={focusedPartId}
             onMeshPositions={onMeshPositions}
+            globalOpacity={globalOpacity}
           />
         </Suspense>
 

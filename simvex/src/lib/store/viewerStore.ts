@@ -10,6 +10,7 @@ const initialState: ViewerState = {
   hoveredPartId: null,
   notes: '',
   isDarkMode: false,
+  globalOpacity: 1,
   modelStates: {},
 };
 
@@ -58,6 +59,9 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
           hoveredPartId: null,
         }),
 
+      setGlobalOpacity: (value) =>
+        set({ globalOpacity: Math.max(0, Math.min(1, value)) }),
+
       getModelState: (modelId: string) => {
         return get().modelStates[modelId];
       },
@@ -80,6 +84,7 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
         isDarkMode: state.isDarkMode,
         explodeValue: state.explodeValue,
         currentModel: state.currentModel,
+        globalOpacity: state.globalOpacity,
         modelStates: state.modelStates,
       }),
       skipHydration: true,

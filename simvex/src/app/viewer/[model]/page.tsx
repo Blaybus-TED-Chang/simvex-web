@@ -174,6 +174,7 @@ export default function ViewerPage() {
     notes,
     getModelState,
     setModelState,
+    globalOpacity,
   } = useViewerStore();
 
   // 조작 가이드 오버레이 (페이지 진입 시 항상 표시)
@@ -1051,6 +1052,7 @@ export default function ViewerPage() {
                   containerRef={viewportRef}
                   focusedPartId={focusedPartId}
                   onMeshPositions={handleMeshPositions}
+                  globalOpacity={globalOpacity}
                 />
               ) : model ? (
                 <ModelViewer
