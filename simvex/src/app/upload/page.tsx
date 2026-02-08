@@ -35,6 +35,7 @@ export default function UploadPage() {
   const [fileName, setFileName] = useState<string>('');
   const [glbBlob, setGlbBlob] = useState<Blob | null>(null);
   const [glbUrl, setGlbUrl] = useState<string | null>(null);
+  const [originalFbxBlob, setOriginalFbxBlob] = useState<Blob | null>(null);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
 
   // 폼 상태
@@ -66,6 +67,7 @@ export default function UploadPage() {
     if (glbUrl) URL.revokeObjectURL(glbUrl);
     setGlbBlob(null);
     setGlbUrl(null);
+    setOriginalFbxBlob(null);
     setSelectedPartId(null);
     setName('');
     setDescription('');
@@ -91,9 +93,11 @@ export default function UploadPage() {
         const ext = file.name.split('.').pop()?.toLowerCase();
 
         if (ext === 'fbx') {
+          setOriginalFbxBlob(file);
           const buffer = await file.arrayBuffer();
           blob = await convertFbxToGlb(buffer);
         } else {
+          setOriginalFbxBlob(null);
           blob = file;
         }
 
@@ -162,6 +166,7 @@ export default function UploadPage() {
 
         const result = await uploadModel({
           glbBlob,
+          fbxBlob: originalFbxBlob ?? undefined,
           thumbnailBlob,
           name: name.trim(),
           description: description.trim(),
@@ -209,6 +214,7 @@ export default function UploadPage() {
     const url = getPublicUrl(model.glb_storage_path);
     setGlbUrl(url);
     setGlbBlob(null); // 수정 시 새 파일 없음
+    setOriginalFbxBlob(null);
   }, []);
 
   if (authLoading) {

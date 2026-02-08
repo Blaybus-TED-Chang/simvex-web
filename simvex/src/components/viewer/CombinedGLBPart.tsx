@@ -2,8 +2,9 @@
 
 import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { useGLTF, OrbitControls, Grid } from '@react-three/drei';
+import { useGLTF, OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
+import { AnnotationPins } from '@/components/annotation/AnnotationPins';
 
 // 텍스쳐 관련 경고/에러 억제
 const originalWarn = console.warn;
@@ -66,6 +67,11 @@ interface CombinedGLBViewerProps {
   onSelectPart: (partId: string) => void;
   onHoverPart: (partId: string | null) => void;
   onDebugInfo?: (info: { meshCount: number; partIds: string[]; allMeshNames: string[] }) => void;
+  isPlacingPin?: boolean;
+  onPlacePin?: (point: [number, number, number], partId?: string) => void;
+  focusedPartId?: string | null;
+  onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
+  globalOpacity?: number;
 }
 
 // Individual part mesh component
@@ -75,7 +81,9 @@ function PartMesh({
   isSelected,
   isHovered,
   isVisible,
+  opacity = 1,
   onClick,
+  onClickWithPoint,
   onPointerOver,
   onPointerOut,
 }: {
@@ -84,7 +92,9 @@ function PartMesh({
   isSelected: boolean;
   isHovered: boolean;
   isVisible: boolean;
+  opacity?: number;
   onClick: () => void;
+  onClickWithPoint?: (point: [number, number, number]) => void;
   onPointerOver: () => void;
   onPointerOut: () => void;
 }) {
@@ -108,9 +118,11 @@ function PartMesh({
       color: partConfig.color || '#888888',
       metalness: 0.3,
       roughness: 0.6,
+      transparent: opacity < 1,
+      opacity: opacity,
     });
     return mat;
-  }, [partConfig.color]);
+  }, [partConfig.color, opacity]);
 
   // Update emissive for highlight
   useEffect(() => {
@@ -128,6 +140,16 @@ function PartMesh({
       }
     }
   }, [clonedMaterial, isSelected, isHovered]);
+
+  // Update opacity dynamically
+  useEffect(() => {
+    const mat = clonedMaterial as THREE.MeshStandardMaterial;
+    if (mat) {
+      mat.transparent = opacity < 1;
+      mat.opacity = opacity;
+      mat.needsUpdate = true;
+    }
+  }, [clonedMaterial, opacity]);
 
   if (!isVisible) return null;
 
@@ -157,16 +179,20 @@ function PartMesh({
       receiveShadow
       onClick={(e) => {
         e.stopPropagation();
-        onClick();
+        if (onClickWithPoint) {
+          const p = e.point;
+          onClickWithPoint([p.x, p.y, p.z]);
+        } else {
+          onClick();
+        }
       }}
       onPointerOver={(e) => {
         e.stopPropagation();
         onPointerOver();
-        document.body.style.cursor = 'pointer';
       }}
-      onPointerOut={() => {
+      onPointerOut={(e) => {
+        e.stopPropagation();
         onPointerOut();
-        document.body.style.cursor = 'auto';
       }}
     />
   );
@@ -181,6 +207,11 @@ export function CombinedGLBViewer({
   onSelectPart,
   onHoverPart,
   onDebugInfo,
+  isPlacingPin = false,
+  onPlacePin,
+  focusedPartId,
+  onMeshPositions,
+  globalOpacity = 1,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
@@ -263,7 +294,20 @@ export function CombinedGLBViewer({
         allMeshNames,
       });
     }
-  }, [scene, meshToPartMap, onDebugInfo]);
+
+    // 부품 위치 콜백
+    if (onMeshPositions) {
+      const positions: Record<string, [number, number, number]> = {};
+      extracted.forEach((e) => {
+        positions[e.partConfig.id] = [
+          e.worldPosition.x,
+          e.worldPosition.y,
+          e.worldPosition.z,
+        ];
+      });
+      onMeshPositions(positions);
+    }
+  }, [scene, meshToPartMap, onDebugInfo, onMeshPositions]);
 
   const modelScale = model.scale || 1;
 
@@ -274,6 +318,9 @@ export function CombinedGLBViewer({
         const isVisible = visibleParts.length === 0 || visibleParts.includes(partConfig.id);
         const isSelected = selectedPartId === partConfig.id;
         const isHovered = hoveredPartId === partConfig.id;
+        const opacity = focusedPartId
+          ? (focusedPartId === partConfig.id ? globalOpacity : Math.min(0.15, globalOpacity))
+          : globalOpacity;
 
         return (
           <PartMesh
@@ -283,7 +330,26 @@ export function CombinedGLBViewer({
             isSelected={isSelected}
             isHovered={isHovered}
             isVisible={isVisible}
+            opacity={opacity}
             onClick={() => onSelectPart(partConfig.id)}
+            onClickWithPoint={
+              isPlacingPin && onPlacePin
+                ? (point) => {
+                    // 핀 배치 모드: 모델 스케일 보정 + 분해 오프셋 제거 (비분해 좌표로 저장)
+                    const scale = model.scale || 1;
+                    const [dx, dy, dz] = partConfig.explodeDirection;
+                    const dist = partConfig.explodeDistance * explodeValue;
+                    onPlacePin(
+                      [
+                        point[0] / scale - dx * dist,
+                        point[1] / scale - dy * dist,
+                        point[2] / scale - dz * dist,
+                      ],
+                      partConfig.id
+                    );
+                  }
+                : undefined
+            }
             onPointerOver={() => onHoverPart(partConfig.id)}
             onPointerOut={() => onHoverPart(null)}
           />
@@ -306,6 +372,19 @@ interface CombinedModelViewerProps {
   cameraTarget?: [number, number, number];
   isDarkMode?: boolean;
   onCameraChange?: (position: [number, number, number], target: [number, number, number]) => void;
+  // 주석 관련 props
+  annotations?: import('@/types/annotation').AnnotationRow[];
+  activeAnnotationId?: string | null;
+  showAllAnnotations?: boolean;
+  isPlacingPin?: boolean;
+  onPlacePin?: (point: [number, number, number], partId?: string) => void;
+  onAnnotationPinClick?: (id: string) => void;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
+  // 부품 트리 탐색기 관련
+  focusedPartId?: string | null;
+  onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
+  // 투명도
+  globalOpacity?: number;
 }
 
 // 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
@@ -395,6 +474,16 @@ export function CombinedModelViewer({
   cameraTarget,
   isDarkMode = false,
   onCameraChange,
+  annotations,
+  activeAnnotationId,
+  showAllAnnotations,
+  isPlacingPin = false,
+  onPlacePin,
+  onAnnotationPinClick,
+  containerRef,
+  focusedPartId,
+  onMeshPositions,
+  globalOpacity,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -421,7 +510,7 @@ export function CombinedModelViewer({
   }
 
   return (
-    <div className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`}>
+    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isPlacingPin ? { cursor: 'crosshair' } : undefined}>
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -431,7 +520,7 @@ export function CombinedModelViewer({
           near: 0.01,
           far: 100,
         }}
-        onPointerMissed={() => onSelectPart(null)}
+        onPointerMissed={() => { if (!isPlacingPin) onSelectPart(null); }}
         gl={{
           antialias: true,
           preserveDrawingBuffer: true,
@@ -463,11 +552,31 @@ export function CombinedModelViewer({
             visibleParts={visibleParts}
             onSelectPart={onSelectPart}
             onHoverPart={onHoverPart}
+            isPlacingPin={isPlacingPin}
+            onPlacePin={onPlacePin}
+            focusedPartId={focusedPartId}
+            onMeshPositions={onMeshPositions}
+            globalOpacity={globalOpacity}
           />
         </Suspense>
 
-        {/* 좌표축 */}
-        <axesHelper args={[1]} />
+        {/* 주석 핀 */}
+        {annotations && annotations.length > 0 && onAnnotationPinClick && (
+          <AnnotationPins
+            annotations={annotations}
+            activeAnnotationId={activeAnnotationId ?? null}
+            showAllAnnotations={showAllAnnotations}
+            explodeValue={explodeValue}
+            parts={model.parts}
+            modelScale={model.scale || 1}
+            onPinClick={onAnnotationPinClick}
+          />
+        )}
+
+        {/* 축 인디케이터 (Gizmo) */}
+        <GizmoHelper alignment="top-right" margin={[72, 72]}>
+          <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
+        </GizmoHelper>
 
         {/* 그리드 */}
         <Grid
@@ -484,7 +593,20 @@ export function CombinedModelViewer({
         />
 
         {/* 바닥 */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, -0.02, 0]}
+          receiveShadow
+          onClick={
+            isPlacingPin && onPlacePin
+              ? (e) => {
+                  e.stopPropagation();
+                  const p = e.point;
+                  onPlacePin([p.x, p.y, p.z]);
+                }
+              : undefined
+          }
+        >
           <planeGeometry args={[50, 50]} />
           <meshStandardMaterial
             color={isDarkMode ? '#1a1a1a' : '#e8e8e8'}

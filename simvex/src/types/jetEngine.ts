@@ -51,9 +51,9 @@ export function calculateEngineOutput(params: EngineParams): EngineOutput {
   const altitudeFactor = Math.exp(-altitude / 30000); // Density decreases with altitude
   const ramFactor = 1 + 0.2 * machNumber * machNumber; // Ram pressure recovery
 
-  // Base performance at sea level, static
-  const baseThrust = 280; // kN (like CFM56 class engine)
-  const baseFuelFlow = 3000; // kg/h at max thrust
+  // Base performance at sea level, static (CFM56-5B class)
+  const baseThrust = 120; // kN (CFM56-5B: ~120 kN max takeoff thrust)
+  const baseFuelFlow = 3600; // kg/h at max thrust
   const baseAirflow = 400; // kg/s
 
   // Throttle effect (non-linear)
@@ -109,7 +109,7 @@ export function getSectionProperties(sectionId: string, throttle: number): { tem
     fan: [1.2, 1.8],
     lpc: [1.8, 5],
     hpc: [5, 40],
-    combustor: [38, 38],
+    combustor: [5, 40],
     hpt: [8, 10],
     lpt: [2, 3],
     nozzle: [1, 1.5],

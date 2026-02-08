@@ -57,6 +57,7 @@ export const useQuizStore = create<QuizState & QuizActions>()(
             [modelId]: {
               currentIndex: 0,
               answers: {},
+              correctAnswers: {},
               score: 0,
               completed: false,
               startedAt: Date.now(),
@@ -85,6 +86,10 @@ export const useQuizStore = create<QuizState & QuizActions>()(
                 answers: {
                   ...progress.answers,
                   [questionId]: answer,
+                },
+                correctAnswers: {
+                  ...progress.correctAnswers,
+                  [questionId]: isCorrect,
                 },
                 score: isCorrect ? progress.score + 1 : progress.score,
               },

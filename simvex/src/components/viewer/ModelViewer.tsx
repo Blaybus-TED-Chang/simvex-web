@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import { ModelConfig, PartConfig } from '@/types/viewer';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { GLBPart } from './GLBPart';
@@ -113,8 +113,10 @@ function Scene({
         </group>
       </Suspense>
 
-      {/* 좌표축 표시 (디버그 모드) */}
-      <axesHelper args={[1]} />
+      {/* 축 인디케이터 (Gizmo) */}
+      <GizmoHelper alignment="top-right" margin={[72, 72]}>
+        <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
+      </GizmoHelper>
 
       {/* 그리드 */}
       <Grid
