@@ -3,6 +3,7 @@
 import { useJetEngineStore, AirflowMode } from '@/lib/store/jetEngineStore';
 import { ENGINE_SECTIONS, getSectionProperties } from '@/types/jetEngine';
 import EngineGauges from './EngineGauges';
+import { InlineTooltip } from '@/components/ui/Tooltip';
 
 interface EngineControlsProps {
   isDarkMode: boolean;
@@ -44,7 +45,9 @@ export default function EngineControls({ isDarkMode }: EngineControlsProps) {
         {/* Throttle Control */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Throttle</label>
+            <InlineTooltip label="엔진 출력 (IDLE=공회전, TOGA=최대 이륙 출력)">
+              <label className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Throttle</label>
+            </InlineTooltip>
             <span className="text-lg font-mono text-green-400">{params.throttle.toFixed(0)}%</span>
           </div>
           <input
@@ -68,7 +71,9 @@ export default function EngineControls({ isDarkMode }: EngineControlsProps) {
         {/* Altitude */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Altitude</label>
+            <InlineTooltip label="비행 고도 (높을수록 공기밀도 감소 → 추력 저하)">
+              <label className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Altitude</label>
+            </InlineTooltip>
             <span className="text-sm font-mono text-blue-400">{params.altitude.toLocaleString()} ft</span>
           </div>
           <input
@@ -85,7 +90,9 @@ export default function EngineControls({ isDarkMode }: EngineControlsProps) {
         {/* Mach Number */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Mach Number</label>
+            <InlineTooltip label="비행 속도 / 음속 비율 (M 0.85 = 순항 속도)">
+              <label className={`text-sm font-medium cursor-help ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Mach Number</label>
+            </InlineTooltip>
             <span className="text-sm font-mono text-purple-400">M {params.machNumber.toFixed(2)}</span>
           </div>
           <input
@@ -113,7 +120,9 @@ export default function EngineControls({ isDarkMode }: EngineControlsProps) {
                 onChange={toggleParticles}
                 className={`w-4 h-4 rounded ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'} text-blue-500 focus:ring-blue-500`}
               />
-              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Show Airflow</span>
+              <InlineTooltip label="엔진 내부/외부 공기 흐름 시각화">
+                <span className={`text-sm cursor-help ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Show Airflow</span>
+              </InlineTooltip>
             </label>
 
             {/* Airflow Mode Selection */}
@@ -151,7 +160,9 @@ export default function EngineControls({ isDarkMode }: EngineControlsProps) {
                 onChange={toggleCutaway}
                 className={`w-4 h-4 rounded ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'} text-blue-500 focus:ring-blue-500`}
               />
-              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Cutaway View</span>
+              <InlineTooltip label="엔진 내부 단면을 볼 수 있는 절단 뷰">
+                <span className={`text-sm cursor-help ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Cutaway View</span>
+              </InlineTooltip>
             </label>
           </div>
         </div>
