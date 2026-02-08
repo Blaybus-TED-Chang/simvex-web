@@ -71,6 +71,7 @@ export function useUserModels(user: User | null) {
   const uploadModel = useCallback(
     async (params: {
       glbBlob: Blob;
+      fbxBlob?: Blob;
       thumbnailBlob?: Blob;
       name: string;
       description: string;
@@ -107,7 +108,20 @@ export function useUserModels(user: User | null) {
         });
       }
 
-      // 3. DB 레코드 생성
+      // 3. FBX 원본 업로드 (선택)
+      let fbxPath: string | null = null;
+      if (params.fbxBlob) {
+        fbxPath = `${basePath}/original.fbx`;
+        const { error: fbxError } = await supabase.storage
+          .from(BUCKET)
+          .upload(fbxPath, params.fbxBlob, {
+            contentType: 'application/octet-stream',
+            upsert: true,
+          });
+        if (fbxError) throw new Error(`FBX 업로드 실패: ${fbxError.message}`);
+      }
+
+      // 4. DB 레코드 생성
       const { data, error } = await supabase
         .from('user_models')
         .insert({
@@ -118,6 +132,7 @@ export function useUserModels(user: User | null) {
           category: params.category,
           is_public: params.isPublic,
           glb_storage_path: glbPath,
+          original_fbx_storage_path: fbxPath,
           thumbnail_storage_path: thumbnailPath,
           file_size_bytes: params.glbBlob.size,
           parts_config: params.partsConfig,
@@ -198,6 +213,7 @@ export function useUserModels(user: User | null) {
 
       // Storage 파일 삭제
       const filesToDelete = [model.glb_storage_path];
+      if (model.original_fbx_storage_path) filesToDelete.push(model.original_fbx_storage_path);
       if (model.thumbnail_storage_path) filesToDelete.push(model.thumbnail_storage_path);
       await supabase.storage.from(BUCKET).remove(filesToDelete);
 
