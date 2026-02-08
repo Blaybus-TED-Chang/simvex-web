@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { useGLTF, OrbitControls, Grid } from '@react-three/drei';
+import { useGLTF, OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import { AnnotationPins } from '@/components/annotation/AnnotationPins';
 
@@ -573,8 +573,10 @@ export function CombinedModelViewer({
           />
         )}
 
-        {/* 좌표축 */}
-        <axesHelper args={[1]} />
+        {/* 축 인디케이터 (Gizmo) */}
+        <GizmoHelper alignment="top-right" margin={[72, 72]}>
+          <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
+        </GizmoHelper>
 
         {/* 그리드 */}
         <Grid
