@@ -368,6 +368,12 @@ export default function ViewerPage() {
     if (!isAnnotationPanelOpen) setAnnotationPanelOpen(true);
   }, [activeAnnotationId, isAnnotationPanelOpen, setActiveAnnotationId, setAnnotationPanelOpen]);
 
+  // 부품 선택 시 핀 말풍선 닫기
+  const handleSelectPart = useCallback((partId: string | null) => {
+    setSelectedPartId(partId);
+    setActiveAnnotationId(null);
+  }, [setSelectedPartId, setActiveAnnotationId]);
+
   // 주석 패널 토글
   const handleToggleAnnotationPanel = useCallback(() => {
     const next = !isAnnotationPanelOpen;
@@ -573,7 +579,7 @@ export default function ViewerPage() {
               selectedPartId={selectedPartId}
               hoveredPartId={hoveredPartId}
               visibleParts={visibleParts}
-              onSelectPart={setSelectedPartId}
+              onSelectPart={handleSelectPart}
               onHoverPart={setHoveredPartId}
               cameraPosition={cameraPosition}
               cameraTarget={cameraTarget}
