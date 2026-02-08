@@ -829,85 +829,7 @@ export default function ViewerPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Tooltip label="로그인 / 계정 관리">
-            <AuthButton />
-          </Tooltip>
-
-          {/* 스크랩 버튼 */}
-          <Tooltip label={isScraped(isUserModel ? 'user' : 'builtin', isUserModel ? modelId.slice(2) : modelId) ? '스크랩 해제' : '스크랩'}>
-            <ScrapButton
-              user={user}
-              isScraped={isScraped(isUserModel ? 'user' : 'builtin', isUserModel ? modelId.slice(2) : modelId)}
-              scrapInput={
-                isUserModel
-                  ? { model_type: 'user', model_id: modelId.slice(2), user_model_id: modelId.slice(2) }
-                  : { model_type: 'builtin', model_id: modelId }
-              }
-              onToggle={toggleScrap}
-              isDarkMode={isDarkMode}
-              size="md"
-            />
-          </Tooltip>
-
-          {/* 공유 버튼 */}
-          <Tooltip label="공유 링크 복사">
-            <ShareButton
-              modelId={modelId}
-              isDarkMode={isDarkMode}
-              size="md"
-            />
-          </Tooltip>
-
-          {/* 다운로드 버튼 (단일 GLB 모델만) */}
-          {isCombinedModel && combinedModel && (
-            <Tooltip label="3D 모델 다운로드">
-              <DownloadButton
-                modelType={isUserModel ? 'user' : 'builtin'}
-                glbUrl={combinedModel.glbPath}
-                fbxUrl={isUserModel ? (userModelFbxUrl ?? undefined) : undefined}
-                modelName={combinedModel.nameKo || combinedModel.name}
-                isDarkMode={isDarkMode}
-                size="md"
-              />
-            </Tooltip>
-          )}
-
-          {/* 조작 가이드 버튼 */}
-          <Tooltip label="3D 뷰어 조작 방법 안내">
-            <button
-              onClick={() => setShowControls(true)}
-              className={`p-2 rounded-lg transition-colors ${
-                isDarkMode
-                  ? 'hover:bg-gray-800 text-gray-400'
-                  : 'hover:bg-gray-100 text-gray-600'
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-          </Tooltip>
-
-          {/* PDF 내보내기 버튼 */}
-          {pdfModelInfo && (
-            <Tooltip label="모델 정보를 PDF로 내보내기">
-              <ExportPdfButton
-                modelNameKo={pdfModelInfo.nameKo}
-                modelName={pdfModelInfo.name}
-                description={pdfModelInfo.description}
-                theory={pdfModelInfo.theory}
-                parts={pdfModelInfo.parts.map((p) => ({
-                  nameKo: p.nameKo,
-                  name: p.name,
-                  description: p.description,
-                }))}
-                notes={notes}
-                isDarkMode={isDarkMode}
-              />
-            </Tooltip>
-          )}
-
-          {/* 부품 트리 패널 토글 — 뷰어 탭 + 통합 모델만 */}
+          {/* 그룹 A: 뷰어 도구 (뷰어 탭 + 통합 모델) */}
           {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="부품 트리 탐색기">
               <button
@@ -932,7 +854,6 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
-          {/* 주석 버튼 — 뷰어 탭에서만 표시 */}
           {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="3D 주석 (핀 메모)">
               <button
@@ -952,7 +873,6 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
-          {/* 부품 메모 버튼 — 뷰어 탭에서만 표시 */}
           {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="부품별 메모 (스크린샷 포함)">
               <button
@@ -972,7 +892,12 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
-          {/* 퀴즈 버튼 — 뷰어 탭에서만 표시 */}
+          {/* 구분선 — 그룹 A가 표시될 때만 */}
+          {activeTab === 'viewer' && isCombinedModel && (
+            <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-300/70'}`} />
+          )}
+
+          {/* 그룹 B: 학습/정보 패널 */}
           {activeTab === 'viewer' && modelHasQuiz && (
             <Tooltip label="학습 퀴즈 풀기">
               <button
@@ -992,7 +917,6 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
-          {/* Learn 토글 — 시뮬레이션 탭에서만 표시 */}
           {activeTab === 'simulation' && modelHasSimulation && (
             <Tooltip label="학습 패널">
               <button
@@ -1013,7 +937,6 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
-          {/* 노트 패널 토글 */}
           <Tooltip label="노트">
             <button
               onClick={() => toggleRightPanel('notes')}
@@ -1031,7 +954,6 @@ export default function ViewerPage() {
             </button>
           </Tooltip>
 
-          {/* AI 어시스턴트 하단 패널 토글 */}
           <Tooltip label="AI 어시스턴트">
             <button
               onClick={() => setIsAIPanelOpen(!isAIPanelOpen)}
@@ -1049,7 +971,83 @@ export default function ViewerPage() {
             </button>
           </Tooltip>
 
-          {/* 다크모드 토글 */}
+          {/* 구분선 */}
+          <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-300/70'}`} />
+
+          {/* 그룹 C: 모델 액션 */}
+          <Tooltip label={isScraped(isUserModel ? 'user' : 'builtin', isUserModel ? modelId.slice(2) : modelId) ? '스크랩 해제' : '스크랩'}>
+            <ScrapButton
+              user={user}
+              isScraped={isScraped(isUserModel ? 'user' : 'builtin', isUserModel ? modelId.slice(2) : modelId)}
+              scrapInput={
+                isUserModel
+                  ? { model_type: 'user', model_id: modelId.slice(2), user_model_id: modelId.slice(2) }
+                  : { model_type: 'builtin', model_id: modelId }
+              }
+              onToggle={toggleScrap}
+              isDarkMode={isDarkMode}
+              size="md"
+            />
+          </Tooltip>
+
+          <Tooltip label="공유 링크 복사">
+            <ShareButton
+              modelId={modelId}
+              isDarkMode={isDarkMode}
+              size="md"
+            />
+          </Tooltip>
+
+          {isCombinedModel && combinedModel && (
+            <Tooltip label="3D 모델 다운로드">
+              <DownloadButton
+                modelType={isUserModel ? 'user' : 'builtin'}
+                glbUrl={combinedModel.glbPath}
+                fbxUrl={isUserModel ? (userModelFbxUrl ?? undefined) : undefined}
+                modelName={combinedModel.nameKo || combinedModel.name}
+                isDarkMode={isDarkMode}
+                size="md"
+              />
+            </Tooltip>
+          )}
+
+          {pdfModelInfo && (
+            <Tooltip label="모델 정보를 PDF로 내보내기">
+              <ExportPdfButton
+                modelNameKo={pdfModelInfo.nameKo}
+                modelName={pdfModelInfo.name}
+                description={pdfModelInfo.description}
+                theory={pdfModelInfo.theory}
+                parts={pdfModelInfo.parts.map((p) => ({
+                  nameKo: p.nameKo,
+                  name: p.name,
+                  description: p.description,
+                }))}
+                notes={notes}
+                isDarkMode={isDarkMode}
+              />
+            </Tooltip>
+          )}
+
+          {/* 구분선 */}
+          <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-300/70'}`} />
+
+          {/* 그룹 D: 전역 설정 */}
+          <Tooltip label="3D 뷰어 조작 방법 안내">
+            <button
+              onClick={() => setShowControls(!showControls)}
+              className={`p-2 rounded-lg transition-colors ${
+                isDarkMode
+                  ? 'hover:bg-gray-800 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </Tooltip>
+
           <Tooltip label={isDarkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}>
             <button
               onClick={toggleDarkMode}
@@ -1065,6 +1063,10 @@ export default function ViewerPage() {
                 </svg>
               )}
             </button>
+          </Tooltip>
+
+          <Tooltip label="로그인 / 계정 관리">
+            <AuthButton />
           </Tooltip>
         </div>
       </header>
