@@ -13,6 +13,7 @@ import { PartInfo } from '@/components/viewer/PartInfo';
 import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/viewer/NotesPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
+import { ScrapButton } from '@/components/scrap/ScrapButton';
 import { QuizPanel } from '@/components/quiz/QuizPanel';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import { useUser } from '@/hooks/useUser';
@@ -23,6 +24,7 @@ import { userModelToConfig } from '@/types/userModel';
 import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ControlsHelp } from '@/components/ui/ControlsHelp';
+import { useScraps } from '@/hooks/useScraps';
 import { useAnnotations } from '@/hooks/useAnnotations';
 import { useAnnotationStore } from '@/lib/store/annotationStore';
 import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
@@ -97,6 +99,7 @@ export default function ViewerPage() {
   const router = useRouter();
   const modelId = params.model as string;
   const { user } = useUser();
+  const { isScraped, toggleScrap } = useScraps(user);
 
   // 사용자 업로드 모델 (u-{uuid} 형식)
   const isUserModel = modelId.startsWith('u-');
@@ -809,6 +812,22 @@ export default function ViewerPage() {
         <div className="flex items-center gap-2">
           <Tooltip label="로그인 / 계정 관리">
             <AuthButton />
+          </Tooltip>
+
+          {/* 스크랩 버튼 */}
+          <Tooltip label={isScraped(isUserModel ? 'user' : 'builtin', isUserModel ? modelId.slice(2) : modelId) ? '스크랩 해제' : '스크랩'}>
+            <ScrapButton
+              user={user}
+              isScraped={isScraped(isUserModel ? 'user' : 'builtin', isUserModel ? modelId.slice(2) : modelId)}
+              scrapInput={
+                isUserModel
+                  ? { model_type: 'user', model_id: modelId.slice(2), user_model_id: modelId.slice(2) }
+                  : { model_type: 'builtin', model_id: modelId }
+              }
+              onToggle={toggleScrap}
+              isDarkMode={isDarkMode}
+              size="md"
+            />
           </Tooltip>
 
           {/* 조작 가이드 버튼 */}
