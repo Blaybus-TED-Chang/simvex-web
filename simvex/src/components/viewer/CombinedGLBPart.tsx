@@ -299,10 +299,16 @@ export function CombinedGLBViewer({
             onClickWithPoint={
               isPlacingPin && onPlacePin
                 ? (point) => {
-                    // 핀 배치 모드: 모델 스케일 보정 후 좌표 전달
+                    // 핀 배치 모드: 모델 스케일 보정 + 분해 오프셋 제거 (비분해 좌표로 저장)
                     const scale = model.scale || 1;
+                    const [dx, dy, dz] = partConfig.explodeDirection;
+                    const dist = partConfig.explodeDistance * explodeValue;
                     onPlacePin(
-                      [point[0] / scale, point[1] / scale, point[2] / scale],
+                      [
+                        point[0] / scale - dx * dist,
+                        point[1] / scale - dy * dist,
+                        point[2] / scale - dz * dist,
+                      ],
                       partConfig.id
                     );
                   }

@@ -110,7 +110,8 @@ export function AnnotationPanel({
 
     await onCreate({
       model_id: modelId,
-      target_type: 'coordinate',
+      target_type: pendingAnnotation.targetType,
+      part_id: pendingAnnotation.partId || null,
       position: pendingAnnotation.position,
       title: formTitle,
       content: formContent,
