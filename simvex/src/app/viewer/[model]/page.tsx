@@ -26,6 +26,9 @@ import { ControlsHelp } from '@/components/ui/ControlsHelp';
 import { useAnnotations } from '@/hooks/useAnnotations';
 import { useAnnotationStore } from '@/lib/store/annotationStore';
 import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
+import { usePartCustomizations } from '@/hooks/usePartCustomizations';
+import { usePartMemos } from '@/hooks/usePartMemos';
+import { PartMemoPanel } from '@/components/viewer/PartMemoPanel';
 import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
 import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
 import { hasSimulation as checkHasSimulation, hasViewer as checkHasViewer, getSimulationMapping } from '@/data/simulationMapping';
@@ -390,6 +393,44 @@ export default function ViewerPage() {
     saveModelStateDebounced(position, target);
   }, [saveModelStateDebounced]);
 
+  // === 부품 커스터마이징 ===
+  const { customizations, upsertCustomization, resetCustomization } = usePartCustomizations(user, modelId);
+
+  // mergedModel: 원본에 커스터마이징 오버라이드 적용
+  const mergedModel = useMemo(() => {
+    if (!combinedModel) return null;
+    return {
+      ...combinedModel,
+      parts: combinedModel.parts.map((p) => ({
+        ...p,
+        color: customizations[p.id]?.color ?? p.color,
+        nameKo: customizations[p.id]?.nameKo ?? p.nameKo,
+      })),
+    };
+  }, [combinedModel, customizations]);
+
+  // === 부품 메모 ===
+  const { memos, createMemo, deleteMemo, loading: memosLoading } = usePartMemos(user, modelId);
+  const [isMemoPanelOpen, setIsMemoPanelOpen] = useState(false);
+
+  // 스크린샷 캡처 함수
+  const captureScreenshot = useCallback(async (): Promise<Blob | null> => {
+    const container = viewportRef.current;
+    if (!container) return null;
+
+    const glCanvas = container.querySelector('canvas') as HTMLCanvasElement | null;
+    if (!glCanvas) return null;
+
+    try {
+      const dataUrl = glCanvas.toDataURL('image/jpeg', 0.8);
+      const res = await fetch(dataUrl);
+      return await res.blob();
+    } catch {
+      console.error('스크린샷 캡처 실패');
+      return null;
+    }
+  }, []);
+
   // === 주석(Annotation) ===
   const { annotations, createAnnotation, updateAnnotation, deleteAnnotation } = useAnnotations(user, modelId);
   const {
@@ -617,8 +658,8 @@ export default function ViewerPage() {
     );
   }
 
-  // 선택된 부품 찾기
-  const selectedPart = currentModelInfo?.parts.find((p) => p.id === selectedPartId) || null;
+  // 선택된 부품 찾기 (mergedModel 우선 — 커스터마이징 반영)
+  const selectedPart = (mergedModel ?? currentModelInfo)?.parts.find((p) => p.id === selectedPartId) || null;
 
   // 노트에 전달할 모델 정보 (활성 탭에 따라)
   const notesModelInfo = activeTab === 'simulation' && simModelInfo ? simModelInfo : (currentModelInfo || simModelInfo);
@@ -732,6 +773,26 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
+          {/* 부품 메모 버튼 — 뷰어 탭에서만 표시 */}
+          {activeTab === 'viewer' && isCombinedModel && (
+            <Tooltip label="부품별 메모 (스크린샷 포함)">
+              <button
+                onClick={() => setIsMemoPanelOpen(!isMemoPanelOpen)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isMemoPanelOpen
+                    ? 'bg-teal-500 text-white'
+                    : isDarkMode
+                      ? 'hover:bg-gray-800 text-gray-400'
+                      : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </button>
+            </Tooltip>
+          )}
+
           {/* 퀴즈 버튼 — 뷰어 탭에서만 표시 */}
           {activeTab === 'viewer' && modelHasQuiz && (
             <Tooltip label="학습 퀴즈 풀기">
@@ -820,9 +881,9 @@ export default function ViewerPage() {
           <>
             {/* 3D 뷰포트 */}
             <div className="flex-1 min-w-0 p-4 relative">
-              {isCombinedModel && combinedModel ? (
+              {isCombinedModel && mergedModel ? (
                 <CombinedModelViewer
-                  model={combinedModel}
+                  model={mergedModel}
                   explodeValue={explodeValue}
                   selectedPartId={selectedPartId}
                   hoveredPartId={hoveredPartId}
@@ -875,10 +936,16 @@ export default function ViewerPage() {
               {currentModelInfo && <ProductInfo model={currentModelInfo} />}
 
               {/* 부품 정보 */}
-              <PartInfo part={selectedPart} />
+              <PartInfo
+                part={selectedPart}
+                isLoggedIn={!!user}
+                customization={selectedPartId ? customizations[selectedPartId] : undefined}
+                onCustomize={upsertCustomization}
+                onResetCustomize={resetCustomization}
+              />
 
               {/* 부품 목록 */}
-              {currentModelInfo && <PartsList parts={currentModelInfo.parts} />}
+              {(mergedModel ?? currentModelInfo) && <PartsList parts={(mergedModel ?? currentModelInfo)!.parts} />}
             </div>
           </>
         )}
@@ -968,6 +1035,28 @@ export default function ViewerPage() {
           onUpdate={updateAnnotation}
           onDelete={deleteAnnotation}
           onScreenshot={handleAnnotationScreenshot}
+        />
+      </div>
+
+      {/* 부품 메모 패널 (슬라이드) */}
+      <div
+        className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
+          isDarkMode ? 'bg-gray-900' : 'bg-white'
+        } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
+        transform transition-transform duration-300 ease-in-out z-50
+        ${isMemoPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: 380 }}
+      >
+        <PartMemoPanel
+          isDarkMode={isDarkMode}
+          isLoggedIn={!!user}
+          selectedPart={selectedPart}
+          memos={memos}
+          loading={memosLoading}
+          onCreateMemo={createMemo}
+          onDeleteMemo={deleteMemo}
+          onCaptureScreenshot={captureScreenshot}
+          onClose={() => setIsMemoPanelOpen(false)}
         />
       </div>
     </div>
