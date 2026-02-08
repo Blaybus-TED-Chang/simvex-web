@@ -46,6 +46,7 @@ export interface ViewerState {
   hoveredPartId: string | null;
   notes: string;
   isDarkMode: boolean;
+  globalOpacity: number;
   modelStates: Record<string, ModelViewState>;
 }
 
@@ -60,6 +61,7 @@ export interface ViewerActions {
   setNotes: (notes: string) => void;
   toggleDarkMode: () => void;
   resetViewer: () => void;
+  setGlobalOpacity: (value: number) => void;
   getModelState: (modelId: string) => ModelViewState | undefined;
   setModelState: (modelId: string, state: Partial<ModelViewState>) => void;
 }
