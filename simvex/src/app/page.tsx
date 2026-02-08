@@ -7,9 +7,11 @@ import { combinedModels } from '@/data/models';
 import { suspensionModel } from '@/data/models/suspension';
 import { hasSimulation } from '@/data/simulationMapping';
 import { AuthButton } from '@/components/auth/AuthButton';
+import { ScrapButton } from '@/components/scrap/ScrapButton';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { useUser } from '@/hooks/useUser';
 import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
+import { useScraps } from '@/hooks/useScraps';
 import type { UserModelRow } from '@/types/userModel';
 
 function ThumbnailSlideshow({ images, isDarkMode }: { images: string[]; isDarkMode: boolean }) {
@@ -75,6 +77,7 @@ export default function Home() {
   const { isDarkMode, toggleDarkMode } = useViewerStore();
   const { user } = useUser();
   const { models: myModels, fetchPublicModels } = useUserModels(user);
+  const { isScraped, toggleScrap } = useScraps(user);
   const [communityModels, setCommunityModels] = useState<UserModelRow[]>([]);
 
   // Zustand store hydration (SSR 호환)
@@ -148,6 +151,20 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <AuthButton />
+            {/* 마이페이지 */}
+            {user && (
+              <Link
+                href="/mypage"
+                className={`p-2 rounded-lg transition-colors ${
+                  isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
+                }`}
+                title="마이페이지"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </Link>
+            )}
             {/* 다크모드 토글 */}
             <button
               onClick={toggleDarkMode}
@@ -250,8 +267,16 @@ export default function Home() {
                     </p>
                   </div>
 
-                  {/* 카테고리 배지 */}
-                  <div className="absolute top-3 right-3">
+                  {/* 카테고리 배지 + 스크랩 */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1">
+                    <ScrapButton
+                      user={user}
+                      isScraped={isScraped('builtin', model.id)}
+                      scrapInput={{ model_type: 'builtin', model_id: model.id }}
+                      onToggle={toggleScrap}
+                      isDarkMode={isDarkMode}
+                      size="sm"
+                    />
                     <span className={`px-2 py-0.5 text-xs rounded ${
                       isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
                     }`}>
@@ -352,8 +377,16 @@ export default function Home() {
                           </p>
                         </div>
 
-                        {/* 카테고리 + 공개 배지 */}
-                        <div className="absolute top-3 right-3 flex gap-1">
+                        {/* 카테고리 + 공개 배지 + 스크랩 */}
+                        <div className="absolute top-3 right-3 flex items-center gap-1">
+                          <ScrapButton
+                            user={user}
+                            isScraped={isScraped('user', model.id)}
+                            scrapInput={{ model_type: 'user', model_id: model.id, user_model_id: model.id }}
+                            onToggle={toggleScrap}
+                            isDarkMode={isDarkMode}
+                            size="sm"
+                          />
                           {!model.is_public && (
                             <span className={`px-2 py-0.5 text-xs rounded ${
                               isDarkMode ? 'bg-gray-800/80 backdrop-blur text-yellow-400' : 'bg-yellow-50 text-yellow-600'
