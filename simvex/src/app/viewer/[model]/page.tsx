@@ -38,6 +38,9 @@ import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
 import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
 import { hasSimulation as checkHasSimulation, hasViewer as checkHasViewer, getSimulationMapping } from '@/data/simulationMapping';
 import { getSimulationModelInfo } from '@/data/simulationModelInfo';
+import { useResizePanel } from '@/hooks/useResizePanel';
+
+type RightPanelType = 'notes' | 'quiz' | 'annotation' | 'memo' | null;
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
@@ -194,9 +197,18 @@ export default function ViewerPage() {
   // 조작 가이드 오버레이 (페이지 진입 시 항상 표시)
   const [showControls, setShowControls] = useState(true);
 
-  const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
-  const [isQuizPanelOpen, setIsQuizPanelOpen] = useState(false);
-  const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
+  // 오른쪽 슬라이드 패널 상호배타 상태
+  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
+  const toggleRightPanel = useCallback((panel: RightPanelType) => {
+    setActiveRightPanel(prev => prev === panel ? null : panel);
+  }, []);
+
+  // 각 패널 리사이즈
+  const notesResize = useResizePanel({ direction: 'right', min: 320, max: 800, initial: 384 });
+  const quizResize = useResizePanel({ direction: 'right', min: 320, max: 600, initial: 420 });
+  const annotationResize = useResizePanel({ direction: 'right', min: 300, max: 600, initial: 380 });
+  const memoResize = useResizePanel({ direction: 'right', min: 300, max: 600, initial: 380 });
+
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
 
   // 부품 트리 패널
@@ -205,39 +217,7 @@ export default function ViewerPage() {
   const [focusedPartId, setFocusedPartId] = useState<string | null>(null);
   const [meshPositions, setMeshPositions] = useState<Record<string, [number, number, number]>>({});
   const isTreeResizing = useRef(false);
-  const isResizing = useRef(false);
   const isSidebarResizing = useRef(false);
-
-  // 노트 패널 리사이즈 핸들러
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    isResizing.current = true;
-    document.body.style.cursor = 'ew-resize';
-    document.body.style.userSelect = 'none';
-
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
-    document.body.appendChild(overlay);
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing.current) return;
-      const newWidth = window.innerWidth - e.clientX;
-      setNotesPanelWidth(Math.max(320, Math.min(800, newWidth)));
-    };
-
-    const handleMouseUp = () => {
-      isResizing.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      overlay.remove();
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, []);
 
   // 우측 사이드바 리사이즈 핸들러
   const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
@@ -518,7 +498,6 @@ export default function ViewerPage() {
 
   // === 부품 메모 ===
   const { memos, createMemo, deleteMemo, loading: memosLoading } = usePartMemos(user, modelId);
-  const [isMemoPanelOpen, setIsMemoPanelOpen] = useState(false);
 
   // 스크린샷 캡처 함수
   const captureScreenshot = useCallback(async (): Promise<Blob | null> => {
@@ -564,6 +543,28 @@ export default function ViewerPage() {
     setPlacingPin(false);
   }, [setPendingAnnotation, setPlacingPin]);
 
+  // activeRightPanel → annotationStore 동기화
+  useEffect(() => {
+    const shouldBeOpen = activeRightPanel === 'annotation';
+    if (shouldBeOpen !== isAnnotationPanelOpen) {
+      setAnnotationPanelOpen(shouldBeOpen);
+      if (!shouldBeOpen) {
+        setPlacingPin(false);
+        setPendingAnnotation(null);
+        setActiveAnnotationId(null);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRightPanel]);
+
+  // annotationStore → activeRightPanel 동기화 (핀 클릭으로 열릴 때)
+  useEffect(() => {
+    if (isAnnotationPanelOpen && activeRightPanel !== 'annotation') {
+      setActiveRightPanel('annotation');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAnnotationPanelOpen]);
+
   // 주석 핀 클릭 콜백
   const handleAnnotationPinClick = useCallback((id: string) => {
     setActiveAnnotationId(activeAnnotationId === id ? null : id);
@@ -575,17 +576,6 @@ export default function ViewerPage() {
     setSelectedPartId(partId);
     setActiveAnnotationId(null);
   }, [setSelectedPartId, setActiveAnnotationId]);
-
-  // 주석 패널 토글
-  const handleToggleAnnotationPanel = useCallback(() => {
-    const next = !isAnnotationPanelOpen;
-    setAnnotationPanelOpen(next);
-    if (!next) {
-      setPlacingPin(false);
-      setPendingAnnotation(null);
-      setActiveAnnotationId(null);
-    }
-  }, [isAnnotationPanelOpen, setAnnotationPanelOpen, setPlacingPin, setPendingAnnotation, setActiveAnnotationId]);
 
   // 주석 포함 스크린샷 저장
   const handleAnnotationScreenshot = useCallback(async () => {
@@ -928,9 +918,9 @@ export default function ViewerPage() {
           {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="3D 주석 (핀 메모)">
               <button
-                onClick={handleToggleAnnotationPanel}
+                onClick={() => toggleRightPanel('annotation')}
                 className={`p-2 rounded-lg transition-colors ${
-                  isAnnotationPanelOpen
+                  activeRightPanel === 'annotation'
                     ? 'bg-amber-500 text-white'
                     : isDarkMode
                       ? 'hover:bg-gray-800 text-gray-400'
@@ -948,9 +938,9 @@ export default function ViewerPage() {
           {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="부품별 메모 (스크린샷 포함)">
               <button
-                onClick={() => setIsMemoPanelOpen(!isMemoPanelOpen)}
+                onClick={() => toggleRightPanel('memo')}
                 className={`p-2 rounded-lg transition-colors ${
-                  isMemoPanelOpen
+                  activeRightPanel === 'memo'
                     ? 'bg-teal-500 text-white'
                     : isDarkMode
                       ? 'hover:bg-gray-800 text-gray-400'
@@ -968,9 +958,9 @@ export default function ViewerPage() {
           {activeTab === 'viewer' && modelHasQuiz && (
             <Tooltip label="학습 퀴즈 풀기">
               <button
-                onClick={() => setIsQuizPanelOpen(!isQuizPanelOpen)}
+                onClick={() => toggleRightPanel('quiz')}
                 className={`p-2 rounded-lg transition-colors ${
-                  isQuizPanelOpen
+                  activeRightPanel === 'quiz'
                     ? 'bg-green-500 text-white'
                     : isDarkMode
                       ? 'hover:bg-gray-800 text-gray-400'
@@ -1008,9 +998,9 @@ export default function ViewerPage() {
           {/* 노트 패널 토글 */}
           <Tooltip label="노트 / AI 어시스턴트">
             <button
-              onClick={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
+              onClick={() => toggleRightPanel('notes')}
               className={`p-2 rounded-lg transition-colors ${
-                isNotesPanelOpen
+                activeRightPanel === 'notes'
                   ? 'bg-blue-500 text-white'
                   : isDarkMode
                     ? 'hover:bg-gray-800 text-gray-400'
@@ -1177,15 +1167,15 @@ export default function ViewerPage() {
           isDarkMode ? 'bg-gray-900' : 'bg-white'
         } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
         transform transition-transform duration-300 ease-in-out z-50
-        ${isNotesPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        style={{ width: notesPanelWidth }}
+        ${activeRightPanel === 'notes' ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: notesResize.width }}
       >
         {/* 리사이즈 핸들 */}
         <div
           className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-500 transition-colors ${
             isDarkMode ? 'hover:bg-blue-400' : 'hover:bg-blue-500'
           }`}
-          onMouseDown={handleResizeStart}
+          onMouseDown={notesResize.handleResizeStart}
         />
         <div className="h-full p-4">
           {notesModelInfo && (
@@ -1206,14 +1196,21 @@ export default function ViewerPage() {
             isDarkMode ? 'bg-gray-900' : 'bg-white'
           } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
           transform transition-transform duration-300 ease-in-out z-50
-          ${isQuizPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-          style={{ width: 420 }}
+          ${activeRightPanel === 'quiz' ? 'translate-x-0' : 'translate-x-full'}`}
+          style={{ width: quizResize.width }}
         >
+          {/* 리사이즈 핸들 */}
+          <div
+            className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-green-500 transition-colors ${
+              isDarkMode ? 'hover:bg-green-400' : 'hover:bg-green-500'
+            }`}
+            onMouseDown={quizResize.handleResizeStart}
+          />
           <QuizPanel
             quiz={quiz}
             modelId={currentModelInfo.id}
             isDarkMode={isDarkMode}
-            onClose={() => setIsQuizPanelOpen(false)}
+            onClose={() => setActiveRightPanel(null)}
             selectedPartId={selectedPartId}
             onRequestPartSelect={handleQuizRequestPartSelect}
             onClearPartSelect={handleQuizClearPartSelect}
@@ -1227,15 +1224,22 @@ export default function ViewerPage() {
           isDarkMode ? 'bg-gray-900' : 'bg-white'
         } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
         transform transition-transform duration-300 ease-in-out z-50
-        ${isAnnotationPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        style={{ width: 380 }}
+        ${activeRightPanel === 'annotation' ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: annotationResize.width }}
       >
+        {/* 리사이즈 핸들 */}
+        <div
+          className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-amber-500 transition-colors ${
+            isDarkMode ? 'hover:bg-amber-400' : 'hover:bg-amber-500'
+          }`}
+          onMouseDown={annotationResize.handleResizeStart}
+        />
         <AnnotationPanel
           modelId={modelId}
           annotations={annotations}
           isDarkMode={isDarkMode}
           isLoggedIn={!!user}
-          onClose={handleToggleAnnotationPanel}
+          onClose={() => toggleRightPanel('annotation')}
           onCreate={createAnnotation}
           onUpdate={updateAnnotation}
           onDelete={deleteAnnotation}
@@ -1249,9 +1253,16 @@ export default function ViewerPage() {
           isDarkMode ? 'bg-gray-900' : 'bg-white'
         } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
         transform transition-transform duration-300 ease-in-out z-50
-        ${isMemoPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        style={{ width: 380 }}
+        ${activeRightPanel === 'memo' ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: memoResize.width }}
       >
+        {/* 리사이즈 핸들 */}
+        <div
+          className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-teal-500 transition-colors ${
+            isDarkMode ? 'hover:bg-teal-400' : 'hover:bg-teal-500'
+          }`}
+          onMouseDown={memoResize.handleResizeStart}
+        />
         <PartMemoPanel
           isDarkMode={isDarkMode}
           isLoggedIn={!!user}
@@ -1261,7 +1272,7 @@ export default function ViewerPage() {
           onCreateMemo={createMemo}
           onDeleteMemo={deleteMemo}
           onCaptureScreenshot={captureScreenshot}
-          onClose={() => setIsMemoPanelOpen(false)}
+          onClose={() => setActiveRightPanel(null)}
         />
       </div>
     </div>
