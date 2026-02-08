@@ -23,6 +23,9 @@ import { userModelToConfig } from '@/types/userModel';
 import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ControlsHelp } from '@/components/ui/ControlsHelp';
+import { useAnnotations } from '@/hooks/useAnnotations';
+import { useAnnotationStore } from '@/lib/store/annotationStore';
+import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
@@ -336,6 +339,46 @@ export default function ViewerPage() {
     saveModelStateDebounced(position, target);
   }, [saveModelStateDebounced]);
 
+  // === 주석(Annotation) ===
+  const { annotations, createAnnotation, updateAnnotation, deleteAnnotation } = useAnnotations(user, modelId);
+  const {
+    isPlacingPin,
+    isAnnotationPanelOpen,
+    setAnnotationPanelOpen,
+    activeAnnotationId,
+    setActiveAnnotationId,
+    pendingAnnotation,
+    setPendingAnnotation,
+    setPlacingPin,
+  } = useAnnotationStore();
+
+  // 핀 배치 콜백 (3D 뷰어에서 클릭 시)
+  const handlePlacePin = useCallback((point: [number, number, number], partId?: string) => {
+    setPendingAnnotation({
+      position: point,
+      targetType: partId ? 'part' : 'coordinate',
+      partId,
+    });
+    setPlacingPin(false);
+  }, [setPendingAnnotation, setPlacingPin]);
+
+  // 주석 핀 클릭 콜백
+  const handleAnnotationPinClick = useCallback((id: string) => {
+    setActiveAnnotationId(activeAnnotationId === id ? null : id);
+    if (!isAnnotationPanelOpen) setAnnotationPanelOpen(true);
+  }, [activeAnnotationId, isAnnotationPanelOpen, setActiveAnnotationId, setAnnotationPanelOpen]);
+
+  // 주석 패널 토글
+  const handleToggleAnnotationPanel = useCallback(() => {
+    const next = !isAnnotationPanelOpen;
+    setAnnotationPanelOpen(next);
+    if (!next) {
+      setPlacingPin(false);
+      setPendingAnnotation(null);
+      setActiveAnnotationId(null);
+    }
+  }, [isAnnotationPanelOpen, setAnnotationPanelOpen, setPlacingPin, setPendingAnnotation, setActiveAnnotationId]);
+
   // 사용자 모델 로딩 중
   if (userModelLoading) {
     return (
@@ -441,6 +484,26 @@ export default function ViewerPage() {
             />
           </Tooltip>
 
+          {/* 주석 버튼 */}
+          {isCombinedModel && (
+            <Tooltip label="3D 주석 (핀 메모)">
+              <button
+                onClick={handleToggleAnnotationPanel}
+                className={`p-2 rounded-lg transition-colors ${
+                  isAnnotationPanelOpen
+                    ? 'bg-amber-500 text-white'
+                    : isDarkMode
+                      ? 'hover:bg-gray-800 text-gray-400'
+                      : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+              </button>
+            </Tooltip>
+          )}
+
           {/* 퀴즈 버튼 */}
           {modelHasQuiz && (
             <Tooltip label="학습 퀴즈 풀기">
@@ -516,6 +579,11 @@ export default function ViewerPage() {
               cameraTarget={cameraTarget}
               isDarkMode={isDarkMode}
               onCameraChange={handleUpdateCamera}
+              annotations={annotations}
+              activeAnnotationId={activeAnnotationId}
+              isPlacingPin={isPlacingPin}
+              onPlacePin={handlePlacePin}
+              onAnnotationPinClick={handleAnnotationPinClick}
             />
           ) : model ? (
             <ModelViewer
@@ -604,6 +672,27 @@ export default function ViewerPage() {
             />
           </div>
         )}
+
+        {/* 주석 패널 (슬라이드) */}
+        <div
+          className={`fixed top-14 right-0 h-[calc(100vh-3.5rem)] ${
+            isDarkMode ? 'bg-gray-900' : 'bg-white'
+          } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
+          transform transition-transform duration-300 ease-in-out z-50
+          ${isAnnotationPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          style={{ width: 380 }}
+        >
+          <AnnotationPanel
+            modelId={modelId}
+            annotations={annotations}
+            isDarkMode={isDarkMode}
+            isLoggedIn={!!user}
+            onClose={handleToggleAnnotationPanel}
+            onCreate={createAnnotation}
+            onUpdate={updateAnnotation}
+            onDelete={deleteAnnotation}
+          />
+        </div>
       </div>
 
     </div>
