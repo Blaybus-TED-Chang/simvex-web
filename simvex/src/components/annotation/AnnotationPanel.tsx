@@ -5,6 +5,57 @@ import type { AnnotationRow, AnnotationInput } from '@/types/annotation';
 import { ANNOTATION_COLORS } from '@/types/annotation';
 import { useAnnotationStore } from '@/lib/store/annotationStore';
 
+// 프리셋 6색 + 커스텀 색상 피커
+function ColorPicker({
+  color,
+  onChange,
+  isDarkMode,
+  subtext,
+}: {
+  color: string;
+  onChange: (c: string) => void;
+  isDarkMode: boolean;
+  subtext: string;
+}) {
+  const isPreset = (ANNOTATION_COLORS as readonly string[]).includes(color);
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`text-xs ${subtext}`}>색상:</span>
+      {ANNOTATION_COLORS.map((c) => (
+        <button
+          key={c}
+          onClick={() => onChange(c)}
+          className="w-6 h-6 rounded-full transition-transform"
+          style={{
+            backgroundColor: c,
+            border: color === c ? '3px solid white' : '2px solid transparent',
+            boxShadow: color === c ? '0 0 0 1px ' + c : 'none',
+            transform: color === c ? 'scale(1.2)' : 'scale(1)',
+          }}
+        />
+      ))}
+      {/* 커스텀 색상 */}
+      <label
+        className="relative w-6 h-6 rounded-full cursor-pointer transition-transform overflow-hidden"
+        style={{
+          background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+          border: !isPreset ? '3px solid white' : '2px solid transparent',
+          boxShadow: !isPreset ? '0 0 0 1px ' + color : 'none',
+          transform: !isPreset ? 'scale(1.2)' : 'scale(1)',
+        }}
+      >
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+        />
+      </label>
+    </div>
+  );
+}
+
 interface AnnotationPanelProps {
   modelId: string;
   annotations: AnnotationRow[];
@@ -41,6 +92,7 @@ export function AnnotationPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [editColor, setEditColor] = useState<string>(ANNOTATION_COLORS[0]);
 
   // 핀 배치 모드 토글
   const handleTogglePlacingPin = useCallback(() => {
@@ -87,14 +139,15 @@ export function AnnotationPanel({
     setEditingId(ann.id);
     setEditTitle(ann.title);
     setEditContent(ann.content);
+    setEditColor(ann.color || ANNOTATION_COLORS[0]);
   }, []);
 
   // 수정 저장
   const handleEditSave = useCallback(async () => {
     if (!editingId) return;
-    await onUpdate(editingId, { title: editTitle, content: editContent });
+    await onUpdate(editingId, { title: editTitle, content: editContent, color: editColor });
     setEditingId(null);
-  }, [editingId, editTitle, editContent, onUpdate]);
+  }, [editingId, editTitle, editContent, editColor, onUpdate]);
 
   // 삭제
   const handleDelete = useCallback(async (id: string) => {
@@ -158,7 +211,7 @@ export function AnnotationPanel({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          {isPlacingPin ? '핀 배치 중... (3D 표면 클릭)' : '좌표에 핀 배치'}
+          {isPlacingPin ? '배치 중... (3D 표면 클릭)' : '3D 주석 추가'}
         </button>
       </div>
 
@@ -190,22 +243,7 @@ export function AnnotationPanel({
           />
 
           {/* 색상 선택 */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs ${subtext}`}>색상:</span>
-            {ANNOTATION_COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setFormColor(c)}
-                className="w-6 h-6 rounded-full transition-transform"
-                style={{
-                  backgroundColor: c,
-                  border: formColor === c ? '3px solid white' : '2px solid transparent',
-                  boxShadow: formColor === c ? '0 0 0 1px ' + c : 'none',
-                  transform: formColor === c ? 'scale(1.2)' : 'scale(1)',
-                }}
-              />
-            ))}
-          </div>
+          <ColorPicker color={formColor} onChange={setFormColor} isDarkMode={isDarkMode} subtext={subtext} />
 
           {/* 저장/취소 */}
           <div className="flex gap-2">
@@ -264,6 +302,7 @@ export function AnnotationPanel({
                     rows={2}
                     className={`w-full px-2 py-1 rounded text-sm border ${border} ${inputBg} resize-none focus:outline-none focus:ring-1 focus:ring-blue-500`}
                   />
+                  <ColorPicker color={editColor} onChange={setEditColor} isDarkMode={isDarkMode} subtext={subtext} />
                   <div className="flex gap-1">
                     <button
                       onClick={handleEditSave}
