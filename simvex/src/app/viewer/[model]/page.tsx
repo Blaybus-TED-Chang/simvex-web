@@ -11,7 +11,9 @@ import { ExplodeSlider } from '@/components/viewer/ExplodeSlider';
 import { ProductInfo } from '@/components/viewer/ProductInfo';
 import { PartInfo } from '@/components/viewer/PartInfo';
 import { PartsList } from '@/components/viewer/PartsList';
-import { NotesPanel } from '@/components/viewer/NotesPanel';
+import { NotesPanel } from '@/components/notes/NotesPanel';
+import { AIChatPanel } from '@/components/ai/AIChatPanel';
+import { useResizePanelVertical } from '@/hooks/useResizePanelVertical';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
 import { ShareButton } from '@/components/share/ShareButton';
@@ -202,6 +204,10 @@ export default function ViewerPage() {
   const toggleRightPanel = useCallback((panel: RightPanelType) => {
     setActiveRightPanel(prev => prev === panel ? null : panel);
   }, []);
+
+  // AI 하단 패널
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const aiPanelResize = useResizePanelVertical({ min: 150, max: 600, initial: 300 });
 
   // 각 패널 리사이즈
   const notesResize = useResizePanel({ direction: 'right', min: 320, max: 800, initial: 384 });
@@ -570,6 +576,18 @@ export default function ViewerPage() {
     setActiveAnnotationId(activeAnnotationId === id ? null : id);
     if (!isAnnotationPanelOpen) setAnnotationPanelOpen(true);
   }, [activeAnnotationId, isAnnotationPanelOpen, setActiveAnnotationId, setAnnotationPanelOpen]);
+
+  // partTag 클릭 이벤트 리스너 (노트 내 부품 태그 클릭 → 부품 선택)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ partId: string }>).detail;
+      if (detail?.partId) {
+        setSelectedPartId(detail.partId);
+      }
+    };
+    window.addEventListener('partTagClick', handler);
+    return () => window.removeEventListener('partTagClick', handler);
+  }, [setSelectedPartId]);
 
   // 부품 선택 시 핀 말풍선 닫기
   const handleSelectPart = useCallback((partId: string | null) => {
@@ -996,7 +1014,7 @@ export default function ViewerPage() {
           )}
 
           {/* 노트 패널 토글 */}
-          <Tooltip label="노트 / AI 어시스턴트">
+          <Tooltip label="노트">
             <button
               onClick={() => toggleRightPanel('notes')}
               className={`p-2 rounded-lg transition-colors ${
@@ -1009,6 +1027,24 @@ export default function ViewerPage() {
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          </Tooltip>
+
+          {/* AI 어시스턴트 하단 패널 토글 */}
+          <Tooltip label="AI 어시스턴트">
+            <button
+              onClick={() => setIsAIPanelOpen(!isAIPanelOpen)}
+              className={`p-2 rounded-lg transition-colors ${
+                isAIPanelOpen
+                  ? 'bg-purple-500 text-white'
+                  : isDarkMode
+                    ? 'hover:bg-gray-800 text-gray-400'
+                    : 'hover:bg-gray-100 text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </button>
           </Tooltip>
@@ -1035,7 +1071,7 @@ export default function ViewerPage() {
 
       {/* 메인 컨텐츠 — 뷰어 탭 */}
       <div
-        className="flex-1 flex overflow-hidden"
+        className="flex-1 flex overflow-hidden min-h-0"
         style={{ display: activeTab === 'viewer' ? 'flex' : 'none' }}
       >
         {modelHasViewer && (
@@ -1149,7 +1185,7 @@ export default function ViewerPage() {
       {/* 메인 컨텐츠 — 시뮬레이션 탭 */}
       {modelHasSimulation && (
         <div
-          className="flex-1 flex flex-col overflow-hidden"
+          className="flex-1 flex flex-col overflow-hidden min-h-0"
           style={{ display: activeTab === 'simulation' ? 'flex' : 'none' }}
         >
           <SimulationTabContent
@@ -1159,6 +1195,48 @@ export default function ViewerPage() {
             onCloseLearning={() => setShowLearning(false)}
           />
         </div>
+      )}
+
+      {/* AI 하단 패널 */}
+      {isAIPanelOpen && (
+        <>
+          {/* 리사이즈 핸들 */}
+          <div
+            className={`h-1.5 flex-shrink-0 cursor-ns-resize group relative z-20 ${
+              isDarkMode ? 'bg-gray-900' : 'bg-white'
+            }`}
+            onMouseDown={aiPanelResize.handleResizeStart}
+          >
+            <div className={`absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 transition-all group-hover:h-1 ${
+              isDarkMode ? 'group-hover:bg-purple-400' : 'group-hover:bg-purple-500'
+            }`} />
+          </div>
+          {/* 패널 본체 */}
+          <div
+            className={`flex-shrink-0 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}
+            style={{ height: aiPanelResize.height }}
+          >
+            <AIChatPanel
+              modelId={modelId}
+              modelInfo={notesModelInfo ? {
+                name: notesModelInfo.name,
+                nameKo: notesModelInfo.nameKo,
+                description: notesModelInfo.description,
+                theory: notesModelInfo.theory,
+                category: notesModelInfo.category,
+              } : null}
+              selectedPart={selectedPart ? {
+                name: selectedPart.name,
+                nameKo: selectedPart.nameKo,
+                description: selectedPart.description,
+                material: (selectedPart as unknown as { material?: string }).material,
+              } : null}
+              user={user}
+              isDarkMode={isDarkMode}
+              onClose={() => setIsAIPanelOpen(false)}
+            />
+          </div>
+        </>
       )}
 
       {/* 노트 패널 (슬라이드) */}
@@ -1178,14 +1256,14 @@ export default function ViewerPage() {
           onMouseDown={notesResize.handleResizeStart}
         />
         <div className="h-full p-4">
-          {notesModelInfo && (
-            <NotesPanel
-              modelInfo={notesModelInfo}
-              selectedPart={selectedPart}
-              user={user}
-              modelId={modelId}
-            />
-          )}
+          <NotesPanel
+            modelId={modelId}
+            user={user}
+            isDarkMode={isDarkMode}
+            selectedPartId={selectedPartId}
+            selectedPartName={selectedPart?.nameKo ?? null}
+            onSelectPart={handleSelectPart}
+          />
         </div>
       </div>
 
