@@ -69,6 +69,8 @@ interface CombinedGLBViewerProps {
   onDebugInfo?: (info: { meshCount: number; partIds: string[]; allMeshNames: string[] }) => void;
   isPlacingPin?: boolean;
   onPlacePin?: (point: [number, number, number], partId?: string) => void;
+  focusedPartId?: string | null;
+  onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
 }
 
 // Individual part mesh component
@@ -78,6 +80,7 @@ function PartMesh({
   isSelected,
   isHovered,
   isVisible,
+  opacity = 1,
   onClick,
   onClickWithPoint,
   onPointerOver,
@@ -88,6 +91,7 @@ function PartMesh({
   isSelected: boolean;
   isHovered: boolean;
   isVisible: boolean;
+  opacity?: number;
   onClick: () => void;
   onClickWithPoint?: (point: [number, number, number]) => void;
   onPointerOver: () => void;
@@ -113,9 +117,11 @@ function PartMesh({
       color: partConfig.color || '#888888',
       metalness: 0.3,
       roughness: 0.6,
+      transparent: opacity < 1,
+      opacity: opacity,
     });
     return mat;
-  }, [partConfig.color]);
+  }, [partConfig.color, opacity]);
 
   // Update emissive for highlight
   useEffect(() => {
@@ -133,6 +139,16 @@ function PartMesh({
       }
     }
   }, [clonedMaterial, isSelected, isHovered]);
+
+  // Update opacity dynamically
+  useEffect(() => {
+    const mat = clonedMaterial as THREE.MeshStandardMaterial;
+    if (mat) {
+      mat.transparent = opacity < 1;
+      mat.opacity = opacity;
+      mat.needsUpdate = true;
+    }
+  }, [clonedMaterial, opacity]);
 
   if (!isVisible) return null;
 
@@ -172,11 +188,10 @@ function PartMesh({
       onPointerOver={(e) => {
         e.stopPropagation();
         onPointerOver();
-        document.body.style.cursor = 'pointer';
       }}
-      onPointerOut={() => {
+      onPointerOut={(e) => {
+        e.stopPropagation();
         onPointerOut();
-        document.body.style.cursor = 'auto';
       }}
     />
   );
@@ -193,6 +208,8 @@ export function CombinedGLBViewer({
   onDebugInfo,
   isPlacingPin = false,
   onPlacePin,
+  focusedPartId,
+  onMeshPositions,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
@@ -275,7 +292,20 @@ export function CombinedGLBViewer({
         allMeshNames,
       });
     }
-  }, [scene, meshToPartMap, onDebugInfo]);
+
+    // 부품 위치 콜백
+    if (onMeshPositions) {
+      const positions: Record<string, [number, number, number]> = {};
+      extracted.forEach((e) => {
+        positions[e.partConfig.id] = [
+          e.worldPosition.x,
+          e.worldPosition.y,
+          e.worldPosition.z,
+        ];
+      });
+      onMeshPositions(positions);
+    }
+  }, [scene, meshToPartMap, onDebugInfo, onMeshPositions]);
 
   const modelScale = model.scale || 1;
 
@@ -286,6 +316,9 @@ export function CombinedGLBViewer({
         const isVisible = visibleParts.length === 0 || visibleParts.includes(partConfig.id);
         const isSelected = selectedPartId === partConfig.id;
         const isHovered = hoveredPartId === partConfig.id;
+        const opacity = focusedPartId
+          ? (focusedPartId === partConfig.id ? 1 : 0.15)
+          : 1;
 
         return (
           <PartMesh
@@ -295,6 +328,7 @@ export function CombinedGLBViewer({
             isSelected={isSelected}
             isHovered={isHovered}
             isVisible={isVisible}
+            opacity={opacity}
             onClick={() => onSelectPart(partConfig.id)}
             onClickWithPoint={
               isPlacingPin && onPlacePin
@@ -344,6 +378,9 @@ interface CombinedModelViewerProps {
   onPlacePin?: (point: [number, number, number], partId?: string) => void;
   onAnnotationPinClick?: (id: string) => void;
   containerRef?: React.RefObject<HTMLDivElement | null>;
+  // 부품 트리 탐색기 관련
+  focusedPartId?: string | null;
+  onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
 }
 
 // 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
@@ -440,6 +477,8 @@ export function CombinedModelViewer({
   onPlacePin,
   onAnnotationPinClick,
   containerRef,
+  focusedPartId,
+  onMeshPositions,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -510,6 +549,8 @@ export function CombinedModelViewer({
             onHoverPart={onHoverPart}
             isPlacingPin={isPlacingPin}
             onPlacePin={onPlacePin}
+            focusedPartId={focusedPartId}
+            onMeshPositions={onMeshPositions}
           />
         </Suspense>
 

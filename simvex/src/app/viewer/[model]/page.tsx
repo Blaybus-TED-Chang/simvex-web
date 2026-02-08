@@ -29,6 +29,7 @@ import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
 import { usePartCustomizations } from '@/hooks/usePartCustomizations';
 import { usePartMemos } from '@/hooks/usePartMemos';
 import { PartMemoPanel } from '@/components/viewer/PartMemoPanel';
+import { PartTreePanel } from '@/components/viewer/PartTreePanel';
 import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
 import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
 import { hasSimulation as checkHasSimulation, hasViewer as checkHasViewer, getSimulationMapping } from '@/data/simulationMapping';
@@ -182,6 +183,13 @@ export default function ViewerPage() {
   const [isQuizPanelOpen, setIsQuizPanelOpen] = useState(false);
   const [notesPanelWidth, setNotesPanelWidth] = useState(384); // 기본 w-96 = 384px
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
+
+  // 부품 트리 패널
+  const [isTreePanelOpen, setIsTreePanelOpen] = useState(false);
+  const [treePanelWidth, setTreePanelWidth] = useState(280);
+  const [focusedPartId, setFocusedPartId] = useState<string | null>(null);
+  const [meshPositions, setMeshPositions] = useState<Record<string, [number, number, number]>>({});
+  const isTreeResizing = useRef(false);
   const isResizing = useRef(false);
   const isSidebarResizing = useRef(false);
 
@@ -237,6 +245,37 @@ export default function ViewerPage() {
 
     const handleMouseUp = () => {
       isSidebarResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      overlay.remove();
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // 트리 패널 리사이즈 핸들러
+  const handleTreeResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isTreeResizing.current = true;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;';
+    document.body.appendChild(overlay);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isTreeResizing.current) return;
+      const newWidth = e.clientX;
+      setTreePanelWidth(Math.max(200, Math.min(500, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      isTreeResizing.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       overlay.remove();
@@ -392,6 +431,59 @@ export default function ViewerPage() {
     setCameraTarget(target);
     saveModelStateDebounced(position, target);
   }, [saveModelStateDebounced]);
+
+  // 부품 트리: 포커스 콜백
+  const handleFocusPart = useCallback((partId: string | null) => {
+    if (partId) {
+      setFocusedPartId(partId);
+      setSelectedPartId(partId);
+      // 카메라를 부품 위치로 줌인
+      const pos = meshPositions[partId];
+      if (pos) {
+        const modelObj = originalModel || combinedModel;
+        const scale = (modelObj && 'scale' in modelObj ? (modelObj as CombinedModelConfig).scale : undefined) || 1;
+        // explode offset 반영
+        const part = modelObj?.parts.find((p) => p.id === partId);
+        let tx = pos[0] * scale;
+        let ty = pos[1] * scale;
+        let tz = pos[2] * scale;
+        if (part) {
+          const [dx, dy, dz] = part.explodeDirection;
+          const dist = part.explodeDistance * explodeValue;
+          tx += dx * dist * scale;
+          ty += dy * dist * scale;
+          tz += dz * dist * scale;
+        }
+        // 카메라 방향 유지하면서 거리 2.0
+        const camDir = [
+          cameraPosition[0] - cameraTarget[0],
+          cameraPosition[1] - cameraTarget[1],
+          cameraPosition[2] - cameraTarget[2],
+        ];
+        const len = Math.sqrt(camDir[0] ** 2 + camDir[1] ** 2 + camDir[2] ** 2);
+        const zoomDist = 2.0;
+        const norm = len > 0 ? [camDir[0] / len, camDir[1] / len, camDir[2] / len] : [0, 0.5, 1];
+        setCameraTarget([tx, ty, tz]);
+        setCameraPosition([
+          tx + norm[0] * zoomDist,
+          ty + norm[1] * zoomDist,
+          tz + norm[2] * zoomDist,
+        ]);
+      }
+    } else {
+      setFocusedPartId(null);
+      setSelectedPartId(null);
+      // 카메라를 기본값으로 복원
+      const modelObj = originalModel || combinedModel;
+      setCameraPosition(modelObj?.cameraPosition || [5, 3, 5]);
+      setCameraTarget(modelObj?.cameraTarget || [0, 0, 0]);
+    }
+  }, [meshPositions, cameraPosition, cameraTarget, explodeValue, originalModel, combinedModel, setSelectedPartId]);
+
+  // 부품 위치 콜백 (안정적 참조를 위해 useCallback)
+  const handleMeshPositions = useCallback((positions: Record<string, [number, number, number]>) => {
+    setMeshPositions(positions);
+  }, []);
 
   // === 부품 커스터마이징 ===
   const { customizations, upsertCustomization, resetCustomization } = usePartCustomizations(user, modelId);
@@ -753,6 +845,31 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
+          {/* 부품 트리 패널 토글 — 뷰어 탭 + 통합 모델만 */}
+          {activeTab === 'viewer' && isCombinedModel && (
+            <Tooltip label="부품 트리 탐색기">
+              <button
+                onClick={() => {
+                  setIsTreePanelOpen(!isTreePanelOpen);
+                  if (isTreePanelOpen) {
+                    setFocusedPartId(null);
+                  }
+                }}
+                className={`p-2 rounded-lg transition-colors ${
+                  isTreePanelOpen
+                    ? 'bg-cyan-500 text-white'
+                    : isDarkMode
+                      ? 'hover:bg-gray-800 text-gray-400'
+                      : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />
+                </svg>
+              </button>
+            </Tooltip>
+          )}
+
           {/* 주석 버튼 — 뷰어 탭에서만 표시 */}
           {activeTab === 'viewer' && isCombinedModel && (
             <Tooltip label="3D 주석 (핀 메모)">
@@ -879,6 +996,37 @@ export default function ViewerPage() {
       >
         {modelHasViewer && (
           <>
+            {/* 왼쪽 부품 트리 패널 */}
+            {isTreePanelOpen && isCombinedModel && mergedModel && (
+              <>
+                <div
+                  className={`flex-shrink-0 overflow-hidden ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-r ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}
+                  style={{ width: treePanelWidth, minWidth: 200, maxWidth: 500 }}
+                >
+                  <PartTreePanel
+                    isDarkMode={isDarkMode}
+                    modelNameKo={mergedModel.nameKo}
+                    parts={mergedModel.parts}
+                    selectedPartId={selectedPartId}
+                    focusedPartId={focusedPartId}
+                    onFocusPart={handleFocusPart}
+                    onSelectPart={handleSelectPart}
+                  />
+                </div>
+                {/* 트리 패널 리사이즈 핸들 */}
+                <div
+                  className={`w-1.5 flex-shrink-0 cursor-ew-resize group relative z-20 ${
+                    isDarkMode ? 'bg-gray-900' : 'bg-white'
+                  }`}
+                  onMouseDown={handleTreeResizeStart}
+                >
+                  <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-all group-hover:w-1 ${
+                    isDarkMode ? 'group-hover:bg-cyan-400' : 'group-hover:bg-cyan-500'
+                  }`} />
+                </div>
+              </>
+            )}
+
             {/* 3D 뷰포트 */}
             <div className="flex-1 min-w-0 p-4 relative">
               {isCombinedModel && mergedModel ? (
@@ -901,6 +1049,8 @@ export default function ViewerPage() {
                   onPlacePin={handlePlacePin}
                   onAnnotationPinClick={handleAnnotationPinClick}
                   containerRef={viewportRef}
+                  focusedPartId={focusedPartId}
+                  onMeshPositions={handleMeshPositions}
                 />
               ) : model ? (
                 <ModelViewer
