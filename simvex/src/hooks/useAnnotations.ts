@@ -63,7 +63,7 @@ export function useAnnotations(user: User | null, modelId: string) {
 
   // 주석 수정
   const updateAnnotation = useCallback(
-    async (id: string, updates: Partial<Pick<AnnotationRow, 'title' | 'content' | 'color'>>) => {
+    async (id: string, updates: Partial<Pick<AnnotationRow, 'title' | 'content' | 'color' | 'position' | 'target_type' | 'part_id'>>) => {
       if (!user) return;
 
       const supabase = createClient();

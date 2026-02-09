@@ -542,6 +542,12 @@ export default function ViewerPage() {
     setPlacingPin,
     showAllAnnotations,
     setShowAllAnnotations,
+    draggingAnnotationId,
+    dragPreviewPosition,
+    dragTargetInfo,
+    setDraggingAnnotation,
+    setDragPreview,
+    clearDrag,
   } = useAnnotationStore();
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -554,6 +560,45 @@ export default function ViewerPage() {
     });
     setPlacingPin(false);
   }, [setPendingAnnotation, setPlacingPin]);
+
+  // 핀 드래그 시작
+  const handleDragStart = useCallback((id: string) => {
+    setDraggingAnnotation(id);
+  }, [setDraggingAnnotation]);
+
+  // 핀 드래그 이동 (onPointerMove에서 호출)
+  const handleDragMove = useCallback((point: [number, number, number], partId?: string) => {
+    setDragPreview(point, { targetType: partId ? 'part' : 'coordinate', partId });
+  }, [setDragPreview]);
+
+  // 핀 드래그 완료: window pointerup
+  useEffect(() => {
+    if (!draggingAnnotationId) return;
+
+    const handlePointerUp = () => {
+      if (dragPreviewPosition) {
+        updateAnnotation(draggingAnnotationId, {
+          position: dragPreviewPosition,
+          target_type: dragTargetInfo?.targetType || 'coordinate',
+          part_id: dragTargetInfo?.partId || null,
+        });
+      }
+      clearDrag();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        clearDrag();
+      }
+    };
+
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [draggingAnnotationId, dragPreviewPosition, dragTargetInfo, updateAnnotation, clearDrag]);
 
   // activeRightPanel → annotationStore 동기화
   useEffect(() => {
@@ -1157,6 +1202,12 @@ export default function ViewerPage() {
                   focusedPartId={focusedPartId}
                   onMeshPositions={handleMeshPositions}
                   globalOpacity={globalOpacity}
+                  isDraggingPin={!!draggingAnnotationId}
+                  onDragMove={handleDragMove}
+                  draggingAnnotationId={draggingAnnotationId}
+                  dragPreviewPosition={dragPreviewPosition}
+                  dragTargetInfo={dragTargetInfo}
+                  onDragStart={handleDragStart}
                 />
               ) : model ? (
                 <ModelViewer
