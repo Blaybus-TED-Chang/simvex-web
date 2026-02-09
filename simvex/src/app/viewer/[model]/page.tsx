@@ -814,7 +814,7 @@ export default function ViewerPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">모델을 찾을 수 없습니다</h1>
           <Link
-            href="/"
+            href="/models"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
             홈으로 돌아가기
@@ -837,7 +837,7 @@ export default function ViewerPage() {
         <div className="flex items-center gap-4">
           <Tooltip label="홈으로 돌아가기">
             <Link
-              href="/"
+              href="/models"
               className={`p-2 rounded-lg block ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

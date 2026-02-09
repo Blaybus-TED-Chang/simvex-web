@@ -86,7 +86,7 @@ export default function MyPage() {
       <header className={`h-14 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 flex items-center justify-between`}>
         <div className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/models"
             className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,7 +159,7 @@ export default function MyPage() {
                 아직 스크랩한 모델이 없습니다
               </p>
               <Link
-                href="/"
+                href="/models"
                 className={`inline-block mt-3 text-sm px-4 py-2 rounded-lg transition-colors ${
                   isDarkMode ? 'text-blue-400 hover:bg-gray-800' : 'text-blue-600 hover:bg-gray-100'
                 }`}
