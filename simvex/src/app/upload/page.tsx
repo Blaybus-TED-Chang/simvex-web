@@ -250,11 +250,11 @@ export default function UploadPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="SIMVEX"
-              width={32}
-              height={32}
-              className="rounded-lg"
+              width={90}
+              height={19}
+              className={`object-contain ${isDarkMode ? 'invert' : ''}`}
             />
             <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               모델 업로드

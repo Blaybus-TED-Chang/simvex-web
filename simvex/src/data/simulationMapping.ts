@@ -1,5 +1,8 @@
 /**
  * 모델 ID ↔ 시뮬레이션 매핑
+ *
+ * NOTE: robot-arm-combined는 FK 관절 애니메이션 구현 문제로 보류됨.
+ * 관련 파일은 components/simulation/RobotArmSim*.tsx에 참고용으로 남아있음.
  */
 
 export interface SimulationMapping {
@@ -15,11 +18,6 @@ const SIMULATION_MAP: Record<string, SimulationMapping> = {
   'drone-combined': {
     simulationId: 'drone',
     nameKo: '드론 시뮬레이터',
-    hasViewer: true,
-  },
-  'robot-arm-combined': {
-    simulationId: 'robot-arm',
-    nameKo: '로봇 암 시뮬레이터',
     hasViewer: true,
   },
   'jet-engine': {
