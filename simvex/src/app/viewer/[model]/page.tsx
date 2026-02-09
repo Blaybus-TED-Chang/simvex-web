@@ -201,10 +201,9 @@ export default function ViewerPage() {
     toggleGroupCollapsed,
     moveGroupToGroup,
     reorderGroups,
+    showControlsGuide,
+    toggleControlsGuide,
   } = useViewerStore();
-
-  // 조작 가이드 오버레이 (페이지 진입 시 항상 표시)
-  const [showControls, setShowControls] = useState(true);
 
   // 오른쪽 슬라이드 패널 상호배타 상태
   const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
@@ -1042,11 +1041,15 @@ export default function ViewerPage() {
           {/* 그룹 D: 전역 설정 */}
           <Tooltip label="3D 뷰어 조작 방법 안내">
             <button
-              onClick={() => setShowControls(!showControls)}
+              onClick={toggleControlsGuide}
               className={`p-2 rounded-lg transition-colors ${
-                isDarkMode
-                  ? 'hover:bg-gray-800 text-gray-400'
-                  : 'hover:bg-gray-100 text-gray-600'
+                showControlsGuide
+                  ? isDarkMode
+                    ? 'bg-cyan-900/50 text-cyan-400'
+                    : 'bg-cyan-100 text-cyan-700'
+                  : isDarkMode
+                    ? 'hover:bg-gray-800 text-gray-400'
+                    : 'hover:bg-gray-100 text-gray-600'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1162,7 +1165,7 @@ export default function ViewerPage() {
                   cameraTarget={cameraTarget}
                 />
               ) : null}
-              <ControlsHelp show={showControls} onDismiss={() => setShowControls(false)} isDarkMode={isDarkMode} controls={VIEWER_CONTROLS_GUIDE} />
+              <ControlsHelp show={showControlsGuide} onDismiss={toggleControlsGuide} isDarkMode={isDarkMode} controls={VIEWER_CONTROLS_GUIDE} />
             </div>
 
             {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}

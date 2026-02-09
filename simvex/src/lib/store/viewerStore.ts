@@ -46,6 +46,7 @@ const initialState: ViewerState = {
   isDarkMode: false,
   globalOpacity: 1,
   modelStates: {},
+  showControlsGuide: true,
 };
 
 export const useViewerStore = create<ViewerState & ViewerActions>()(
@@ -307,6 +308,9 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
             },
           };
         }),
+
+      toggleControlsGuide: () =>
+        set((state) => ({ showControlsGuide: !state.showControlsGuide })),
     }),
     {
       name: 'viewer-storage',
@@ -317,6 +321,7 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
         currentModel: state.currentModel,
         globalOpacity: state.globalOpacity,
         modelStates: state.modelStates,
+        showControlsGuide: state.showControlsGuide,
       }),
       skipHydration: true,
     }

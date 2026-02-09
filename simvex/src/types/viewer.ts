@@ -60,6 +60,7 @@ export interface ViewerState {
   isDarkMode: boolean;
   globalOpacity: number;
   modelStates: Record<string, ModelViewState>;
+  showControlsGuide: boolean;
 }
 
 // 뷰어 액션
@@ -83,4 +84,5 @@ export interface ViewerActions {
   toggleGroupCollapsed: (modelId: string, groupId: string) => void;
   moveGroupToGroup: (modelId: string, sourceGroupId: string, targetGroupId: string | null) => void;
   reorderGroups: (modelId: string, parentGroupId: string | null, orderedGroupIds: string[]) => void;
+  toggleControlsGuide: () => void;
 }
