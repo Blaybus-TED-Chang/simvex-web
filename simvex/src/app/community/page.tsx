@@ -59,7 +59,7 @@ export default function CommunityPage() {
             </svg>
           </Link>
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="SIMVEX" width={32} height={32} className="rounded-lg" />
+            <Image src="/logo.svg" alt="SIMVEX" width={90} height={19} className={`object-contain ${isDarkMode ? 'invert' : ''}`} />
             <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>커뮤니티 모델</h1>
           </div>
         </div>

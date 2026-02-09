@@ -139,16 +139,13 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="SIMVEX Logo"
-              width={48}
-              height={48}
-              className="rounded-xl shadow-lg"
+              width={130}
+              height={28}
+              className={`object-contain ${isDarkMode ? 'invert' : ''}`}
             />
-            <div>
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>SIMVEX</h1>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>공학 시뮬레이션 플랫폼</p>
-            </div>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>공학 시뮬레이션 플랫폼</p>
           </div>
           <div className="flex items-center gap-2">
             {/* 네비게이션 */}
