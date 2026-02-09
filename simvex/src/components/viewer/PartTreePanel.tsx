@@ -42,7 +42,7 @@ function EyeIcon({ visible, className }: { visible: boolean; className?: string 
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 012.223-3.592M6.938 6.938A9.966 9.966 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.969 9.969 0 01-4.043 5.207M6.938 6.938L3 3m3.938 3.938l3.124 3.124m6.876 6.876L21 21m-3.938-3.938l-3.124-3.124m0 0a3 3 0 01-4.243-4.243m4.243 4.243L9.88 9.88" />
+        d="M2.458 12C3.732 16.057 7.523 19 12 19c4.478 0 8.268-2.943 9.542-7" />
     </svg>
   );
 }
@@ -145,6 +145,7 @@ export function PartTreePanel({
   }, [moveMenuPartId]);
 
   const allVisible = parts.length > 0 && parts.every((p) => visibleParts.includes(p.id));
+  const someVisible = parts.length > 0 && parts.some((p) => visibleParts.includes(p.id));
   const displayRootName = rootName || modelNameKo;
 
   /* ── 핸들러 ── */
@@ -197,8 +198,8 @@ export function PartTreePanel({
   const handleGroupVisibilityToggle = (group: PartTreeGroup) => {
     const allPartIds = collectAllPartIds(group);
     const groupParts = parts.filter((p) => allPartIds.includes(p.id));
-    const allGroupVisible = groupParts.length > 0 && groupParts.every((p) => visibleParts.includes(p.id));
-    if (allGroupVisible) {
+    const someGroupVisible = groupParts.length > 0 && groupParts.some((p) => visibleParts.includes(p.id));
+    if (someGroupVisible) {
       const newVisible = visibleParts.filter((id) => !allPartIds.includes(id));
       onSetAllVisible(newVisible);
     } else {
@@ -461,6 +462,7 @@ export function PartTreePanel({
     const allPartIds = collectAllPartIds(group);
     const groupParts = parts.filter((p) => allPartIds.includes(p.id));
     const allGroupVisible = groupParts.length > 0 && groupParts.every((p) => visibleParts.includes(p.id));
+    const someGroupVisible = groupParts.length > 0 && groupParts.some((p) => visibleParts.includes(p.id));
     const isEditing = editingGroupId === group.id;
     const isConfirmingDelete = confirmDeleteGroupId === group.id;
     const childGroups = (group.childGroupIds ?? [])
@@ -542,9 +544,9 @@ export function PartTreePanel({
               isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
             }`}
             onClick={(e) => { e.stopPropagation(); handleGroupVisibilityToggle(group); }}
-            title={allGroupVisible ? '그룹 숨기기' : '그룹 보이기'}
+            title={someGroupVisible ? '그룹 숨기기' : '그룹 보이기'}
           >
-            <EyeIcon visible={allGroupVisible} className={`w-3.5 h-3.5 ${
+            <EyeIcon visible={someGroupVisible} className={`w-3.5 h-3.5 ${
               isDarkMode ? 'text-gray-500' : 'text-gray-400'
             }`} />
           </button>
@@ -745,15 +747,15 @@ export function PartTreePanel({
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              if (allVisible) {
+              if (someVisible) {
                 onSetAllVisible([]);
               } else {
                 onSetAllVisible(parts.map((p) => p.id));
               }
             }}
-            title={allVisible ? '모두 숨기기' : '모두 보이기'}
+            title={someVisible ? '모두 숨기기' : '모두 보이기'}
           >
-            <EyeIcon visible={allVisible} className={`w-3.5 h-3.5 ${
+            <EyeIcon visible={someVisible} className={`w-3.5 h-3.5 ${
               isDarkMode ? 'text-gray-500' : 'text-gray-400'
             }`} />
           </button>
