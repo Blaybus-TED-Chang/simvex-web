@@ -315,7 +315,7 @@ export function CombinedGLBViewer({
     <group scale={[modelScale, modelScale, modelScale]}>
       {extractedMeshes.map((meshData, index) => {
         const { partConfig } = meshData;
-        const isVisible = visibleParts.length === 0 || visibleParts.includes(partConfig.id);
+        const isVisible = visibleParts.includes(partConfig.id);
         const isSelected = selectedPartId === partConfig.id;
         const isHovered = hoveredPartId === partConfig.id;
         const opacity = focusedPartId

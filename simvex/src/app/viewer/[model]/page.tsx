@@ -10,7 +10,6 @@ import { useViewerStore } from '@/lib/store/viewerStore';
 import { ExplodeSlider } from '@/components/viewer/ExplodeSlider';
 import { ProductInfo } from '@/components/viewer/ProductInfo';
 import { PartInfo } from '@/components/viewer/PartInfo';
-import { PartsList } from '@/components/viewer/PartsList';
 import { NotesPanel } from '@/components/notes/NotesPanel';
 import { AIChatPanel } from '@/components/ai/AIChatPanel';
 import { useResizePanelVertical } from '@/hooks/useResizePanelVertical';
@@ -188,12 +187,20 @@ export default function ViewerPage() {
     visibleParts,
     setCurrentModel,
     setAllPartsVisible,
+    togglePartVisibility,
     isDarkMode,
     toggleDarkMode,
     notes,
     getModelState,
     setModelState,
     globalOpacity,
+    createPartGroup,
+    deletePartGroup,
+    renamePartGroup,
+    movePartToGroup,
+    toggleGroupCollapsed,
+    moveGroupToGroup,
+    reorderGroups,
   } = useViewerStore();
 
   // 조작 가이드 오버레이 (페이지 진입 시 항상 표시)
@@ -218,7 +225,7 @@ export default function ViewerPage() {
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
 
   // 부품 트리 패널
-  const [isTreePanelOpen, setIsTreePanelOpen] = useState(false);
+  const [isTreePanelOpen, setIsTreePanelOpen] = useState(true);
   const [treePanelWidth, setTreePanelWidth] = useState(280);
   const [focusedPartId, setFocusedPartId] = useState<string | null>(null);
   const [meshPositions, setMeshPositions] = useState<Record<string, [number, number, number]>>({});
@@ -1088,11 +1095,24 @@ export default function ViewerPage() {
                   <PartTreePanel
                     isDarkMode={isDarkMode}
                     modelNameKo={mergedModel.nameKo}
+                    rootName={getModelState(mergedModel.id)?.rootName}
                     parts={mergedModel.parts}
                     selectedPartId={selectedPartId}
                     focusedPartId={focusedPartId}
+                    visibleParts={visibleParts}
+                    groups={getModelState(mergedModel.id)?.partTreeGroups ?? []}
                     onFocusPart={handleFocusPart}
                     onSelectPart={handleSelectPart}
+                    onToggleVisibility={togglePartVisibility}
+                    onSetAllVisible={setAllPartsVisible}
+                    onCreateGroup={(name, parentGroupId) => createPartGroup(mergedModel.id, name, parentGroupId ?? null)}
+                    onDeleteGroup={(groupId) => deletePartGroup(mergedModel.id, groupId)}
+                    onRenameGroup={(groupId, name) => renamePartGroup(mergedModel.id, groupId, name)}
+                    onMovePartToGroup={(partId, groupId) => movePartToGroup(mergedModel.id, partId, groupId)}
+                    onToggleGroupCollapsed={(groupId) => toggleGroupCollapsed(mergedModel.id, groupId)}
+                    onMoveGroupToGroup={(src, tgt) => moveGroupToGroup(mergedModel.id, src, tgt)}
+                    onReorderGroups={(parentId, ids) => reorderGroups(mergedModel.id, parentId, ids)}
+                    onRenameRoot={(name) => setModelState(mergedModel.id, { rootName: name })}
                   />
                 </div>
                 {/* 트리 패널 리사이즈 핸들 */}
@@ -1177,8 +1197,6 @@ export default function ViewerPage() {
                 onResetCustomize={resetCustomization}
               />
 
-              {/* 부품 목록 */}
-              {(mergedModel ?? currentModelInfo) && <PartsList parts={(mergedModel ?? currentModelInfo)!.parts} />}
             </div>
           </>
         )}
