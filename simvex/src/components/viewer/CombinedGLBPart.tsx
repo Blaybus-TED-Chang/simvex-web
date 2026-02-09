@@ -118,13 +118,14 @@ function PartMesh({
 
   // Create material with base color from config
   const clonedMaterial = useMemo(() => {
-    // 새로운 MeshStandardMaterial 생성하고 color 적용
+    const isTransparent = opacity < 1;
     const mat = new THREE.MeshStandardMaterial({
       color: partConfig.color || '#888888',
       metalness: 0.3,
       roughness: 0.6,
-      transparent: opacity < 1,
+      transparent: isTransparent,
       opacity: opacity,
+      depthWrite: !isTransparent,
     });
     return mat;
   }, [partConfig.color, opacity]);
@@ -150,13 +151,15 @@ function PartMesh({
   useEffect(() => {
     const mat = clonedMaterial as THREE.MeshStandardMaterial;
     if (mat) {
-      mat.transparent = opacity < 1;
+      const isTransparent = opacity < 1;
+      mat.transparent = isTransparent;
       mat.opacity = opacity;
+      mat.depthWrite = !isTransparent;
       mat.needsUpdate = true;
     }
   }, [clonedMaterial, opacity]);
 
-  if (!isVisible) return null;
+  if (!isVisible || opacity <= 0.01) return null;
 
   // Convert to arrays for R3F
   const quaternionArray: [number, number, number, number] = [
@@ -180,8 +183,8 @@ function PartMesh({
       position={position}
       quaternion={quaternionArray}
       scale={scaleArray}
-      castShadow
-      receiveShadow
+      castShadow={opacity > 0.5}
+      receiveShadow={opacity > 0.5}
       onClick={(e) => {
         e.stopPropagation();
         if (onClickWithPoint) {
@@ -581,7 +584,7 @@ export function CombinedModelViewer({
         <directionalLight
           position={[10, 10, 5]}
           intensity={isDarkMode ? 1.5 : 1.8}
-          castShadow
+          castShadow={(globalOpacity ?? 1) > 0.5}
           shadow-mapSize={[1024, 1024]}
         />
         <directionalLight position={[-5, 5, -5]} intensity={isDarkMode ? 0.8 : 1.0} />
@@ -649,7 +652,7 @@ export function CombinedModelViewer({
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, -0.02, 0]}
-          receiveShadow
+          receiveShadow={(globalOpacity ?? 1) > 0.5}
           onClick={
             isPlacingPin && onPlacePin
               ? (e) => {
