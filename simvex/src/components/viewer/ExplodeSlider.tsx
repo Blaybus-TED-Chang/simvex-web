@@ -7,11 +7,9 @@ import { useViewerStore } from '@/lib/store/viewerStore';
 function EditablePercent({
   value,
   onChange,
-  isDarkMode,
 }: {
   value: number;
   onChange: (v: number) => void;
-  isDarkMode: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -23,16 +21,17 @@ function EditablePercent({
 
   if (!editing) {
     return (
-      <span
-        className={`text-sm tabular-nums cursor-text rounded px-1 -mx-1 hover:bg-blue-500/10 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+      <button
+        className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-50 border border-gray-200 text-[13px] tabular-nums text-gray-500 hover:border-gray-300 transition-colors cursor-text"
         onClick={() => {
           setDraft(String(Math.round(value)));
           setEditing(true);
         }}
         title="클릭하여 직접 입력"
       >
-        {Math.round(value)}%
-      </span>
+        {Math.round(value)}
+        <span className="text-gray-400">%</span>
+      </button>
     );
   }
 
@@ -58,154 +57,90 @@ function EditablePercent({
           if (e.key === 'Enter') setEditing(false);
           if (e.key === 'Escape') setEditing(false);
         }}
-        className={`w-12 text-sm text-right rounded px-1 outline-none border ${
-          isDarkMode
-            ? 'bg-gray-700 border-gray-600 text-gray-200'
-            : 'bg-white border-gray-300 text-gray-700'
-        }`}
+        className="w-12 text-[13px] text-right rounded-md px-2 py-1 outline-none border border-blue-400 bg-white text-gray-700 ring-1 ring-blue-200"
       />
-      <span className={`text-sm ml-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>%</span>
+      <span className="text-[13px] ml-0.5 text-gray-400">%</span>
     </span>
   );
 }
 
 export function ExplodeSlider() {
-  const { explodeValue, setExplodeValue, globalOpacity, setGlobalOpacity, isDarkMode } = useViewerStore();
+  const { explodeValue, setExplodeValue, globalOpacity, setGlobalOpacity } = useViewerStore();
 
-  // 투명도: 0% = 불투명(opacity 1), 100% = 완전투명(opacity 0)
   const transparencyPercent = Math.round((1 - globalOpacity) * 100);
 
   return (
-    <div className={`backdrop-blur rounded-lg p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>분해/조립</span>
-        <EditablePercent
-          value={Math.round(explodeValue * 100)}
-          onChange={(v) => setExplodeValue(v / 100)}
-          isDarkMode={isDarkMode}
-        />
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>조립</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={explodeValue * 100}
-          onChange={(e) => setExplodeValue(Number(e.target.value) / 100)}
-          className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer
-                     ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}
-                     [&::-webkit-slider-thumb]:appearance-none
-                     [&::-webkit-slider-thumb]:w-4
-                     [&::-webkit-slider-thumb]:h-4
-                     [&::-webkit-slider-thumb]:rounded-full
-                     [&::-webkit-slider-thumb]:bg-blue-500
-                     [&::-webkit-slider-thumb]:cursor-pointer
-                     [&::-webkit-slider-thumb]:transition-transform
-                     [&::-webkit-slider-thumb]:hover:scale-110`}
-        />
-        <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>분해</span>
-      </div>
-
-      <div className="flex gap-2 mt-3">
-        <button
-          onClick={() => setExplodeValue(0)}
-          className={`flex-1 px-3 py-1.5 text-xs rounded transition-colors ${
-            isDarkMode
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-        >
-          조립
-        </button>
-        <button
-          onClick={() => setExplodeValue(0.5)}
-          className={`flex-1 px-3 py-1.5 text-xs rounded transition-colors ${
-            isDarkMode
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-        >
-          50%
-        </button>
-        <button
-          onClick={() => setExplodeValue(1)}
-          className={`flex-1 px-3 py-1.5 text-xs rounded transition-colors ${
-            isDarkMode
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-        >
-          분해
-        </button>
-      </div>
-
-      {/* 투명도 슬라이더 — 0%=불투명(기본), 100%=투명 */}
-      <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className="flex items-center justify-between mb-2">
-          <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>투명도</span>
+    <div className="space-y-5">
+      {/* 조립 / 분해 */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[14px] font-semibold text-gray-800">조립 / 분해</span>
           <EditablePercent
-            value={transparencyPercent}
-            onChange={(v) => setGlobalOpacity(1 - v / 100)}
-            isDarkMode={isDarkMode}
+            value={Math.round(explodeValue * 100)}
+            onChange={(v) => setExplodeValue(v / 100)}
           />
         </div>
 
         <div className="flex items-center gap-3">
-          <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>불투명</span>
+          <span className="text-[12px] text-gray-400 shrink-0 w-7">조립</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={explodeValue * 100}
+            onChange={(e) => setExplodeValue(Number(e.target.value) / 100)}
+            className="flex-1 h-[6px] rounded-full appearance-none cursor-pointer bg-gray-200
+                       [&::-webkit-slider-thumb]:appearance-none
+                       [&::-webkit-slider-thumb]:w-[16px]
+                       [&::-webkit-slider-thumb]:h-[16px]
+                       [&::-webkit-slider-thumb]:rounded-full
+                       [&::-webkit-slider-thumb]:bg-[#001AFF]
+                       [&::-webkit-slider-thumb]:border-2
+                       [&::-webkit-slider-thumb]:border-white
+                       [&::-webkit-slider-thumb]:shadow-md
+                       [&::-webkit-slider-thumb]:cursor-pointer
+                       [&::-webkit-slider-thumb]:transition-transform
+                       [&::-webkit-slider-thumb]:hover:scale-110"
+          />
+          <span className="text-[12px] text-gray-400 shrink-0 w-7 text-right">분해</span>
+        </div>
+        <p className="text-[12px] text-gray-400 mt-1 ml-10">{Math.round(explodeValue * 100)}%</p>
+      </div>
+
+      {/* 투명도 */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[14px] font-semibold text-gray-800">투명도</span>
+          <EditablePercent
+            value={transparencyPercent}
+            onChange={(v) => setGlobalOpacity(1 - v / 100)}
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] text-gray-400 shrink-0 w-10">불투명</span>
           <input
             type="range"
             min="0"
             max="100"
             value={transparencyPercent}
             onChange={(e) => setGlobalOpacity(1 - Number(e.target.value) / 100)}
-            className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer
-                       ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}
+            className="flex-1 h-[6px] rounded-full appearance-none cursor-pointer bg-gray-200
                        [&::-webkit-slider-thumb]:appearance-none
-                       [&::-webkit-slider-thumb]:w-4
-                       [&::-webkit-slider-thumb]:h-4
+                       [&::-webkit-slider-thumb]:w-[16px]
+                       [&::-webkit-slider-thumb]:h-[16px]
                        [&::-webkit-slider-thumb]:rounded-full
-                       [&::-webkit-slider-thumb]:bg-purple-500
+                       [&::-webkit-slider-thumb]:bg-[#001AFF]
+                       [&::-webkit-slider-thumb]:border-2
+                       [&::-webkit-slider-thumb]:border-white
+                       [&::-webkit-slider-thumb]:shadow-md
                        [&::-webkit-slider-thumb]:cursor-pointer
                        [&::-webkit-slider-thumb]:transition-transform
-                       [&::-webkit-slider-thumb]:hover:scale-110`}
+                       [&::-webkit-slider-thumb]:hover:scale-110"
           />
-          <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>투명</span>
+          <span className="text-[12px] text-gray-400 shrink-0 w-7 text-right">투명</span>
         </div>
-
-        <div className="flex gap-2 mt-3">
-          <button
-            onClick={() => setGlobalOpacity(1)}
-            className={`flex-1 px-3 py-1.5 text-xs rounded transition-colors ${
-              isDarkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            0%
-          </button>
-          <button
-            onClick={() => setGlobalOpacity(0.5)}
-            className={`flex-1 px-3 py-1.5 text-xs rounded transition-colors ${
-              isDarkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            50%
-          </button>
-          <button
-            onClick={() => setGlobalOpacity(0)}
-            className={`flex-1 px-3 py-1.5 text-xs rounded transition-colors ${
-              isDarkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            100%
-          </button>
-        </div>
+        <p className="text-[12px] text-gray-400 mt-1 ml-[52px]">{transparencyPercent}%</p>
       </div>
     </div>
   );

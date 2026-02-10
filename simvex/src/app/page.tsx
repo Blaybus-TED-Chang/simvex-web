@@ -1,227 +1,407 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import { LoginModal } from '@/components/auth/LoginModal';
+import { useUser } from '@/hooks/useUser';
 
 const CURVE_PATH =
-  'M0.0338419 2.34804C246.347 -1.82041 749.414 29.7598 791.178 189.428C832.942 349.096 646.763 532.408 548.453 604.106C398.835 714.319 237.915 965.46 791.178 1088.31C1344.44 1211.17 1522.94 1349.59 1543.03 1403.45L1471.45 1487.98L1377.81 1526';
+  'M0.0338419 2.34804C246.347 -1.82041 749.414 29.7598 791.178 189.428C832.942 349.096 646.763 532.408 548.453 604.106C398.835 714.319 237.915 965.46 791.178 1088.31C1344.44 1211.17 1522.94 1349.59 1543.03 1403.45';
+
+/** IntersectionObserver로 .fade-in-up 요소에 .visible 토글 */
+function useScrollReveal() {
+  const observed = useRef(false);
+
+  useEffect(() => {
+    if (observed.current) return;
+    observed.current = true;
+
+    const els = document.querySelectorAll('.fade-in-up');
+    if (!els.length) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+}
+
+/** SVG drawLine 애니메이션용: path 길이 계산 후 적용 */
+function useSvgDraw() {
+  const pathRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    const path = pathRef.current;
+    if (!path) return;
+
+    const len = path.getTotalLength();
+    path.style.setProperty('--path-length', String(len));
+    path.style.strokeDasharray = String(len);
+    path.style.strokeDashoffset = String(len);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            path.style.animation = 'drawLine 2s ease forwards';
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+    io.observe(path);
+    return () => io.disconnect();
+  }, []);
+
+  return pathRef;
+}
 
 export default function LandingPage() {
+  useScrollReveal();
+  const curveRef = useSvgDraw();
+  const [showLogin, setShowLogin] = useState(false);
+  const { user } = useUser();
+
+  // 로그인 성공 시 모달 자동 닫기
+  useEffect(() => {
+    if (user && showLogin) setShowLogin(false);
+  }, [user, showLogin]);
+
   return (
-    <div style={{ background: '#F8FAFF', overflow: 'hidden', minHeight: '100vh' }}>
-      <div style={{ width: 1440, margin: '0 auto', position: 'relative', minHeight: 2700 }}>
+    <div style={{ background: '#F8FAFF', minHeight: '100vh' }}>
 
-        {/* ── 헤더 ── */}
-        <div style={{ width: 1440, height: 118, left: 0, top: 12, position: 'absolute' }}>
-          {/* SIMVEX 로고 */}
-          <div style={{
-            left: 60, top: 32, position: 'absolute',
-            color: 'black', fontSize: 35, fontFamily: 'Righteous', fontWeight: 400,
-            lineHeight: '64px',
-          }}>
-            <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>SIMVEX</Link>
-          </div>
-          {/* 네비게이션 */}
-          <div style={{
-            width: 251, paddingLeft: 25, left: 1079, top: 32, position: 'absolute',
-            justifyContent: 'flex-end', alignItems: 'center', gap: 24, display: 'inline-flex',
-          }}>
-            <div style={{ justifyContent: 'flex-end', alignItems: 'center', gap: 33, display: 'flex' }}>
-              <Link href="/models" style={{
-                textAlign: 'center', color: '#5D5A88', fontSize: 18,
-                fontFamily: 'DM Sans', fontWeight: 400, lineHeight: '18px',
-                textDecoration: 'none',
-              }}>Models</Link>
-              <Link href="/community" style={{
-                textAlign: 'center', color: '#5D5A88', fontSize: 18,
-                fontFamily: 'DM Sans', fontWeight: 400, lineHeight: '18px',
-                textDecoration: 'none',
-              }}>Community</Link>
-            </div>
-            <Link href="/auth/login" style={{
-              paddingLeft: 24, paddingRight: 24, paddingTop: 18, paddingBottom: 18,
-              background: 'white', borderRadius: 30,
-              justifyContent: 'flex-end', alignItems: 'center', gap: 8, display: 'flex',
-              textAlign: 'center', color: '#5D5A88', fontSize: 16,
-              fontFamily: 'DM Sans', fontWeight: 400, lineHeight: '18px',
-              textDecoration: 'none',
-            }}>Login</Link>
-            <Link href="/models" style={{
-              paddingLeft: 24, paddingRight: 24, paddingTop: 18, paddingBottom: 18,
-              background: '#001AFF', borderRadius: 30,
-              justifyContent: 'flex-end', alignItems: 'center', gap: 8, display: 'flex',
-              textAlign: 'center', color: 'white', fontSize: 16,
-              fontFamily: 'DM Sans', fontWeight: 700, lineHeight: '18px',
-              textDecoration: 'none',
-            }}>Get started</Link>
-          </div>
-        </div>
-
-        {/* ── 히어로: 파란 원 (2개 겹침) ── */}
+      {/* ── 헤더 ── */}
+      <header style={{
+        width: '100%', height: 72, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', padding: '0 48px',
+        position: 'sticky', top: 0, zIndex: 50, background: '#F8FAFF',
+      }}>
         <div style={{
-          width: 504, height: 504, left: 468, top: 169, position: 'absolute',
-          background: '#0019FF', boxShadow: '0px 0px 40.4px rgba(0,0,0,0.07)', borderRadius: 9999,
-        }} />
-        <div style={{
-          width: 504, height: 504, left: 468, top: 169, position: 'absolute',
-          background: '#0019FF', boxShadow: '0px 0px 40.4px rgba(0,0,0,0.07)', borderRadius: 9999,
-        }} />
-
-        {/* ── 히어로: SIMVEX 텍스트 (파란색, 원 바깥) ── */}
-        <div style={{
-          width: 896, height: 261, left: 272, top: 290, position: 'absolute',
-          textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-          color: '#0019FF', fontSize: 175, fontFamily: 'Righteous', fontWeight: 400,
-          lineHeight: '64px',
-        }}>SIMVEX</div>
-
-        {/* ── 히어로: SIMVEX 텍스트 (흰색, 원 위) ── */}
-        <div style={{
-          width: 896, height: 261, left: 272, top: 290, position: 'absolute',
-          textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-          color: 'white', fontSize: 175, fontFamily: 'Righteous', fontWeight: 400,
-          lineHeight: '64px',
-          clipPath: 'circle(252px at 448px 131px)',
-        }}>SIMVEX</div>
-
-        {/* ── 히어로: 캐치프레이즈 ── */}
-        <div style={{
-          width: 515, height: 28, left: 463, top: 302, position: 'absolute',
-          textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
+          color: 'black', fontSize: 26, fontFamily: 'Righteous', fontWeight: 400,
         }}>
-          <span style={{ color: 'white', fontSize: 20, fontFamily: 'Roboto', fontWeight: 100, lineHeight: '18px' }}>
-            아무리 크고 복잡한 기계도 내 손에서
-          </span>
-          <span style={{ color: 'white', fontSize: 20, fontFamily: 'Roboto', fontWeight: 500, lineHeight: '18px' }}> </span>
-          <span style={{ color: 'white', fontSize: 25, fontFamily: 'Roboto', fontWeight: 900, lineHeight: '18px' }}>슥</span>
+          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>SIMVEX</Link>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          <Link href="/" className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            textDecoration: 'none',
+          }}>Home</Link>
+          <Link href="#about" className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            textDecoration: 'none',
+          }}>About</Link>
+          <Link href="#pricing" className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            textDecoration: 'none',
+          }}>Pricing</Link>
+          <button onClick={() => setShowLogin(true)} className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}>Login</button>
+          <Link href="/models" className="landing-btn" style={{
+            padding: '10px 22px',
+            background: '#001AFF', borderRadius: 24,
+            display: 'flex', alignItems: 'center',
+            color: 'white', fontSize: 14, fontFamily: 'DM Sans', fontWeight: 700,
+            textDecoration: 'none',
+          }}>Get started</Link>
+        </div>
+      </header>
 
-        {/* ── 구분선 ── */}
+      {/* ── 히어로 섹션 ── */}
+      <section style={{
+        position: 'relative', width: '100%',
+        height: 'calc(100vh - 72px)', minHeight: 480, maxHeight: 700,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        {/* 파란 원 */}
         <div style={{
-          width: 1444, height: 0, left: -2, top: 427, position: 'absolute',
+          width: 'min(38vw, 420px)', height: 'min(38vw, 420px)',
+          background: '#0019FF', borderRadius: 9999,
+          animation: 'pulseGlow 6s ease-in-out infinite',
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }} />
+
+        {/* 구분선 — 원 중앙을 가로지름 */}
+        <div style={{
+          position: 'absolute', top: '50%', left: 0, right: 0,
           borderTop: '2px solid rgba(55,55,55,0.4)',
+          transform: 'translateY(10px)',
+          zIndex: 2,
+          animation: 'fadeIn 0.5s ease both', animationDelay: '1.2s',
         }} />
 
-        {/* ── Feature 섹션 (CenterContent) ── */}
-        <div style={{ width: 1440, height: 1449, left: 0, top: 1190, position: 'absolute' }}>
-
-          {/* 곡선 SVG */}
-          <svg
-            style={{ width: 1543, height: 1524, left: 0, top: 155, position: 'absolute' }}
-            fill="none"
-            viewBox="0 0 1545.32 1527.85"
-            preserveAspectRatio="none"
-          >
-            <path d={CURVE_PATH} stroke="#373737" strokeOpacity="0.3" strokeWidth="4" />
-          </svg>
-
-          {/* "about SIMVEX" 타이틀 */}
-          <div style={{
-            width: 230, height: 41, left: 228, top: 67, position: 'absolute',
-            textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-          }}>
-            <span style={{ color: 'black', fontSize: 35, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '64px' }}>about </span>
-            <span style={{ color: '#001AFF', fontSize: 35, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '64px' }}>SIMVEX</span>
-          </div>
-
-          {/* Feature 컨테이너 */}
-          <div style={{ width: 980, height: 1235, left: 230, top: 134, position: 'absolute' }}>
-
-            {/* ── Feature 1: 3D모델 조립·분해 ── */}
-            <div style={{ width: 980, height: 369, left: 0, top: 0, position: 'absolute' }}>
-              <div style={{ width: 519, height: 148, left: 551, top: 90, position: 'absolute' }}>
-                <div style={{
-                  width: 519, left: 0, top: 0, position: 'absolute',
-                  justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                  color: '#212121', fontSize: 36, fontFamily: 'Inter', fontWeight: 600,
-                  textTransform: 'capitalize' as const, letterSpacing: 0.2,
-                }}>3D모델 조립·분해 기반 학습</div>
-                <div style={{
-                  width: 519, left: 0, top: 76, position: 'absolute',
-                  justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                }}>
-                  <span style={{ color: '#474747', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 400, lineHeight: '24px', letterSpacing: 0.2 }}>SIMVEX는 사용자가 업로드한 </span>
-                  <span style={{ color: '#0019FF', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 600, lineHeight: '24px', letterSpacing: 0.2 }}>3D모델의 조립·분해, <br />회전·확대·축소 기능을 제공</span>
-                  <span style={{ color: '#474747', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 400, lineHeight: '24px', letterSpacing: 0.2 }}>하며, 부품 간 구조 관계를<br />시각적으로 확인할 수 있습니다.</span>
-                </div>
-              </div>
-              <div style={{
-                width: 115, height: 155, left: 486, top: 37, position: 'absolute',
-                opacity: 0.2, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                color: 'rgba(0,0,0,0.34)', fontSize: 250, fontFamily: 'Anta', fontWeight: 400, lineHeight: '64px',
-              }}>1</div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img style={{ width: 486, height: 340, left: 0, top: 15, position: 'absolute', borderRadius: 16, objectFit: 'cover' }}
-                src="/images/landing/feature-explode.png" alt="3D 모델 분해도" />
-            </div>
-
-            {/* ── Feature 2: AI 설명 ── */}
-            <div style={{ width: 980, height: 369, left: 0, top: 433, position: 'absolute' }}>
-              <div style={{
-                left: 0, top: 93.5, position: 'absolute',
-                flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start',
-                gap: 32, display: 'inline-flex',
-              }}>
-                <div style={{
-                  alignSelf: 'stretch', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                  color: '#212121', fontSize: 36, fontFamily: 'Inter', fontWeight: 600,
-                  textTransform: 'capitalize' as const, letterSpacing: 0.2,
-                }}>부품별 실시간 AI 설명 제공</div>
-                <div style={{
-                  width: 429, justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                }}>
-                  <span style={{ color: '#3A3A3A', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 400, lineHeight: '24px', letterSpacing: 0.2 }}>사용자가 선택한 부품에 대해 </span>
-                  <span style={{ color: '#001AFF', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 600, lineHeight: '24px', letterSpacing: 0.2 }}>AI 기반 전반적인 구조와 기능에 대한 설명을 실시간으로</span>
-                  <span style={{ color: '#3A3A3A', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 400, lineHeight: '24px', letterSpacing: 0.2 }}> 빠르게 제공합니다.</span>
-                </div>
-              </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img style={{ width: 486, height: 331, left: 494, top: 19, position: 'absolute', borderRadius: 16, objectFit: 'cover' }}
-                src="/images/landing/feature-ai.png" alt="AI 부품 설명" />
-              <div style={{
-                width: 115, height: 155, left: -26, top: 36, position: 'absolute',
-                opacity: 0.2, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                color: 'rgba(0,0,0,0.34)', fontSize: 250, fontFamily: 'Anta', fontWeight: 400, lineHeight: '64px',
-              }}>2</div>
-            </div>
-
-            {/* ── Feature 3: 시뮬레이션 ── */}
-            <div style={{ width: 980, height: 369, left: 0, top: 866, position: 'absolute' }}>
-              <div style={{ width: 429, height: 236, left: 551, top: 66.5, position: 'absolute' }}>
-                <div style={{
-                  width: 429, left: 0, top: 65, position: 'absolute',
-                  justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                  color: '#212121', fontSize: 36, fontFamily: 'Inter', fontWeight: 600,
-                  textTransform: 'capitalize' as const, letterSpacing: 0.2,
-                }}>가상 3D 시뮬레이션</div>
-                <div style={{
-                  width: 429, left: 0, top: 139.5, position: 'absolute',
-                  justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                  color: '#757575', fontSize: 18, fontFamily: 'Inter', fontWeight: 400,
-                  lineHeight: '24px', letterSpacing: 0.2,
-                }}>입력된 3D 모델의 파라미터 조절을 통해 제품의 작동 상태와 변화를 시각적으로 확인합니다.</div>
-                <div style={{
-                  width: 115, height: 155, left: -37, top: -36.5, position: 'absolute',
-                  opacity: 0.2, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column',
-                  color: 'rgba(0,0,0,0.34)', fontSize: 250, fontFamily: 'Anta', fontWeight: 400, lineHeight: '64px',
-                }}>3</div>
-              </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img style={{ width: 480, height: 328, left: 0, top: 21, position: 'absolute', borderRadius: 16, objectFit: 'cover' }}
-                src="/images/landing/feature-simulation.png" alt="3D 시뮬레이션" />
-            </div>
-
-          </div>
-        </div>
-
-        {/* ── 푸터 ── */}
+        {/* 캐치프레이즈 */}
         <div style={{
-          position: 'absolute', left: 0, top: 2650, width: 1440,
-          borderTop: '1px solid rgba(55,55,55,0.2)',
-          padding: '32px 60px', display: 'flex', justifyContent: 'space-between',
-          color: '#757575', fontSize: 14, fontFamily: 'Pretendard Variable',
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -90px)',
+          zIndex: 3, textAlign: 'center', whiteSpace: 'nowrap',
+          animation: 'fadeIn 1s ease both', animationDelay: '0.8s',
         }}>
-          <span>SIMVEX - 공학 학습 플랫폼</span>
-          <span>교육과 탐구를 위해 만들어졌습니다</span>
+          <span style={{ color: 'white', fontSize: 15, fontFamily: 'Roboto', fontWeight: 100 }}>아무리 크고 복잡한 기계도 내 손에서</span>
+          <span style={{ color: 'white', fontSize: 15, fontFamily: 'Roboto', fontWeight: 500 }}> </span>
+          <span style={{ color: 'white', fontSize: 19, fontFamily: 'Roboto', fontWeight: 900 }}>슥</span>
         </div>
-      </div>
+
+        {/* SIMVEX 텍스트 (파란색 — 원 바깥) */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#0019FF', fontSize: 'clamp(90px, 11vw, 150px)', fontFamily: 'Righteous', fontWeight: 400,
+          lineHeight: 1, zIndex: 1,
+          animation: 'fadeIn 1s ease both', animationDelay: '0.3s',
+        }}>SIMVEX</div>
+
+        {/* SIMVEX 텍스트 (흰색 — 원 안쪽 clip) */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'min(38vw, 420px)', height: 'min(38vw, 420px)',
+          borderRadius: 9999, overflow: 'hidden',
+          pointerEvents: 'none', zIndex: 2,
+        }}>
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: 'white', fontSize: 'clamp(90px, 11vw, 150px)', fontFamily: 'Righteous', fontWeight: 400,
+            lineHeight: 1, whiteSpace: 'nowrap',
+            animation: 'fadeIn 1s ease both', animationDelay: '0.3s',
+          }}>SIMVEX</div>
+        </div>
+      </section>
+
+      {/* ── Feature 섹션 (about) ── */}
+      <section id="about" style={{
+        position: 'relative', width: '100%',
+        maxWidth: 1300, margin: '0 auto',
+        padding: '20px 80px 120px',
+        overflow: 'visible',
+      }}>
+        {/* 곡선 SVG — about → pricing 연결 */}
+        <svg
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+          fill="none"
+          viewBox="0 0 1545 1410"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <path ref={curveRef} d={CURVE_PATH} stroke="#373737" strokeOpacity="0.3" strokeWidth="4" />
+        </svg>
+
+        {/* "about SIMVEX" 타이틀 */}
+        <div className="fade-in-up" style={{ display: 'flex', gap: 8, marginBottom: 56 }}>
+          <span style={{ color: 'black', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>about </span>
+          <span style={{ color: '#001AFF', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>SIMVEX</span>
+        </div>
+
+        {/* Feature 1 — 이미지 왼쪽 · 텍스트 오른쪽 */}
+        <div className="fade-in-up" style={{
+          display: 'flex', alignItems: 'center', gap: 48,
+          marginBottom: 80,
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="landing-feature-img"
+            style={{ width: '46%', maxWidth: 500, borderRadius: 14, objectFit: 'cover', flexShrink: 0, position: 'relative', zIndex: 1, marginLeft: -60 }}
+            src="/images/landing/feature-explode.png" alt="3D 모델 분해도" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'absolute', left: -40, top: -110, opacity: 0.07, fontSize: 240, fontFamily: 'Anta', fontWeight: 400, lineHeight: 1, color: '#000', pointerEvents: 'none', zIndex: -1 }}>1</div>
+            <div style={{
+              color: '#212121', fontSize: 28, fontFamily: 'Inter', fontWeight: 600,
+              textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
+            }}>3D모델 조립·분해 기반 학습</div>
+            <div style={{ lineHeight: '24px' }}>
+              <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>SIMVEX는 사용자가 업로드한 </span>
+              <span style={{ color: '#0019FF', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 600 }}>3D모델의 조립·분해, 회전·확대·축소 기능을 제공</span>
+              <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>하며, 부품 간 구조 관계를 시각적으로 확인할 수 있습니다.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature 2 — 이미지 오른쪽 · 텍스트 왼쪽 */}
+        <div className="fade-in-up" style={{
+          display: 'flex', alignItems: 'center', gap: 40,
+          flexDirection: 'row-reverse',
+          marginBottom: 64,
+          transitionDelay: '0.2s',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="landing-feature-img"
+            style={{ width: '46%', maxWidth: 500, borderRadius: 14, objectFit: 'cover', flexShrink: 0, position: 'relative', zIndex: 1 }}
+            src="/images/landing/feature-ai.png" alt="AI 부품 설명" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'absolute', left: -40, top: -110, opacity: 0.07, fontSize: 240, fontFamily: 'Anta', fontWeight: 400, lineHeight: 1, color: '#000', pointerEvents: 'none', zIndex: -1 }}>2</div>
+            <div style={{
+              color: '#212121', fontSize: 28, fontFamily: 'Inter', fontWeight: 600,
+              textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
+            }}>부품별 실시간 AI 설명 제공</div>
+            <div style={{ lineHeight: '24px', maxWidth: 380 }}>
+              <span style={{ color: '#3A3A3A', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>사용자가 선택한 부품에 대해 </span>
+              <span style={{ color: '#001AFF', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 600 }}>AI 기반 전반적인 구조와 기능에 대한 설명을 실시간으로</span>
+              <span style={{ color: '#3A3A3A', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}> 빠르게 제공합니다.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature 3 — 이미지 왼쪽 · 텍스트 오른쪽 */}
+        <div className="fade-in-up" style={{
+          display: 'flex', alignItems: 'center', gap: 40,
+          transitionDelay: '0.4s',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="landing-feature-img"
+            style={{ width: '46%', maxWidth: 500, borderRadius: 14, objectFit: 'cover', flexShrink: 0, position: 'relative', zIndex: 1, marginLeft: -60 }}
+            src="/images/landing/feature-simulation.png" alt="3D 시뮬레이션" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'absolute', left: -40, top: -140, opacity: 0.07, fontSize: 240, fontFamily: 'Anta', fontWeight: 400, lineHeight: 1, color: '#000', pointerEvents: 'none', zIndex: -1 }}>3</div>
+            <div style={{
+              color: '#212121', fontSize: 28, fontFamily: 'Inter', fontWeight: 600,
+              textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
+            }}>가상 3D 시뮬레이션</div>
+            <div style={{ lineHeight: '24px', maxWidth: 380, color: '#757575', fontSize: 14, fontFamily: 'Inter', fontWeight: 400 }}>
+              입력된 3D 모델의 파라미터 조절을 통해 제품의 작동 상태와 변화를 시각적으로 확인합니다.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Pricing 섹션 ── */}
+      <section id="pricing" style={{
+        width: '100%', padding: '100px 60px 80px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+        <div className="fade-in-up" style={{
+          color: '#001AFF', fontSize: 13, fontFamily: 'DM Sans', fontWeight: 700,
+          letterSpacing: 3, textTransform: 'uppercase' as const, marginBottom: 12,
+        }}>PRICING</div>
+
+        <div className="fade-in-up" style={{
+          color: '#212121', fontSize: 34, fontFamily: 'Pretendard Variable', fontWeight: 800,
+          textAlign: 'center', marginBottom: 48, transitionDelay: '0.1s',
+        }}>원하는 멤버십을 선택하세요</div>
+
+        <div style={{ display: 'flex', gap: 28, marginBottom: 56, width: '100%', maxWidth: 1200, justifyContent: 'center' }}>
+          {[
+            {
+              name: 'Basic', price: '$99', delay: 0,
+              features: ['All analytics features', 'Up to 250,000 tracked visits', 'Normal support', 'Mobile app', 'Up to 3 team members'],
+            },
+            {
+              name: 'Growth', price: '$199', delay: 0.15,
+              features: ['Everything on Basic plan', 'Up to 1,000,000 tracked visits', 'Premium support', 'Mobile app', 'Up to 10 team members'],
+            },
+            {
+              name: 'Enterprise', price: '$399', delay: 0.3,
+              features: ['Everything on Growth plan', 'Up to 5,000,000 tracked visits', 'Dedicated support', 'Mobile app', 'Up to 50 team members'],
+            },
+          ].map((plan) => (
+            <div key={plan.name} className="fade-in-up pricing-card" style={{
+              flex: 1, maxWidth: 380, borderRadius: 16, overflow: 'hidden',
+              background: '#fff', border: '1px solid #E5E7EB',
+              transitionDelay: `${plan.delay}s`,
+            }}>
+              <div style={{
+                background: '#001AFF', padding: '36px 0 32px', textAlign: 'center',
+              }}>
+                <div style={{ color: 'white', fontSize: 20, fontFamily: 'DM Sans', fontWeight: 700, marginBottom: 8 }}>{plan.name}</div>
+                <div style={{ color: 'white', fontSize: 48, fontFamily: 'DM Sans', fontWeight: 800, lineHeight: 1.1 }}>{plan.price}</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontFamily: 'DM Sans', marginTop: 6 }}>Billed monthly</div>
+              </div>
+              <div style={{ padding: '28px 26px 32px' }}>
+                {plan.features.map((feat) => (
+                  <div key={feat} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                      <circle cx="10" cy="10" r="10" fill="#001AFF" fillOpacity="0.1" />
+                      <path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span style={{ color: '#374151', fontSize: 14, fontFamily: 'DM Sans', fontWeight: 500 }}>{feat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="fade-in-up" style={{ transitionDelay: '0.4s' }}>
+          <Link href="/models" className="landing-btn" style={{
+            display: 'inline-block', padding: '14px 64px',
+            background: '#001AFF', borderRadius: 32, textDecoration: 'none',
+            color: 'white', fontSize: 18, fontFamily: 'DM Sans', fontWeight: 700,
+          }}>Next</Link>
+        </div>
+      </section>
+
+      {/* ── 푸터 ── */}
+      <footer className="fade-in-up" style={{
+        width: '100%', background: '#4A4A4A', color: '#fff',
+        fontFamily: 'Pretendard Variable',
+      }}>
+        <div style={{
+          textAlign: 'center', paddingTop: 36, paddingBottom: 24,
+          fontSize: 22, fontWeight: 700, fontFamily: 'Inter',
+        }}>Contact Us</div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 100, paddingBottom: 32 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Product</div>
+            {['3D 뷰어', '모델 업로드', 'AI 어시스턴트', '퀴즈', '시뮬레이션'].map((t) => (
+              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Information</div>
+            {['사용 가이드', '자주 묻는 질문', 'API 문서'].map((t) => (
+              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Company</div>
+            {['팀 소개', '연락처', '파트너십', '채용 정보'].map((t) => (
+              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ position: 'relative', height: 32, margin: '0 40px' }}>
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '2px dashed #6EB8FF', transform: 'translateY(-50%)' }} />
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#6EB8FF', fontSize: 18, fontWeight: 700, background: '#4A4A4A', padding: '0 8px' }}>&#10005;</div>
+        </div>
+
+        <div style={{ textAlign: 'center', padding: '24px 0 36px', fontSize: 22, fontWeight: 700, color: '#ddd' }}>단체사진</div>
+
+        <div style={{ margin: '0 40px', borderTop: '1px solid rgba(255,255,255,0.15)' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px 24px' }}>
+          <div style={{ fontSize: 24, fontFamily: 'Righteous', fontWeight: 400 }}>SIMVEX</div>
+          <div style={{ display: 'flex', gap: 28 }}>
+            {['Terms', 'Privacy', 'Cookies'].map((t) => (
+              <span key={t} style={{ fontSize: 13, color: '#ccc', cursor: 'pointer' }}>{t}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#ccc"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#ccc"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* ══════ 로그인 모달 ══════ */}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </div>
   );
 }
