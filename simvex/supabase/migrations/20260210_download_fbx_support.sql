@@ -7,6 +7,6 @@ SET allowed_mime_types = ARRAY[
   'model/gltf-binary',
   'application/octet-stream',
   'image/png',
-  'image/jpeg'
+  'image/jpeg'   
 ]
 WHERE id = 'user-models';
