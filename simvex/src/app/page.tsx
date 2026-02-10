@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { LoginModal } from '@/components/auth/LoginModal';
-import { useUser } from '@/hooks/useUser';
+import { useEffect, useRef } from 'react';
 
 const CURVE_PATH =
   'M0.0338419 2.34804C246.347 -1.82041 749.414 29.7598 791.178 189.428C832.942 349.096 646.763 532.408 548.453 604.106C398.835 714.319 237.915 965.46 791.178 1088.31C1344.44 1211.17 1522.94 1349.59 1543.03 1403.45';
@@ -67,13 +65,6 @@ function useSvgDraw() {
 export default function LandingPage() {
   useScrollReveal();
   const curveRef = useSvgDraw();
-  const [showLogin, setShowLogin] = useState(false);
-  const { user } = useUser();
-
-  // 로그인 성공 시 모달 자동 닫기
-  useEffect(() => {
-    if (user && showLogin) setShowLogin(false);
-  }, [user, showLogin]);
 
   return (
     <div style={{ background: '#F8FAFF', minHeight: '100vh' }}>
@@ -102,10 +93,6 @@ export default function LandingPage() {
             color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
             textDecoration: 'none',
           }}>Pricing</Link>
-          <button onClick={() => setShowLogin(true)} className="landing-nav-link" style={{
-            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
-            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          }}>Login</button>
           <Link href="/models" className="landing-btn" style={{
             padding: '10px 22px',
             background: '#001AFF', borderRadius: 24,
@@ -400,8 +387,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* ══════ 로그인 모달 ══════ */}
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </div>
   );
 }

@@ -32,16 +32,12 @@ import { useAnnotations } from '@/hooks/useAnnotations';
 import { useAnnotationStore } from '@/lib/store/annotationStore';
 import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
 import { usePartCustomizations } from '@/hooks/usePartCustomizations';
-import { usePartMemos } from '@/hooks/usePartMemos';
-import { PartMemoPanel } from '@/components/viewer/PartMemoPanel';
 import { PartTreePanel } from '@/components/viewer/PartTreePanel';
 import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
 import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
 import { hasSimulation as checkHasSimulation, hasViewer as checkHasViewer, getSimulationMapping } from '@/data/simulationMapping';
 import { getSimulationModelInfo } from '@/data/simulationModelInfo';
-import { useResizePanel } from '@/hooks/useResizePanel';
 
-type RightPanelType = 'memo' | null;
 type RightSidebarTab = 'model' | 'notes' | 'quiz';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
@@ -212,12 +208,6 @@ export default function ViewerPage() {
     toggleControlsGuide,
   } = useViewerStore();
 
-  // 오른쪽 슬라이드 패널 상호배타 상태
-  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
-  const toggleRightPanel = useCallback((panel: RightPanelType) => {
-    setActiveRightPanel(prev => prev === panel ? null : panel);
-  }, []);
-
   // 우측 사이드바 탭 (모델/노트/퀴즈)
   const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('model');
 
@@ -236,9 +226,6 @@ export default function ViewerPage() {
   const aiFabDragging = useRef(false);
   const aiFabStartMouse = useRef({ x: 0, y: 0 });
   const aiFabStartPos = useRef({ x: 0, y: 0 });
-
-  // 슬라이드 패널 리사이즈
-  const memoResize = useResizePanel({ direction: 'right', min: 300, max: 600, initial: 380 });
 
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
 
@@ -619,9 +606,6 @@ export default function ViewerPage() {
     };
   }, [combinedModel, customizations]);
 
-  // === 부품 메모 ===
-  const { memos, createMemo, deleteMemo, loading: memosLoading } = usePartMemos(user, modelId);
-
   // 스크린샷 캡처 함수
   const captureScreenshot = useCallback(async (): Promise<Blob | null> => {
     const container = viewportRef.current;
@@ -948,10 +932,10 @@ export default function ViewerPage() {
     <>
     <div className={`viewer-page h-screen flex flex-col ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
       {/* 헤더 */}
-      <header className={`h-[72px] flex-shrink-0 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-6 flex items-center justify-between`}>
+      <header className={`h-[72px] flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} px-6 flex items-center justify-between relative z-10`} style={{ boxShadow: isDarkMode ? '0 0 8.4px rgba(0,0,0,0.5)' : '0 0 8.4px rgba(0,0,0,0.25)' }}>
         {/* 왼쪽: 로고 */}
         <Link href="/models" className="flex items-center shrink-0 hover:opacity-80 transition-opacity">
-          <span className={`text-[22px] font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`} style={{ fontFamily: 'Righteous, cursive' }}>
+          <span className={`text-[26px] ${isDarkMode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
             SIMVEX
           </span>
         </Link>
@@ -1129,21 +1113,6 @@ export default function ViewerPage() {
                 </button>
               </Tooltip>
 
-              <Tooltip label="부품별 메모">
-                <button
-                  onClick={() => toggleRightPanel('memo')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    activeRightPanel === 'memo'
-                      ? 'bg-teal-500 text-white shadow-sm'
-                      : isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </button>
-              </Tooltip>
-
               <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200'}`} />
             </>
           )}
@@ -1208,6 +1177,18 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
+          <Tooltip label="스크린샷 캡처">
+            <button
+              onClick={handleAnnotationScreenshot}
+              className={`p-2 rounded-lg transition-all duration-200 ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </Tooltip>
+
           {pdfModelInfo && (
             <Tooltip label="PDF 내보내기">
               <ExportPdfButton
@@ -1229,21 +1210,6 @@ export default function ViewerPage() {
           <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200'}`} />
 
           {/* 전역 설정 */}
-          <Tooltip label="조작 가이드">
-            <button
-              onClick={toggleControlsGuide}
-              className={`p-2 rounded-lg transition-all duration-200 ${
-                showControlsGuide
-                  ? isDarkMode ? 'bg-cyan-900/50 text-cyan-400' : 'bg-cyan-50 text-cyan-700'
-                  : isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-          </Tooltip>
-
           <Tooltip label={isDarkMode ? '라이트 모드' : '다크 모드'}>
             <button
               onClick={toggleDarkMode}
@@ -1290,7 +1256,6 @@ export default function ViewerPage() {
                             <span className={`text-[16px] font-bold truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                               {getModelState(mergedModel.id)?.rootName || mergedModel.nameKo}
                             </span>
-                            <span className="text-[10px] text-[#001AFF]">&#9660;</span>
                           </div>
                           <p className={`text-[12px] mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                             내 워크플레이스
@@ -1477,11 +1442,15 @@ export default function ViewerPage() {
 
             {/* 우측 패널 (탭) */}
             <div
-              className={`flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} flex flex-col overflow-hidden`}
+              className={`flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} flex flex-col overflow-hidden relative`}
               style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
             >
+              {/* 왼쪽 파란색 그라디언트 액센트 */}
+              {!isDarkMode && (
+                <div className="absolute left-0 top-0 bottom-0 w-[3px] z-10" style={{ background: 'linear-gradient(to bottom, #818CF8, #60A5FA, #BFDBFE)' }} />
+              )}
               {/* 사이드바 탭 헤더 */}
-              <div className={`flex items-center border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 pt-3 shrink-0`}>
+              <div className={`flex items-center justify-center border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 pt-3 shrink-0`}>
                 {(['model', 'notes', 'quiz'] as const).map((tab) => {
                   const labels = { model: '모델', notes: '노트', quiz: '퀴즈' };
                   const isActive = rightSidebarTab === tab;
@@ -1508,18 +1477,16 @@ export default function ViewerPage() {
               <div className="flex-1 overflow-y-auto">
                 {/* 모델 탭 */}
                 {rightSidebarTab === 'model' && (
-                  <div className="p-4 space-y-5" style={{ animation: 'fadeIn 0.2s ease' }}>
-                    {/* 구조 제어 */}
-                    <div>
-                      <h3 className={`text-[14px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} mb-4`}>구조 제어</h3>
+                  <div className={`p-4 space-y-4 min-h-full ${isDarkMode ? '' : 'bg-[#F0F4FF]'}`} style={{ animation: 'fadeIn 0.2s ease' }}>
+                    {/* 구조 제어 카드 */}
+                    <div className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-blue-100/80 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'}`}>
+                      <h3 className={`text-[16px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'} mb-4`}>구조 제어</h3>
                       <ExplodeSlider />
                     </div>
 
-                    <div className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`} />
-
-                    {/* 모델 정보 */}
-                    <div>
-                      <h3 className={`text-[14px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} mb-4`}>모델 정보</h3>
+                    {/* 모델 정보 카드 */}
+                    <div className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-blue-100/80 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'}`}>
+                      <h3 className={`text-[16px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'} mb-4`}>모델 정보</h3>
                       {currentModelInfo && (
                         <ProductInfo
                           model={currentModelInfo}
@@ -1529,11 +1496,9 @@ export default function ViewerPage() {
                       )}
                     </div>
 
-                    <div className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`} />
-
-                    {/* 부품 세부 정보 */}
-                    <div>
-                      <h3 className={`text-[14px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} mb-4`}>부품 세부 정보</h3>
+                    {/* 부품 세부 정보 카드 */}
+                    <div className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-blue-100/80 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'}`}>
+                      <h3 className={`text-[16px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'} mb-4`}>부품 세부 정보</h3>
                       <PartInfo
                         part={selectedPart}
                         isLoggedIn={!!user}
@@ -1728,34 +1693,6 @@ export default function ViewerPage() {
         </button>
       </div>
 
-      {/* 부품 메모 패널 (슬라이드) */}
-      <div
-        className={`fixed top-[72px] right-0 h-[calc(100vh-72px)] ${
-          isDarkMode ? 'bg-gray-900' : 'bg-white'
-        } border-l ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
-        transform transition-transform duration-300 ease-in-out z-50
-        ${activeRightPanel === 'memo' ? 'translate-x-0' : 'translate-x-full'}`}
-        style={{ width: memoResize.width }}
-      >
-        {/* 리사이즈 핸들 */}
-        <div
-          className={`absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-teal-500 transition-colors ${
-            isDarkMode ? 'hover:bg-teal-400' : 'hover:bg-teal-500'
-          }`}
-          onMouseDown={memoResize.handleResizeStart}
-        />
-        <PartMemoPanel
-          isDarkMode={isDarkMode}
-          isLoggedIn={!!user}
-          selectedPart={selectedPart}
-          memos={memos}
-          loading={memosLoading}
-          onCreateMemo={createMemo}
-          onDeleteMemo={deleteMemo}
-          onCaptureScreenshot={captureScreenshot}
-          onClose={() => setActiveRightPanel(null)}
-        />
-      </div>
     </div>
 
     {/* ══════ 로그인 모달 ══════ */}
