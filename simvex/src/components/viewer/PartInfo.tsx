@@ -177,7 +177,7 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
       )}
 
       {/* 설명 */}
-      <p className={`text-[13px] text-gray-500 leading-relaxed mt-2 ${!isExpanded ? 'line-clamp-2' : ''}`}>
+      <p className={`text-[13px] text-gray-700 leading-relaxed mt-2 ${!isExpanded ? 'line-clamp-2' : ''}`}>
         {part.description}
       </p>
 

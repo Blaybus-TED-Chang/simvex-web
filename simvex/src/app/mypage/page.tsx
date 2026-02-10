@@ -170,6 +170,11 @@ export default function MyPage() {
   const [savingName, setSavingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // 프로필 사진 업로드 상태
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+
   // Zustand store hydration
   useEffect(() => {
     useViewerStore.persist.rehydrate();
@@ -218,6 +223,32 @@ export default function MyPage() {
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자';
   const userScrapModels = scraps.filter((s) => s.model_type === 'user');
   const totalScraps = builtinModels.length + userScrapModels.length;
+
+  // 프로필 사진 업로드
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || uploadingAvatar) return;
+    setUploadingAvatar(true);
+    try {
+      const supabase = createClient();
+      const path = `${user.id}/avatar.png`;
+      const { error: uploadError } = await supabase.storage
+        .from('user-models')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-models')
+        .getPublicUrl(path);
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl + '?t=' + Date.now() },
+      });
+    } catch (err) {
+      console.error('아바타 업로드 실패:', err);
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
 
   // 닉네임 저장
   const handleSaveName = async () => {
@@ -304,9 +335,13 @@ export default function MyPage() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="프로필" className="w-9 h-9 rounded-full object-cover" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <span className="text-[14px] font-medium text-gray-700" style={{ fontFamily: "'Pretendard Variable', Pretendard, sans-serif" }}>{displayName}</span>
           </div>
         </div>
@@ -321,9 +356,13 @@ export default function MyPage() {
             {/* 프로필 요약 */}
             <div className="px-5 pt-6 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[15px] font-bold shadow-inner shrink-0">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="프로필" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[15px] font-bold shadow-inner shrink-0">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="text-[14px] font-bold text-gray-900 truncate">{displayName}</p>
                   <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
@@ -394,9 +433,38 @@ export default function MyPage() {
                 {/* 프로필 카드 */}
                 <div className="bg-white border border-gray-200 rounded-2xl p-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[22px] font-bold shadow-inner shrink-0">
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
+                    <button
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="relative w-14 h-14 rounded-full shrink-0 group cursor-pointer overflow-hidden"
+                      title="프로필 사진 변경"
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="프로필" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[22px] font-bold shadow-inner">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      {uploadingAvatar && (
+                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
                     <div className="flex-1 min-w-0">
                       {editingName ? (
                         <div className="flex items-center gap-2">

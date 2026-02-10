@@ -618,6 +618,7 @@ export default function ModelsPage() {
 
   const recentModels = viewerModels.slice(0, 3);
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자';
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const [showLogin, setShowLogin] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
@@ -661,9 +662,13 @@ export default function ModelsPage() {
           {/* 사용자 프로필 / 로그인 */}
           {user ? (
             <Link href="/mypage" className="flex items-center gap-2.5 shrink-0 rounded-full px-2 py-1.5 -mx-2 transition-all duration-200 hover:bg-gray-100 active:scale-[0.97] cursor-pointer">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="프로필" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="text-[14px] font-medium text-gray-700">{displayName}</span>
             </Link>
           ) : (

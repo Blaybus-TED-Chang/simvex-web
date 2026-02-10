@@ -85,7 +85,7 @@ export function ProductInfo({ model, customName, onRename }: ProductInfoProps) {
       <p className="text-[13px] text-gray-400 mt-0.5">{model.name}</p>
 
       <div className="flex items-center gap-2 mt-3">
-        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-md bg-blue-50 text-[#001AFF]">
+        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-md bg-emerald-100 text-emerald-700">
           {model.category}
         </span>
         <span className="text-[13px] text-gray-500 font-medium">
@@ -93,12 +93,12 @@ export function ProductInfo({ model, customName, onRename }: ProductInfoProps) {
         </span>
       </div>
 
-      <p className={`text-[13px] text-gray-500 leading-relaxed mt-3 ${!isExpanded ? 'line-clamp-3' : ''}`}>
+      <p className={`text-[13px] text-gray-700 leading-relaxed mt-3 ${!isExpanded ? 'line-clamp-3' : ''}`}>
         {model.description}
       </p>
 
       {model.theory && (
-        <p className={`text-[13px] text-gray-400 leading-relaxed mt-2 whitespace-pre-line ${!isExpanded ? 'hidden' : ''}`}>
+        <p className={`text-[13px] text-gray-600 leading-relaxed mt-2 whitespace-pre-line ${!isExpanded ? 'hidden' : ''}`}>
           {model.theory}
         </p>
       )}
