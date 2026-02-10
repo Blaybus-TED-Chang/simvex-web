@@ -8,6 +8,7 @@ import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
 import { useScraps } from '@/hooks/useScraps';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { AuthButton } from '@/components/auth/AuthButton';
+import { LoginModal } from '@/components/auth/LoginModal';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
 import { ShareButton } from '@/components/share/ShareButton';
 import type { UserModelRow } from '@/types/userModel';
@@ -20,6 +21,7 @@ export default function CommunityPage() {
   const { fetchPublicModelsPaginated } = useUserModels(user);
   const { isScraped, toggleScrap } = useScraps(user);
 
+  const [showLogin, setShowLogin] = useState(false);
   const [models, setModels] = useState<UserModelRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -51,7 +53,7 @@ export default function CommunityPage() {
       <header className={`h-14 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 flex items-center justify-between`}>
         <div className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/models"
             className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +61,7 @@ export default function CommunityPage() {
             </svg>
           </Link>
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="SIMVEX" width={32} height={32} className="rounded-lg" />
+            <Image src="/logo.svg" alt="SIMVEX" width={90} height={19} className={`object-contain ${isDarkMode ? 'invert' : ''}`} />
             <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>커뮤니티 모델</h1>
           </div>
         </div>
@@ -202,6 +204,7 @@ export default function CommunityPage() {
                           onToggle={toggleScrap}
                           isDarkMode={isDarkMode}
                           size="sm"
+                          onLoginRequired={() => setShowLogin(true)}
                         />
                         <ShareButton
                           modelId={`u-${model.id}`}
@@ -261,6 +264,9 @@ export default function CommunityPage() {
           <p>교육과 탐구를 위해 만들어졌습니다</p>
         </div>
       </footer>
+
+      {/* ══════ 로그인 모달 ══════ */}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </div>
   );
 }

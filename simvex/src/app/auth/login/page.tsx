@@ -44,7 +44,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/');
+        router.push('/models');
         router.refresh();
       }
     }
@@ -59,13 +59,12 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="SIMVEX"
-              width={40}
-              height={40}
-              className="rounded-xl"
+              width={120}
+              height={25}
+              className="object-contain invert"
             />
-            <span className="text-xl font-bold text-white">SIMVEX</span>
           </Link>
         </div>
 

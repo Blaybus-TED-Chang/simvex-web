@@ -241,7 +241,7 @@ export default function UploadPage() {
       <header className={`h-14 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 flex items-center justify-between`}>
         <div className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/models"
             className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,11 +250,11 @@ export default function UploadPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="SIMVEX"
-              width={32}
-              height={32}
-              className="rounded-lg"
+              width={90}
+              height={19}
+              className={`object-contain ${isDarkMode ? 'invert' : ''}`}
             />
             <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               모델 업로드

@@ -104,7 +104,7 @@ function Scene({
               explodeValue={explodeValue}
               isSelected={selectedPartId === part.id}
               isHovered={hoveredPartId === part.id}
-              isVisible={visibleParts.length === 0 || visibleParts.includes(part.id)}
+              isVisible={visibleParts.includes(part.id)}
               onClick={() => setSelectedPartId(part.id)}
               onPointerOver={() => setHoveredPartId(part.id)}
               onPointerOut={() => setHoveredPartId(null)}

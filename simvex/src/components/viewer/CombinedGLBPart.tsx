@@ -72,6 +72,9 @@ interface CombinedGLBViewerProps {
   focusedPartId?: string | null;
   onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
   globalOpacity?: number;
+  // 핀 드래그 이동
+  isDraggingPin?: boolean;
+  onDragMove?: (point: [number, number, number], partId?: string) => void;
 }
 
 // Individual part mesh component
@@ -86,6 +89,7 @@ function PartMesh({
   onClickWithPoint,
   onPointerOver,
   onPointerOut,
+  onPointerMoveWithPoint,
 }: {
   meshData: ExtractedMeshData;
   explodeValue: number;
@@ -97,6 +101,7 @@ function PartMesh({
   onClickWithPoint?: (point: [number, number, number]) => void;
   onPointerOver: () => void;
   onPointerOut: () => void;
+  onPointerMoveWithPoint?: (point: [number, number, number]) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { worldPosition, worldQuaternion, worldScale, partConfig, geometry, material } = meshData;
@@ -113,13 +118,14 @@ function PartMesh({
 
   // Create material with base color from config
   const clonedMaterial = useMemo(() => {
-    // 새로운 MeshStandardMaterial 생성하고 color 적용
+    const isTransparent = opacity < 1;
     const mat = new THREE.MeshStandardMaterial({
       color: partConfig.color || '#888888',
       metalness: 0.3,
       roughness: 0.6,
-      transparent: opacity < 1,
+      transparent: isTransparent,
       opacity: opacity,
+      depthWrite: !isTransparent,
     });
     return mat;
   }, [partConfig.color, opacity]);
@@ -145,13 +151,15 @@ function PartMesh({
   useEffect(() => {
     const mat = clonedMaterial as THREE.MeshStandardMaterial;
     if (mat) {
-      mat.transparent = opacity < 1;
+      const isTransparent = opacity < 1;
+      mat.transparent = isTransparent;
       mat.opacity = opacity;
+      mat.depthWrite = !isTransparent;
       mat.needsUpdate = true;
     }
   }, [clonedMaterial, opacity]);
 
-  if (!isVisible) return null;
+  if (!isVisible || opacity <= 0.01) return null;
 
   // Convert to arrays for R3F
   const quaternionArray: [number, number, number, number] = [
@@ -175,8 +183,8 @@ function PartMesh({
       position={position}
       quaternion={quaternionArray}
       scale={scaleArray}
-      castShadow
-      receiveShadow
+      castShadow={opacity > 0.5}
+      receiveShadow={opacity > 0.5}
       onClick={(e) => {
         e.stopPropagation();
         if (onClickWithPoint) {
@@ -194,6 +202,15 @@ function PartMesh({
         e.stopPropagation();
         onPointerOut();
       }}
+      onPointerMove={
+        onPointerMoveWithPoint
+          ? (e) => {
+              e.stopPropagation();
+              const p = e.point;
+              onPointerMoveWithPoint([p.x, p.y, p.z]);
+            }
+          : undefined
+      }
     />
   );
 }
@@ -212,6 +229,8 @@ export function CombinedGLBViewer({
   focusedPartId,
   onMeshPositions,
   globalOpacity = 1,
+  isDraggingPin = false,
+  onDragMove,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
@@ -315,7 +334,7 @@ export function CombinedGLBViewer({
     <group scale={[modelScale, modelScale, modelScale]}>
       {extractedMeshes.map((meshData, index) => {
         const { partConfig } = meshData;
-        const isVisible = visibleParts.length === 0 || visibleParts.includes(partConfig.id);
+        const isVisible = visibleParts.includes(partConfig.id);
         const isSelected = selectedPartId === partConfig.id;
         const isHovered = hoveredPartId === partConfig.id;
         const opacity = focusedPartId
@@ -352,6 +371,23 @@ export function CombinedGLBViewer({
             }
             onPointerOver={() => onHoverPart(partConfig.id)}
             onPointerOut={() => onHoverPart(null)}
+            onPointerMoveWithPoint={
+              isDraggingPin && onDragMove
+                ? (point) => {
+                    const scale = model.scale || 1;
+                    const [dx, dy, dz] = partConfig.explodeDirection;
+                    const dist = partConfig.explodeDistance * explodeValue;
+                    onDragMove(
+                      [
+                        point[0] / scale - dx * dist,
+                        point[1] / scale - dy * dist,
+                        point[2] / scale - dz * dist,
+                      ],
+                      partConfig.id
+                    );
+                  }
+                : undefined
+            }
           />
         );
       })}
@@ -385,6 +421,13 @@ interface CombinedModelViewerProps {
   onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
   // 투명도
   globalOpacity?: number;
+  // 핀 드래그 이동
+  isDraggingPin?: boolean;
+  onDragMove?: (point: [number, number, number], partId?: string) => void;
+  draggingAnnotationId?: string | null;
+  dragPreviewPosition?: [number, number, number] | null;
+  dragTargetInfo?: { targetType: 'part' | 'coordinate'; partId?: string } | null;
+  onDragStart?: (id: string) => void;
 }
 
 // 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
@@ -484,6 +527,12 @@ export function CombinedModelViewer({
   focusedPartId,
   onMeshPositions,
   globalOpacity,
+  isDraggingPin = false,
+  onDragMove,
+  draggingAnnotationId,
+  dragPreviewPosition,
+  dragTargetInfo,
+  onDragStart,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -510,7 +559,7 @@ export function CombinedModelViewer({
   }
 
   return (
-    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isPlacingPin ? { cursor: 'crosshair' } : undefined}>
+    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isDraggingPin ? { cursor: 'grabbing' } : isPlacingPin ? { cursor: 'crosshair' } : undefined}>
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -535,7 +584,7 @@ export function CombinedModelViewer({
         <directionalLight
           position={[10, 10, 5]}
           intensity={isDarkMode ? 1.5 : 1.8}
-          castShadow
+          castShadow={(globalOpacity ?? 1) > 0.5}
           shadow-mapSize={[1024, 1024]}
         />
         <directionalLight position={[-5, 5, -5]} intensity={isDarkMode ? 0.8 : 1.0} />
@@ -557,11 +606,13 @@ export function CombinedModelViewer({
             focusedPartId={focusedPartId}
             onMeshPositions={onMeshPositions}
             globalOpacity={globalOpacity}
+            isDraggingPin={isDraggingPin}
+            onDragMove={onDragMove}
           />
         </Suspense>
 
         {/* 주석 핀 */}
-        {annotations && annotations.length > 0 && onAnnotationPinClick && (
+        {annotations && (annotations.length > 0 || draggingAnnotationId) && onAnnotationPinClick && (
           <AnnotationPins
             annotations={annotations}
             activeAnnotationId={activeAnnotationId ?? null}
@@ -570,6 +621,11 @@ export function CombinedModelViewer({
             parts={model.parts}
             modelScale={model.scale || 1}
             onPinClick={onAnnotationPinClick}
+            draggingAnnotationId={draggingAnnotationId}
+            dragPreviewPosition={dragPreviewPosition}
+            dragTargetInfo={dragTargetInfo}
+            onDragStart={onDragStart}
+            isPlacingPin={isPlacingPin}
           />
         )}
 
@@ -596,13 +652,22 @@ export function CombinedModelViewer({
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, -0.02, 0]}
-          receiveShadow
+          receiveShadow={(globalOpacity ?? 1) > 0.5}
           onClick={
             isPlacingPin && onPlacePin
               ? (e) => {
                   e.stopPropagation();
                   const p = e.point;
                   onPlacePin([p.x, p.y, p.z]);
+                }
+              : undefined
+          }
+          onPointerMove={
+            isDraggingPin && onDragMove
+              ? (e) => {
+                  e.stopPropagation();
+                  const p = e.point;
+                  onDragMove([p.x, p.y, p.z]);
                 }
               : undefined
           }
@@ -615,6 +680,24 @@ export function CombinedModelViewer({
           />
         </mesh>
 
+        {/* 드래그 중 투명 캡처 평면 (메시 사이 빈 공간에서도 좌표 추적) */}
+        {isDraggingPin && (
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.5, 0]}
+            visible={false}
+            onPointerMove={(e) => {
+              if (onDragMove) {
+                const p = e.point;
+                onDragMove([p.x, p.y, p.z]);
+              }
+            }}
+          >
+            <planeGeometry args={[100, 100]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+        )}
+
         {/* 카메라 컨트롤 */}
         <OrbitControls
           makeDefault
@@ -623,6 +706,7 @@ export function CombinedModelViewer({
           minDistance={0.1}
           maxDistance={30}
           target={finalCameraTarget}
+          enabled={!isDraggingPin}
         />
 
         {/* 카메라 위치 동기화 (prop 변경 시) */}

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp remove:*)",
+      "Bash(curl:*)",
+      "Bash(SESSION=\"aa108380-5094-4c15-a2a5-64c74b4ec6c5\")",
+      "Bash(python3:*)",
+      "Bash(node -e:*)",
+      "Bash(npm run build:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx next build)",
+      "Bash(npx tsc:*)",
+      "Bash(supabase --version:*)",
+      "Bash(npx supabase:*)"
+    ]
+  }
+}

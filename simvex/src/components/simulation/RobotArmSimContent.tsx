@@ -1,29 +1,35 @@
+/**
+ * [보류] 로봇 암 시뮬레이션 — 메인 레이아웃 (Scene + Controls + LearningPanel)
+ * 현재 미사용. RobotArmSimModel.tsx 상단 주석 참고.
+ */
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { ControlsHelp } from '@/components/ui/ControlsHelp';
-import ControlPanel from '@/components/layout/ControlPanel';
-import BottomBar from '@/components/layout/BottomBar';
 import LearningPanel from '@/components/learning/LearningPanel';
+import RobotArmSimControls from './RobotArmSimControls';
 
-const Scene = dynamic(() => import('@/components/three/Scene'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-900">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-400">Loading 3D Scene...</p>
+const RobotArmSimScene = dynamic(
+  () => import('./RobotArmSimScene'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading Robot Arm Model...</p>
+        </div>
       </div>
-    </div>
-  ),
-});
+    ),
+  },
+);
 
 const ROBOT_ARM_CONTROLS_GUIDE = [
   { icon: '🖱️ 좌클릭 드래그', desc: '회전' },
   { icon: '🖱️ 우클릭 드래그', desc: '이동 (팬)' },
   { icon: '🔄 스크롤', desc: '줌 인/아웃' },
-  { icon: '🎮 우측 패널', desc: '관절 각도 조절 (FK/IK)' },
+  { icon: '🎮 우측 패널', desc: '시뮬레이션 제어' },
 ];
 
 interface RobotArmSimContentProps {
@@ -35,6 +41,9 @@ interface RobotArmSimContentProps {
 export default function RobotArmSimContent({ isDarkMode, showLearning, onCloseLearning }: RobotArmSimContentProps) {
   const [showControls, setShowControls] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isRunning, setIsRunning] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [jointAngles, setJointAngles] = useState([0, 0, 0, 0, 0]);
   const isResizing = useRef(false);
 
   const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
@@ -63,12 +72,21 @@ export default function RobotArmSimContent({ isDarkMode, showLearning, onCloseLe
     document.addEventListener('mouseup', onMouseUp);
   }, []);
 
+  const handleJointAnglesChange = useCallback((angles: number[]) => {
+    setJointAngles(angles);
+  }, []);
+
   return (
     <>
       <div className="flex-1 flex overflow-hidden">
         {/* 3D Viewport */}
         <div className="flex-1 min-w-0 relative">
-          <Scene isDarkMode={isDarkMode} />
+          <RobotArmSimScene
+            isDarkMode={isDarkMode}
+            isRunning={isRunning}
+            speed={speed}
+            onJointAnglesChange={handleJointAnglesChange}
+          />
           <ControlsHelp show={showControls} onDismiss={() => setShowControls(false)} isDarkMode={isDarkMode} controls={ROBOT_ARM_CONTROLS_GUIDE} />
         </div>
 
@@ -83,12 +101,16 @@ export default function RobotArmSimContent({ isDarkMode, showLearning, onCloseLe
           className="flex-shrink-0 overflow-hidden"
           style={{ width: sidebarWidth, minWidth: 240, maxWidth: 600 }}
         >
-          <ControlPanel isDarkMode={isDarkMode} />
+          <RobotArmSimControls
+            isDarkMode={isDarkMode}
+            isRunning={isRunning}
+            speed={speed}
+            jointAngles={jointAngles}
+            onToggleRunning={() => setIsRunning((prev) => !prev)}
+            onSpeedChange={setSpeed}
+          />
         </div>
       </div>
-
-      {/* Bottom Bar */}
-      <BottomBar isDarkMode={isDarkMode} />
 
       {/* Learning Panel */}
       <LearningPanel isOpen={showLearning} onClose={onCloseLearning} isDarkMode={isDarkMode} />

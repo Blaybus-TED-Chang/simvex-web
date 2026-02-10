@@ -22,13 +22,13 @@ export function ViewerTabs({
   const tabs: { id: ViewerTabType; label: string; enabled: boolean; comingSoon: boolean }[] = [
     {
       id: 'viewer',
-      label: '3D 부품 뷰어',
+      label: '뷰어',
       enabled: hasViewer,
       comingSoon: !hasViewer,
     },
     {
       id: 'simulation',
-      label: simulationName || '시뮬레이션',
+      label: '시뮬레이터',
       enabled: hasSimulation,
       comingSoon: !hasSimulation,
     },

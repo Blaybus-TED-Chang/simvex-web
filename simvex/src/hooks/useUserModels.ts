@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import type { UserModelRow, UserModelPartConfig } from '@/types/userModel';
+import type { UserModelRow, UserModelPartConfig, Visibility } from '@/types/userModel';
 
 const BUCKET = 'user-models';
 
@@ -44,15 +44,25 @@ export function useUserModels(user: User | null) {
     fetchMyModels();
   }, [fetchMyModels]);
 
-  // 공개 모델 조회 (정적, 훅 밖에서도 사용 가능)
+  // 공개 모델 조회 (World에 표시)
   const fetchPublicModels = useCallback(async (limit = 6): Promise<UserModelRow[]> => {
     const supabase = getSupabase();
-    const { data } = await supabase
+    // visibility 컬럼 우선 시도, 실패 시 is_public 사용
+    const { data, error } = await supabase
       .from('user_models')
       .select('*')
-      .eq('is_public', true)
+      .eq('visibility', 'public')
       .order('created_at', { ascending: false })
       .limit(limit);
+    if (error) {
+      const { data: fallback } = await supabase
+        .from('user_models')
+        .select('*')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      return fallback ?? [];
+    }
     return data ?? [];
   }, []);
 
@@ -62,12 +72,21 @@ export function useUserModels(user: User | null) {
       const supabase = getSupabase();
       const from = page * pageSize;
       const to = from + pageSize - 1;
-      const { data, count } = await supabase
+      const { data, count, error } = await supabase
         .from('user_models')
         .select('*', { count: 'exact' })
-        .eq('is_public', true)
+        .eq('visibility', 'public')
         .order('created_at', { ascending: false })
         .range(from, to);
+      if (error) {
+        const { data: fallback, count: fbCount } = await supabase
+          .from('user_models')
+          .select('*', { count: 'exact' })
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        return { data: fallback ?? [], count: fbCount ?? 0 };
+      }
       return { data: data ?? [], count: count ?? 0 };
     },
     []
@@ -148,6 +167,7 @@ export function useUserModels(user: User | null) {
           description: params.description,
           category: params.category,
           is_public: params.isPublic,
+          visibility: params.isPublic ? 'public' : 'private',
           glb_storage_path: glbPath,
           original_fbx_storage_path: fbxPath,
           thumbnail_storage_path: thumbnailPath,
@@ -177,6 +197,7 @@ export function useUserModels(user: User | null) {
         description?: string;
         category?: string;
         isPublic?: boolean;
+        visibility?: Visibility;
         partsConfig?: UserModelPartConfig[];
         scale?: number;
         cameraPosition?: [number, number, number];
@@ -203,6 +224,7 @@ export function useUserModels(user: User | null) {
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.category !== undefined) dbUpdates.category = updates.category;
       if (updates.isPublic !== undefined) dbUpdates.is_public = updates.isPublic;
+      if (updates.visibility !== undefined) dbUpdates.visibility = updates.visibility;
       if (updates.partsConfig !== undefined) dbUpdates.parts_config = updates.partsConfig;
       if (updates.scale !== undefined) dbUpdates.scale = updates.scale;
       if (updates.cameraPosition !== undefined) dbUpdates.camera_position = updates.cameraPosition;
@@ -247,12 +269,40 @@ export function useUserModels(user: User | null) {
     [user, fetchMyModels]
   );
 
-  // 공개 토글
+  // 공개 상태 변경 (public / shared / private)
+  const changeVisibility = useCallback(
+    async (id: string, vis: Visibility) => {
+      if (!user) return;
+      const supabase = getSupabase();
+      const isPublic = vis === 'public';
+
+      // visibility 컬럼이 있으면 함께 업데이트, 없으면 is_public만
+      const { error } = await supabase
+        .from('user_models')
+        .update({ is_public: isPublic, visibility: vis })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        // visibility 컬럼이 없는 경우 → is_public만 업데이트
+        await supabase
+          .from('user_models')
+          .update({ is_public: isPublic })
+          .eq('id', id)
+          .eq('user_id', user.id);
+      }
+
+      await fetchMyModels();
+    },
+    [user, fetchMyModels]
+  );
+
+  // 공개 토글 (레거시 호환)
   const togglePublic = useCallback(
     async (id: string, isPublic: boolean) => {
-      await updateModel(id, { isPublic });
+      await changeVisibility(id, isPublic ? 'public' : 'private');
     },
-    [updateModel]
+    [changeVisibility]
   );
 
   return {
@@ -266,5 +316,6 @@ export function useUserModels(user: User | null) {
     updateModel,
     deleteModel,
     togglePublic,
+    changeVisibility,
   };
 }
