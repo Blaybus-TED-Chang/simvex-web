@@ -17,7 +17,10 @@
       "Bash(npx tsc:*)",
       "Bash(supabase --version:*)",
       "Bash(npx supabase:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebSearch",
+      "WebFetch(domain:www.cdnfonts.com)"
     ]
   }
 }
