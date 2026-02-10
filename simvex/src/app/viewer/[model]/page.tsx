@@ -1451,7 +1451,7 @@ export default function ViewerPage() {
                 <div className="absolute left-0 top-0 bottom-0 w-[3px] z-10" style={{ background: 'linear-gradient(to bottom, #818CF8, #60A5FA, #BFDBFE)' }} />
               )}
               {/* 사이드바 탭 헤더 */}
-              <div className={`flex items-center justify-center border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 pt-3 shrink-0`}>
+              <div className={`flex border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} pt-3 shrink-0`}>
                 {(['model', 'notes', 'quiz'] as const).map((tab) => {
                   const labels = { model: '모델', notes: '노트', quiz: '퀴즈' };
                   const isActive = rightSidebarTab === tab;
@@ -1460,7 +1460,7 @@ export default function ViewerPage() {
                     <button
                       key={tab}
                       onClick={() => setRightSidebarTab(tab)}
-                      className={`px-4 pb-3 text-[14px] font-medium transition-all duration-200 border-b-2 ${
+                      className={`flex-1 pb-3 text-[14px] font-medium text-center transition-all duration-200 border-b-2 ${
                         isActive
                           ? 'text-[#001AFF] border-[#001AFF]'
                           : isDarkMode
