@@ -30,11 +30,23 @@ export interface ModelConfig {
 }
 
 // 모델별 뷰 상태 (저장용)
+
+export interface PartTreeGroup {
+  id: string;              // "group-{timestamp}"
+  name: string;
+  childPartIds: string[];
+  childGroupIds: string[];      // 하위 그룹 ID (순서 보존)
+  parentGroupId: string | null; // 부모 그룹 (null=최상위)
+  collapsed: boolean;
+}
+
 export interface ModelViewState {
   cameraPosition: [number, number, number];
   cameraTarget: [number, number, number];
   explodeValue: number;
   selectedPartId: string | null;
+  partTreeGroups?: PartTreeGroup[];
+  rootName?: string;
 }
 
 // 뷰어 상태
@@ -48,6 +60,7 @@ export interface ViewerState {
   isDarkMode: boolean;
   globalOpacity: number;
   modelStates: Record<string, ModelViewState>;
+  showControlsGuide: boolean;
 }
 
 // 뷰어 액션
@@ -64,4 +77,12 @@ export interface ViewerActions {
   setGlobalOpacity: (value: number) => void;
   getModelState: (modelId: string) => ModelViewState | undefined;
   setModelState: (modelId: string, state: Partial<ModelViewState>) => void;
+  createPartGroup: (modelId: string, name: string, parentGroupId?: string | null) => void;
+  deletePartGroup: (modelId: string, groupId: string) => void;
+  renamePartGroup: (modelId: string, groupId: string, name: string) => void;
+  movePartToGroup: (modelId: string, partId: string, groupId: string | null) => void;
+  toggleGroupCollapsed: (modelId: string, groupId: string) => void;
+  moveGroupToGroup: (modelId: string, sourceGroupId: string, targetGroupId: string | null) => void;
+  reorderGroups: (modelId: string, parentGroupId: string | null, orderedGroupIds: string[]) => void;
+  toggleControlsGuide: () => void;
 }

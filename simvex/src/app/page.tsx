@@ -1,477 +1,407 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { combinedModels } from '@/data/models';
-import { suspensionModel } from '@/data/models/suspension';
-import { hasSimulation } from '@/data/simulationMapping';
-import { AuthButton } from '@/components/auth/AuthButton';
-import { ScrapButton } from '@/components/scrap/ScrapButton';
-import { ShareButton } from '@/components/share/ShareButton';
-import { useViewerStore } from '@/lib/store/viewerStore';
+import { useEffect, useRef, useState } from 'react';
+import { LoginModal } from '@/components/auth/LoginModal';
 import { useUser } from '@/hooks/useUser';
-import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
-import { useScraps } from '@/hooks/useScraps';
-import type { UserModelRow } from '@/types/userModel';
 
-function ThumbnailSlideshow({ images, isDarkMode }: { images: string[]; isDarkMode: boolean }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+const CURVE_PATH =
+  'M0.0338419 2.34804C246.347 -1.82041 749.414 29.7598 791.178 189.428C832.942 349.096 646.763 532.408 548.453 604.106C398.835 714.319 237.915 965.46 791.178 1088.31C1344.44 1211.17 1522.94 1349.59 1543.03 1403.45';
 
-  const startSlideshow = useCallback(() => {
-    if (images.length <= 1) return;
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 1200);
-  }, [images.length]);
-
-  const stopSlideshow = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setCurrentIndex(0);
-  }, []);
+/** IntersectionObserver로 .fade-in-up 요소에 .visible 토글 */
+function useScrollReveal() {
+  const observed = useRef(false);
 
   useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+    if (observed.current) return;
+    observed.current = true;
 
-  return (
-    <div
-      className={`relative aspect-video overflow-hidden ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}
-      onMouseEnter={startSlideshow}
-      onMouseLeave={stopSlideshow}
-    >
-      {images.map((src, i) => (
-        <Image
-          key={src}
-          src={src}
-          alt={`조립도 ${i + 1}`}
-          fill
-          className={`object-cover transition-opacity duration-500 ${
-            i === currentIndex ? 'opacity-100' : 'opacity-0'
-          }`}
-          sizes="(max-width: 768px) 100vw, 33vw"
-        />
-      ))}
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-          {images.map((_, i) => (
-            <div
-              key={i}
-              className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                i === currentIndex ? 'bg-white' : 'bg-white/30'
-              }`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    const els = document.querySelectorAll('.fade-in-up');
+    if (!els.length) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
 }
 
-export default function Home() {
-  const { isDarkMode, toggleDarkMode } = useViewerStore();
-  const { user } = useUser();
-  const { fetchPublicModels } = useUserModels(user);
-  const { isScraped, toggleScrap } = useScraps(user);
-  const [communityModels, setCommunityModels] = useState<UserModelRow[]>([]);
+/** SVG drawLine 애니메이션용: path 길이 계산 후 적용 */
+function useSvgDraw() {
+  const pathRef = useRef<SVGPathElement>(null);
 
-  // Zustand store hydration (SSR 호환)
   useEffect(() => {
-    useViewerStore.persist.rehydrate();
+    const path = pathRef.current;
+    if (!path) return;
+
+    const len = path.getTotalLength();
+    path.style.setProperty('--path-length', String(len));
+    path.style.strokeDasharray = String(len);
+    path.style.strokeDashoffset = String(len);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            path.style.animation = 'drawLine 2s ease forwards';
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+    io.observe(path);
+    return () => io.disconnect();
   }, []);
 
-  // 공개 모델 로드 (미리보기 3개)
-  useEffect(() => {
-    fetchPublicModels(3).then(setCommunityModels);
-  }, [fetchPublicModels]);
+  return pathRef;
+}
 
-  // 모델 목록: 통합 모델 + 서스펜션 + 터보팬 엔진 (시뮬레이션 전용)
-  const viewerModels = [
-    ...combinedModels.map((m) => ({
-      id: m.id,
-      href: `/viewer/${m.id}`,
-      nameKo: m.nameKo,
-      name: m.name,
-      description: m.description,
-      category: m.category,
-      partsCount: m.parts.length,
-      thumbnails: m.thumbnails,
-      hasSim: hasSimulation(m.id),
-    })),
-    {
-      id: suspensionModel.id,
-      href: `/viewer/${suspensionModel.id}`,
-      nameKo: suspensionModel.nameKo,
-      name: suspensionModel.name,
-      description: suspensionModel.description,
-      category: suspensionModel.category,
-      partsCount: suspensionModel.parts.length,
-      thumbnails: suspensionModel.thumbnails,
-      hasSim: false,
-    },
-    {
-      id: 'jet-engine',
-      href: '/viewer/jet-engine?tab=sim',
-      nameKo: '터보팬 엔진',
-      name: 'Turbofan Engine Simulator',
-      description: '제트 엔진의 인터랙티브 시각화와 기류 파티클, 실시간 성능 지표를 확인할 수 있습니다',
-      category: '항공',
-      partsCount: 0,
-      thumbnails: undefined as string[] | undefined,
-      hasSim: true,
-    },
-  ];
+export default function LandingPage() {
+  useScrollReveal();
+  const curveRef = useSvgDraw();
+  const [showLogin, setShowLogin] = useState(false);
+  const { user } = useUser();
+
+  // 로그인 성공 시 모달 자동 닫기
+  useEffect(() => {
+    if (user && showLogin) setShowLogin(false);
+  }, [user, showLogin]);
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${
-      isDarkMode
-        ? 'from-gray-900 via-gray-950 to-black text-white'
-        : 'from-gray-50 via-white to-gray-100 text-gray-900'
-    }`}>
-      {/* 헤더 */}
-      <header className="pt-8 pb-4 px-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/logo.png"
-              alt="SIMVEX Logo"
-              width={48}
-              height={48}
-              className="rounded-xl shadow-lg"
-            />
-            <div>
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>SIMVEX</h1>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>공학 시뮬레이션 플랫폼</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* 네비게이션 */}
-            <Link
-              href="/community"
-              className={`p-2 rounded-lg transition-colors ${
-                isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-              }`}
-              title="커뮤니티 모델"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </Link>
-            {user && (
-              <Link
-                href="/mypage"
-                className={`p-2 rounded-lg transition-colors ${
-                  isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-                }`}
-                title="마이페이지"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </Link>
-            )}
-            {/* 구분선 */}
-            <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-300/70'}`} />
-            {/* 설정 */}
-            <button
-              onClick={toggleDarkMode}
-              className={`p-2 rounded-lg transition-colors ${
-                isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-              }`}
-            >
-              {isDarkMode ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-            <AuthButton />
-          </div>
+    <div style={{ background: '#F8FAFF', minHeight: '100vh' }}>
+
+      {/* ── 헤더 ── */}
+      <header style={{
+        width: '100%', height: 72, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', padding: '0 48px',
+        position: 'sticky', top: 0, zIndex: 50, background: '#F8FAFF',
+      }}>
+        <div style={{
+          color: 'black', fontSize: 26, fontFamily: 'Righteous', fontWeight: 400,
+        }}>
+          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>SIMVEX</Link>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          <Link href="/" className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            textDecoration: 'none',
+          }}>Home</Link>
+          <Link href="#about" className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            textDecoration: 'none',
+          }}>About</Link>
+          <Link href="#pricing" className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            textDecoration: 'none',
+          }}>Pricing</Link>
+          <button onClick={() => setShowLogin(true)} className="landing-nav-link" style={{
+            color: '#5D5A88', fontSize: 15, fontFamily: 'DM Sans', fontWeight: 400,
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}>Login</button>
+          <Link href="/models" className="landing-btn" style={{
+            padding: '10px 22px',
+            background: '#001AFF', borderRadius: 24,
+            display: 'flex', alignItems: 'center',
+            color: 'white', fontSize: 14, fontFamily: 'DM Sans', fontWeight: 700,
+            textDecoration: 'none',
+          }}>Get started</Link>
         </div>
       </header>
 
-      {/* 히어로 */}
-      <section className="px-6 py-16">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className={`text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r ${
-            isDarkMode ? 'from-white to-gray-400' : 'from-gray-900 to-gray-500'
-          } bg-clip-text text-transparent`}>
-            인터랙티브 공학 시뮬레이션
-          </h2>
-          <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            3D 시각화를 통해 복잡한 공학 시스템을 탐구하세요.
-            읽기만 하지 말고, 직접 체험하며 배우세요.
-          </p>
-          <div className="mt-6">
-            <Link
-              href="/community"
-              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.02] ${
-                isDarkMode
-                  ? 'bg-purple-600 hover:bg-purple-500 text-white'
-                  : 'bg-purple-500 hover:bg-purple-600 text-white'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              커뮤니티 모델 둘러보기
-            </Link>
+      {/* ── 히어로 섹션 ── */}
+      <section style={{
+        position: 'relative', width: '100%',
+        height: 'calc(100vh - 72px)', minHeight: 480, maxHeight: 700,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        {/* 파란 원 */}
+        <div style={{
+          width: 'min(38vw, 420px)', height: 'min(38vw, 420px)',
+          background: '#0019FF', borderRadius: 9999,
+          animation: 'pulseGlow 6s ease-in-out infinite',
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }} />
+
+        {/* 구분선 — 원 중앙을 가로지름 */}
+        <div style={{
+          position: 'absolute', top: '50%', left: 0, right: 0,
+          borderTop: '2px solid rgba(55,55,55,0.4)',
+          transform: 'translateY(10px)',
+          zIndex: 2,
+          animation: 'fadeIn 0.5s ease both', animationDelay: '1.2s',
+        }} />
+
+        {/* 캐치프레이즈 */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -90px)',
+          zIndex: 3, textAlign: 'center', whiteSpace: 'nowrap',
+          animation: 'fadeIn 1s ease both', animationDelay: '0.8s',
+        }}>
+          <span style={{ color: 'white', fontSize: 15, fontFamily: 'Roboto', fontWeight: 100 }}>아무리 크고 복잡한 기계도 내 손에서</span>
+          <span style={{ color: 'white', fontSize: 15, fontFamily: 'Roboto', fontWeight: 500 }}> </span>
+          <span style={{ color: 'white', fontSize: 19, fontFamily: 'Roboto', fontWeight: 900 }}>슥</span>
+        </div>
+
+        {/* SIMVEX 텍스트 (파란색 — 원 바깥) */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#0019FF', fontSize: 'clamp(90px, 11vw, 150px)', fontFamily: 'Righteous', fontWeight: 400,
+          lineHeight: 1, zIndex: 1,
+          animation: 'fadeIn 1s ease both', animationDelay: '0.3s',
+        }}>SIMVEX</div>
+
+        {/* SIMVEX 텍스트 (흰색 — 원 안쪽 clip) */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'min(38vw, 420px)', height: 'min(38vw, 420px)',
+          borderRadius: 9999, overflow: 'hidden',
+          pointerEvents: 'none', zIndex: 2,
+        }}>
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: 'white', fontSize: 'clamp(90px, 11vw, 150px)', fontFamily: 'Righteous', fontWeight: 400,
+            lineHeight: 1, whiteSpace: 'nowrap',
+            animation: 'fadeIn 1s ease both', animationDelay: '0.3s',
+          }}>SIMVEX</div>
+        </div>
+      </section>
+
+      {/* ── Feature 섹션 (about) ── */}
+      <section id="about" style={{
+        position: 'relative', width: '100%',
+        maxWidth: 1300, margin: '0 auto',
+        padding: '20px 80px 120px',
+        overflow: 'visible',
+      }}>
+        {/* 곡선 SVG — about → pricing 연결 */}
+        <svg
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+          fill="none"
+          viewBox="0 0 1545 1410"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <path ref={curveRef} d={CURVE_PATH} stroke="#373737" strokeOpacity="0.3" strokeWidth="4" />
+        </svg>
+
+        {/* "about SIMVEX" 타이틀 */}
+        <div className="fade-in-up" style={{ display: 'flex', gap: 8, marginBottom: 56 }}>
+          <span style={{ color: 'black', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>about </span>
+          <span style={{ color: '#001AFF', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>SIMVEX</span>
+        </div>
+
+        {/* Feature 1 — 이미지 왼쪽 · 텍스트 오른쪽 */}
+        <div className="fade-in-up" style={{
+          display: 'flex', alignItems: 'center', gap: 48,
+          marginBottom: 80,
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="landing-feature-img"
+            style={{ width: '46%', maxWidth: 500, borderRadius: 14, objectFit: 'cover', flexShrink: 0, position: 'relative', zIndex: 1, marginLeft: -60 }}
+            src="/images/landing/feature-explode.png" alt="3D 모델 분해도" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'absolute', left: -40, top: -110, opacity: 0.07, fontSize: 240, fontFamily: 'Anta', fontWeight: 400, lineHeight: 1, color: '#000', pointerEvents: 'none', zIndex: -1 }}>1</div>
+            <div style={{
+              color: '#212121', fontSize: 28, fontFamily: 'Inter', fontWeight: 600,
+              textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
+            }}>3D모델 조립·분해 기반 학습</div>
+            <div style={{ lineHeight: '24px' }}>
+              <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>SIMVEX는 사용자가 업로드한 </span>
+              <span style={{ color: '#0019FF', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 600 }}>3D모델의 조립·분해, 회전·확대·축소 기능을 제공</span>
+              <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>하며, 부품 간 구조 관계를 시각적으로 확인할 수 있습니다.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature 2 — 이미지 오른쪽 · 텍스트 왼쪽 */}
+        <div className="fade-in-up" style={{
+          display: 'flex', alignItems: 'center', gap: 40,
+          flexDirection: 'row-reverse',
+          marginBottom: 64,
+          transitionDelay: '0.2s',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="landing-feature-img"
+            style={{ width: '46%', maxWidth: 500, borderRadius: 14, objectFit: 'cover', flexShrink: 0, position: 'relative', zIndex: 1 }}
+            src="/images/landing/feature-ai.png" alt="AI 부품 설명" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'absolute', left: -40, top: -110, opacity: 0.07, fontSize: 240, fontFamily: 'Anta', fontWeight: 400, lineHeight: 1, color: '#000', pointerEvents: 'none', zIndex: -1 }}>2</div>
+            <div style={{
+              color: '#212121', fontSize: 28, fontFamily: 'Inter', fontWeight: 600,
+              textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
+            }}>부품별 실시간 AI 설명 제공</div>
+            <div style={{ lineHeight: '24px', maxWidth: 380 }}>
+              <span style={{ color: '#3A3A3A', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>사용자가 선택한 부품에 대해 </span>
+              <span style={{ color: '#001AFF', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 600 }}>AI 기반 전반적인 구조와 기능에 대한 설명을 실시간으로</span>
+              <span style={{ color: '#3A3A3A', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}> 빠르게 제공합니다.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature 3 — 이미지 왼쪽 · 텍스트 오른쪽 */}
+        <div className="fade-in-up" style={{
+          display: 'flex', alignItems: 'center', gap: 40,
+          transitionDelay: '0.4s',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="landing-feature-img"
+            style={{ width: '46%', maxWidth: 500, borderRadius: 14, objectFit: 'cover', flexShrink: 0, position: 'relative', zIndex: 1, marginLeft: -60 }}
+            src="/images/landing/feature-simulation.png" alt="3D 시뮬레이션" />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'absolute', left: -40, top: -140, opacity: 0.07, fontSize: 240, fontFamily: 'Anta', fontWeight: 400, lineHeight: 1, color: '#000', pointerEvents: 'none', zIndex: -1 }}>3</div>
+            <div style={{
+              color: '#212121', fontSize: 28, fontFamily: 'Inter', fontWeight: 600,
+              textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
+            }}>가상 3D 시뮬레이션</div>
+            <div style={{ lineHeight: '24px', maxWidth: 380, color: '#757575', fontSize: 14, fontFamily: 'Inter', fontWeight: 400 }}>
+              입력된 3D 모델의 파라미터 조절을 통해 제품의 작동 상태와 변화를 시각적으로 확인합니다.
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3D 뷰어 & 시뮬레이션 통합 섹션 */}
-      <section className="px-6 pb-20">
-        <div className="max-w-6xl mx-auto">
-          <h3 className={`text-sm font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            3D 뷰어 & 시뮬레이션
-          </h3>
-          <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            기계 부품의 3D 구조를 분해/조립하고, 인터랙티브 시뮬레이션으로 학습하세요
-          </p>
+      {/* ── Pricing 섹션 ── */}
+      <section id="pricing" style={{
+        width: '100%', padding: '100px 60px 80px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+        <div className="fade-in-up" style={{
+          color: '#001AFF', fontSize: 13, fontFamily: 'DM Sans', fontWeight: 700,
+          letterSpacing: 3, textTransform: 'uppercase' as const, marginBottom: 12,
+        }}>PRICING</div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {viewerModels.map((model) => (
-              <Link
-                key={model.id}
-                href={model.href}
-                className="group"
-              >
-                <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                  isDarkMode
-                    ? 'border-green-800/50 bg-gray-900/50 backdrop-blur-sm hover:border-green-500/50 hover:shadow-xl hover:shadow-green-500/10'
-                    : 'border-green-200 bg-white shadow-sm hover:border-green-400 hover:shadow-lg'
-                }`}>
-                  {/* 썸네일 슬라이드쇼 */}
-                  {model.thumbnails && model.thumbnails.length > 0 ? (
-                    <ThumbnailSlideshow images={model.thumbnails} isDarkMode={isDarkMode} />
-                  ) : (
-                    <div className={`aspect-video flex items-center justify-center ${
-                      isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                    }`}>
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
+        <div className="fade-in-up" style={{
+          color: '#212121', fontSize: 34, fontFamily: 'Pretendard Variable', fontWeight: 800,
+          textAlign: 'center', marginBottom: 48, transitionDelay: '0.1s',
+        }}>원하는 멤버십을 선택하세요</div>
 
-                  {/* 콘텐츠 */}
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className={`font-semibold transition-colors ${
-                        isDarkMode ? 'text-white group-hover:text-green-400' : 'text-gray-900 group-hover:text-green-600'
-                      }`}>
-                        {model.nameKo}
-                      </h4>
-                      {model.partsCount > 0 && (
-                        <span className={`px-1.5 py-0.5 text-xs rounded ${
-                          isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'
-                        }`}>
-                          {model.partsCount}개 부품
-                        </span>
-                      )}
-                      {model.hasSim && (
-                        <span className={`px-1.5 py-0.5 text-xs rounded ${
-                          isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                          시뮬레이션
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{model.name}</p>
-                    <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {model.description}
-                    </p>
+        <div style={{ display: 'flex', gap: 28, marginBottom: 56, width: '100%', maxWidth: 1200, justifyContent: 'center' }}>
+          {[
+            {
+              name: 'Basic', price: '$99', delay: 0,
+              features: ['All analytics features', 'Up to 250,000 tracked visits', 'Normal support', 'Mobile app', 'Up to 3 team members'],
+            },
+            {
+              name: 'Growth', price: '$199', delay: 0.15,
+              features: ['Everything on Basic plan', 'Up to 1,000,000 tracked visits', 'Premium support', 'Mobile app', 'Up to 10 team members'],
+            },
+            {
+              name: 'Enterprise', price: '$399', delay: 0.3,
+              features: ['Everything on Growth plan', 'Up to 5,000,000 tracked visits', 'Dedicated support', 'Mobile app', 'Up to 50 team members'],
+            },
+          ].map((plan) => (
+            <div key={plan.name} className="fade-in-up pricing-card" style={{
+              flex: 1, maxWidth: 380, borderRadius: 16, overflow: 'hidden',
+              background: '#fff', border: '1px solid #E5E7EB',
+              transitionDelay: `${plan.delay}s`,
+            }}>
+              <div style={{
+                background: '#001AFF', padding: '36px 0 32px', textAlign: 'center',
+              }}>
+                <div style={{ color: 'white', fontSize: 20, fontFamily: 'DM Sans', fontWeight: 700, marginBottom: 8 }}>{plan.name}</div>
+                <div style={{ color: 'white', fontSize: 48, fontFamily: 'DM Sans', fontWeight: 800, lineHeight: 1.1 }}>{plan.price}</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontFamily: 'DM Sans', marginTop: 6 }}>Billed monthly</div>
+              </div>
+              <div style={{ padding: '28px 26px 32px' }}>
+                {plan.features.map((feat) => (
+                  <div key={feat} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                      <circle cx="10" cy="10" r="10" fill="#001AFF" fillOpacity="0.1" />
+                      <path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span style={{ color: '#374151', fontSize: 14, fontFamily: 'DM Sans', fontWeight: 500 }}>{feat}</span>
                   </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
 
-                  {/* 카테고리 배지 + 스크랩 + 공유 */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1">
-                    <ScrapButton
-                      user={user}
-                      isScraped={isScraped('builtin', model.id)}
-                      scrapInput={{ model_type: 'builtin', model_id: model.id }}
-                      onToggle={toggleScrap}
-                      isDarkMode={isDarkMode}
-                      size="sm"
-                    />
-                    <ShareButton
-                      modelId={model.id}
-                      isDarkMode={isDarkMode}
-                      size="sm"
-                    />
-                    <span className={`px-2 py-0.5 text-xs rounded ${
-                      isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {model.category}
-                    </span>
-                  </div>
-                </div>
-              </Link>
+        <div className="fade-in-up" style={{ transitionDelay: '0.4s' }}>
+          <Link href="/models" className="landing-btn" style={{
+            display: 'inline-block', padding: '14px 64px',
+            background: '#001AFF', borderRadius: 32, textDecoration: 'none',
+            color: 'white', fontSize: 18, fontFamily: 'DM Sans', fontWeight: 700,
+          }}>Next</Link>
+        </div>
+      </section>
+
+      {/* ── 푸터 ── */}
+      <footer className="fade-in-up" style={{
+        width: '100%', background: '#4A4A4A', color: '#fff',
+        fontFamily: 'Pretendard Variable',
+      }}>
+        <div style={{
+          textAlign: 'center', paddingTop: 36, paddingBottom: 24,
+          fontSize: 22, fontWeight: 700, fontFamily: 'Inter',
+        }}>Contact Us</div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 100, paddingBottom: 32 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Product</div>
+            {['3D 뷰어', '모델 업로드', 'AI 어시스턴트', '퀴즈', '시뮬레이션'].map((t) => (
+              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Information</div>
+            {['사용 가이드', '자주 묻는 질문', 'API 문서'].map((t) => (
+              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Company</div>
+            {['팀 소개', '연락처', '파트너십', '채용 정보'].map((t) => (
+              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* 커뮤니티 모델 미리보기 섹션 */}
-      {communityModels.length > 0 && (
-        <section className="px-6 pb-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className={`text-sm font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                커뮤니티 모델
-              </h3>
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/community"
-                  className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                    isDarkMode
-                      ? 'text-purple-400 hover:bg-gray-800'
-                      : 'text-purple-600 hover:bg-gray-100'
-                  }`}
-                >
-                  전체 보기
-                </Link>
-                {user && (
-                  <Link
-                    href="/upload"
-                    className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                      isDarkMode
-                        ? 'text-blue-400 hover:bg-gray-800'
-                        : 'text-blue-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    내 모델 관리
-                  </Link>
-                )}
-              </div>
+        <div style={{ position: 'relative', height: 32, margin: '0 40px' }}>
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '2px dashed #6EB8FF', transform: 'translateY(-50%)' }} />
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#6EB8FF', fontSize: 18, fontWeight: 700, background: '#4A4A4A', padding: '0 8px' }}>&#10005;</div>
+        </div>
+
+        <div style={{ textAlign: 'center', padding: '24px 0 36px', fontSize: 22, fontWeight: 700, color: '#ddd' }}>단체사진</div>
+
+        <div style={{ margin: '0 40px', borderTop: '1px solid rgba(255,255,255,0.15)' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px 24px' }}>
+          <div style={{ fontSize: 24, fontFamily: 'Righteous', fontWeight: 400 }}>SIMVEX</div>
+          <div style={{ display: 'flex', gap: 28 }}>
+            {['Terms', 'Privacy', 'Cookies'].map((t) => (
+              <span key={t} style={{ fontSize: 13, color: '#ccc', cursor: 'pointer' }}>{t}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#ccc"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
             </div>
-            <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              사용자들이 업로드한 3D 모델
-            </p>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {communityModels.map((model) => {
-                const thumbnailUrl = model.thumbnail_storage_path
-                  ? getPublicUrl(model.thumbnail_storage_path)
-                  : null;
-                const partsCount = (model.parts_config as unknown[]).length;
-
-                return (
-                  <Link
-                    key={model.id}
-                    href={`/viewer/u-${model.id}`}
-                    className="group"
-                  >
-                    <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                      isDarkMode
-                        ? 'border-purple-800/50 bg-gray-900/50 backdrop-blur-sm hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10'
-                        : 'border-purple-200 bg-white shadow-sm hover:border-purple-400 hover:shadow-lg'
-                    }`}>
-                      {/* 썸네일 */}
-                      <div className={`aspect-video flex items-center justify-center ${
-                        isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                      }`}>
-                        {thumbnailUrl ? (
-                          <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 콘텐츠 */}
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-semibold transition-colors ${
-                            isDarkMode ? 'text-white group-hover:text-purple-400' : 'text-gray-900 group-hover:text-purple-600'
-                          }`}>
-                            {model.name}
-                          </h4>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${
-                            isDarkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-600'
-                          }`}>
-                            {partsCount}개 부품
-                          </span>
-                        </div>
-                        <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {model.description || '설명 없음'}
-                        </p>
-                      </div>
-
-                      {/* 카테고리 + 스크랩 + 공유 */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1">
-                        <ScrapButton
-                          user={user}
-                          isScraped={isScraped('user', model.id)}
-                          scrapInput={{ model_type: 'user', model_id: model.id, user_model_id: model.id }}
-                          onToggle={toggleScrap}
-                          isDarkMode={isDarkMode}
-                          size="sm"
-                        />
-                        <ShareButton
-                          modelId={`u-${model.id}`}
-                          isDarkMode={isDarkMode}
-                          size="sm"
-                        />
-                        <span className={`px-2 py-0.5 text-xs rounded ${
-                          isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          {model.category}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#ccc"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </div>
           </div>
-        </section>
-      )}
-
-      {/* 업로드 CTA */}
-      {user && (
-        <section className="px-6 pb-20">
-          <div className="max-w-6xl mx-auto">
-            <Link
-              href="/upload"
-              className={`block p-6 rounded-xl border-2 border-dashed text-center transition-all hover:scale-[1.01] ${
-                isDarkMode
-                  ? 'border-gray-800 hover:border-blue-500/50 text-gray-500 hover:text-blue-400'
-                  : 'border-gray-200 hover:border-blue-400 text-gray-400 hover:text-blue-600'
-              }`}
-            >
-              <svg className="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-              </svg>
-              <p className="font-medium">내 3D 모델 업로드하기</p>
-              <p className="text-sm mt-1 opacity-60">GLB 또는 FBX 파일을 업로드하여 커뮤니티에 공유하세요</p>
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {/* 푸터 */}
-      <footer className={`px-6 py-8 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-        <div className={`max-w-6xl mx-auto flex items-center justify-between text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-          <p>SIMVEX - 공학 학습 플랫폼</p>
-          <p>교육과 탐구를 위해 만들어졌습니다</p>
         </div>
       </footer>
+
+      {/* ══════ 로그인 모달 ══════ */}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </div>
   );
 }

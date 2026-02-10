@@ -63,11 +63,15 @@ export function useSupabaseChat(user: User | null, modelId: string) {
     if (!user || !modelId) return;
 
     const supabase = createClient();
-    await supabase
-      .from('chat_conversations')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('model_id', modelId);
+    await supabase.from('chat_conversations').upsert(
+      {
+        user_id: user.id,
+        model_id: modelId,
+        messages: [],
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,model_id' }
+    );
   }, [user, modelId]);
 
   return { messages, saveMessages, clearMessages, loaded };

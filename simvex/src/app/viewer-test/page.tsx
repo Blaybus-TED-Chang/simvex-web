@@ -48,7 +48,7 @@ export default function TestViewerPage() {
       {/* Header */}
       <header className="h-14 bg-gray-900 border-b border-gray-800 px-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-gray-400 hover:text-white">
+          <Link href="/models" className="text-gray-400 hover:text-white">
             ← Back
           </Link>
           <h1 className="font-semibold">{testModel.nameKo}</h1>

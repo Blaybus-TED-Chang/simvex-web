@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { User } from '@supabase/supabase-js';
 
 interface DownloadButtonProps {
   modelType: 'builtin' | 'user';
@@ -9,6 +10,8 @@ interface DownloadButtonProps {
   modelName: string;
   isDarkMode: boolean;
   size?: 'sm' | 'md';
+  user?: User | null;
+  onLoginRequired?: () => void;
 }
 
 /** 파일 다운로드 (same-origin → <a download>, cross-origin → fetch+Blob) */
@@ -43,6 +46,8 @@ export function DownloadButton({
   modelName,
   isDarkMode,
   size = 'sm',
+  user,
+  onLoginRequired,
 }: DownloadButtonProps) {
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -91,7 +96,10 @@ export function DownloadButton({
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!user) { onLoginRequired?.(); return; }
+          setOpen((v) => !v);
+        }}
         disabled={downloading}
         className={`p-1.5 rounded-lg transition-all ${
           isDarkMode

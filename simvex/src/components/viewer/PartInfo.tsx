@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useViewerStore } from '@/lib/store/viewerStore';
 import { PartCustomization } from '@/hooks/usePartCustomizations';
 
-// 공통 부품 정보 인터페이스
-interface PartInfo {
+interface PartInfoData {
   id: string;
   name: string;
   nameKo: string;
@@ -15,7 +13,7 @@ interface PartInfo {
 }
 
 interface PartInfoProps {
-  part: PartInfo | null;
+  part: PartInfoData | null;
   isLoggedIn?: boolean;
   customization?: PartCustomization;
   onCustomize?: (partId: string, updates: PartCustomization) => void;
@@ -23,16 +21,15 @@ interface PartInfoProps {
 }
 
 export function PartInfo({ part, isLoggedIn, customization, onCustomize, onResetCustomize }: PartInfoProps) {
-  const { isDarkMode } = useViewerStore();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
   const hasCustomization = customization && (customization.color || customization.nameKo);
 
-  // 이름 편집 시작 시 input에 포커스
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
       nameInputRef.current.focus();
@@ -40,7 +37,6 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
     }
   }, [isEditingName]);
 
-  // 색상 피커 외부 클릭 시 닫기
   useEffect(() => {
     if (!showColorPicker) return;
     const handler = (e: MouseEvent) => {
@@ -52,7 +48,6 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
     return () => document.removeEventListener('mousedown', handler);
   }, [showColorPicker]);
 
-  // 부품 변경 시 편집 상태 초기화
   useEffect(() => {
     setIsEditingName(false);
     setShowColorPicker(false);
@@ -60,21 +55,11 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
 
   if (!part) {
     return (
-      <div className={`backdrop-blur rounded-lg p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-            <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-            </svg>
-          </div>
-          <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>부품 정보</h3>
-        </div>
-
-        <div className="text-center py-6">
-          <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            부품을 클릭하여 정보를 확인하세요
-          </p>
-        </div>
+      <div className="text-center py-8">
+        <svg className="w-10 h-10 mx-auto text-gray-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+        </svg>
+        <p className="text-[13px] text-gray-400">부품을 클릭하여 정보를 확인하세요</p>
       </div>
     );
   }
@@ -93,7 +78,6 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
     if (trimmed && trimmed !== part.nameKo && onCustomize) {
       onCustomize(part.id, { nameKo: trimmed });
     } else if (trimmed === part.nameKo && customization?.nameKo && onCustomize) {
-      // 원본과 같으면 커스텀 이름 제거
       onCustomize(part.id, { nameKo: undefined });
     }
   };
@@ -110,35 +94,10 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
   ];
 
   return (
-    <div className={`relative z-10 backdrop-blur rounded-lg p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-            <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-            </svg>
-          </div>
-          <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>선택된 부품</h3>
-        </div>
-
-        {/* 원본 복원 버튼 */}
-        {isLoggedIn && hasCustomization && onResetCustomize && (
-          <button
-            onClick={() => onResetCustomize(part.id)}
-            className={`text-xs px-2 py-1 rounded transition-colors ${
-              isDarkMode
-                ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            원본 복원
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {/* 한글 이름 (편집 가능) */}
-        <div>
+    <div className="relative">
+      {/* 이름 + 색상 */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             {isEditingName ? (
               <input
@@ -150,23 +109,15 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
                   if (e.key === 'Enter') handleSaveName();
                   if (e.key === 'Escape') setIsEditingName(false);
                 }}
-                className={`text-lg font-bold w-full px-1 py-0.5 rounded border outline-none ${
-                  isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500'
-                    : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-blue-500'
-                }`}
+                className="text-[18px] font-bold w-full px-2 py-0.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-blue-200 transition-all"
               />
             ) : (
               <>
-                <h4 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {displayNameKo}
-                </h4>
+                <h4 className="text-[18px] font-bold text-gray-900 truncate">{displayNameKo}</h4>
                 {isLoggedIn && onCustomize && (
                   <button
                     onClick={handleStartEditName}
-                    className={`p-0.5 rounded transition-colors ${
-                      isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
-                    }`}
+                    className="p-0.5 rounded text-gray-300 hover:text-[#001AFF] transition-colors shrink-0"
                     title="이름 편집"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,51 +128,20 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
               </>
             )}
           </div>
-          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{part.name}</p>
+          <p className="text-[13px] text-gray-400 mt-0.5">{part.name}</p>
         </div>
 
-        {part.material && (
-          <div className="flex items-center gap-2">
-            <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>재질:</span>
-            <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{part.material}</span>
-          </div>
-        )}
+        {/* 색상 스와치 */}
+        <div className="relative shrink-0" ref={colorPickerRef}>
+          <button
+            onClick={() => isLoggedIn && onCustomize && setShowColorPicker(!showColorPicker)}
+            className={`w-8 h-8 rounded-lg border-2 border-gray-200 transition-all ${isLoggedIn ? 'hover:scale-110 cursor-pointer' : 'cursor-default'}`}
+            style={{ backgroundColor: displayColor || '#888888' }}
+            title={isLoggedIn ? '색상 변경' : ''}
+          />
 
-        <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-          {part.description}
-        </p>
-
-        {/* 색상 (편집 가능) */}
-        <div className="relative">
-          <div className="flex items-center gap-2">
-            <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>색상:</span>
-            <div
-              className={`w-4 h-4 rounded border ${isDarkMode ? 'border-gray-600' : 'border-gray-300'}`}
-              style={{ backgroundColor: displayColor || '#888888' }}
-            />
-            {isLoggedIn && onCustomize && (
-              <button
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                className={`p-0.5 rounded transition-colors ${
-                  isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
-                }`}
-                title="색상 변경"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* 색상 피커 */}
           {showColorPicker && (
-            <div
-              ref={colorPickerRef}
-              className={`absolute left-0 mt-2 p-3 rounded-lg shadow-lg border z-50 ${
-                isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-              }`}
-            >
+            <div className="absolute right-0 top-full mt-2 p-3 rounded-xl shadow-xl border border-gray-200 bg-white z-50" style={{ animation: 'scaleIn 0.2s ease both' }}>
               <div className="grid grid-cols-5 gap-1.5 mb-2">
                 {presetColors.map((c) => (
                   <button
@@ -230,8 +150,8 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
                       handleColorChange(c);
                       setShowColorPicker(false);
                     }}
-                    className={`w-7 h-7 rounded border-2 transition-transform hover:scale-110 ${
-                      displayColor === c ? 'border-blue-500 ring-1 ring-blue-500' : isDarkMode ? 'border-gray-600' : 'border-gray-300'
+                    className={`w-7 h-7 rounded-lg border-2 transition-transform hover:scale-110 ${
+                      displayColor === c ? 'border-[#001AFF] ring-1 ring-blue-200' : 'border-gray-200'
                     }`}
                     style={{ backgroundColor: c }}
                   />
@@ -247,6 +167,43 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
           )}
         </div>
       </div>
+
+      {/* 재질 */}
+      {part.material && (
+        <div className="flex items-center gap-2 mt-3">
+          <span className="text-[12px] text-gray-400">재질</span>
+          <span className="text-[13px] font-medium text-gray-700">{part.material}</span>
+        </div>
+      )}
+
+      {/* 설명 */}
+      <p className={`text-[13px] text-gray-500 leading-relaxed mt-2 ${!isExpanded ? 'line-clamp-2' : ''}`}>
+        {part.description}
+      </p>
+
+      {/* 원본 복원 */}
+      {isLoggedIn && hasCustomization && onResetCustomize && isExpanded && (
+        <button
+          onClick={() => onResetCustomize(part.id)}
+          className="text-[12px] text-gray-400 hover:text-red-500 mt-2 transition-colors"
+        >
+          원본으로 복원
+        </button>
+      )}
+
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex justify-center pt-3 mt-2 border-t border-gray-100"
+      >
+        <svg
+          className={`w-5 h-5 text-gray-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
     </div>
   );
 }
