@@ -26,7 +26,7 @@ export function useSupabaseChat(user: User | null, modelId: string) {
       .select('messages')
       .eq('user_id', user.id)
       .eq('model_id', modelId)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data && Array.isArray(data.messages)) {
           setMessages(data.messages as ChatMessage[]);

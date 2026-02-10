@@ -55,7 +55,7 @@ const NAV_ITEMS = [
   { label: '홈', href: '/models', requireAuth: false },
   { label: '나의 워크플레이스', href: '#workspace', requireAuth: true },
   { label: 'World', href: '/community', requireAuth: false },
-  { label: '설정', href: '#', requireAuth: false },
+  { label: '마이페이지', href: '/mypage', requireAuth: true },
   { label: 'FAQ', href: '#faq', requireAuth: false },
   { label: '공지사항', href: '#notice', requireAuth: false },
 ];
