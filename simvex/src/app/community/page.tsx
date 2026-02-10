@@ -8,6 +8,7 @@ import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
 import { useScraps } from '@/hooks/useScraps';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { AuthButton } from '@/components/auth/AuthButton';
+import { LoginModal } from '@/components/auth/LoginModal';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
 import { ShareButton } from '@/components/share/ShareButton';
 import type { UserModelRow } from '@/types/userModel';
@@ -20,6 +21,7 @@ export default function CommunityPage() {
   const { fetchPublicModelsPaginated } = useUserModels(user);
   const { isScraped, toggleScrap } = useScraps(user);
 
+  const [showLogin, setShowLogin] = useState(false);
   const [models, setModels] = useState<UserModelRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -202,6 +204,7 @@ export default function CommunityPage() {
                           onToggle={toggleScrap}
                           isDarkMode={isDarkMode}
                           size="sm"
+                          onLoginRequired={() => setShowLogin(true)}
                         />
                         <ShareButton
                           modelId={`u-${model.id}`}
@@ -261,6 +264,9 @@ export default function CommunityPage() {
           <p>교육과 탐구를 위해 만들어졌습니다</p>
         </div>
       </footer>
+
+      {/* ══════ 로그인 모달 ══════ */}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </div>
   );
 }

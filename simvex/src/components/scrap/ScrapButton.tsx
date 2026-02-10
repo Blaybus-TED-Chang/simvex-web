@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import type { ScrapInput } from '@/types/scrap';
 
@@ -11,10 +10,10 @@ interface ScrapButtonProps {
   onToggle: (input: ScrapInput) => Promise<void>;
   isDarkMode: boolean;
   size?: 'sm' | 'md';
+  onLoginRequired?: () => void;
 }
 
-export function ScrapButton({ user, isScraped, scrapInput, onToggle, isDarkMode, size = 'sm' }: ScrapButtonProps) {
-  const router = useRouter();
+export function ScrapButton({ user, isScraped, scrapInput, onToggle, isDarkMode, size = 'sm', onLoginRequired }: ScrapButtonProps) {
   const iconSize = size === 'sm' ? 'w-5 h-5' : 'w-6 h-6';
 
   const handleClick = (e: React.MouseEvent) => {
@@ -22,7 +21,7 @@ export function ScrapButton({ user, isScraped, scrapInput, onToggle, isDarkMode,
     e.stopPropagation();
 
     if (!user) {
-      router.push('/auth/login');
+      onLoginRequired?.();
       return;
     }
 

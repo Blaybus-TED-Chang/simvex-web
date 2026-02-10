@@ -12,6 +12,9 @@ export const MODEL_CATEGORIES = [
 
 export type ModelCategory = (typeof MODEL_CATEGORIES)[number];
 
+// 공개 상태
+export type Visibility = 'public' | 'shared' | 'private';
+
 // DB 레코드 타입 (Supabase user_models 테이블)
 export interface UserModelRow {
   id: string;
@@ -20,6 +23,7 @@ export interface UserModelRow {
   description: string;
   category: string;
   is_public: boolean;
+  visibility: Visibility;
   glb_storage_path: string;
   original_fbx_storage_path: string | null;
   thumbnail_storage_path: string | null;

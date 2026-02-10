@@ -1,26 +1,174 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
 import { useUser } from '@/hooks/useUser';
 import { useScraps } from '@/hooks/useScraps';
 import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
 import { useViewerStore } from '@/lib/store/viewerStore';
-import { AuthButton } from '@/components/auth/AuthButton';
 import { getCombinedModelById, getModelById } from '@/data/models';
 import { suspensionModel } from '@/data/models/suspension';
 import { createClient } from '@/lib/supabase/client';
 import type { UserModelRow } from '@/types/userModel';
+import type { Visibility } from '@/types/userModel';
+
+/* ── 공개 상태 드롭다운 (models 페이지와 동일) ── */
+type VisibilityState = 'private' | 'shared' | 'public';
+
+const VISIBILITY_OPTIONS: { key: VisibilityState; label: string; desc: string }[] = [
+  { key: 'public',  label: '전체공개', desc: 'World 게시, 누구나 열람·다운' },
+  { key: 'shared',  label: '일부공개', desc: '링크가 있으면 열람·다운 가능' },
+  { key: 'private', label: '비공개',   desc: '나만 볼 수 있음' },
+];
+
+function VisibilityIcon({ state }: { state: VisibilityState }) {
+  if (state === 'public') return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+  if (state === 'shared') return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+    </svg>
+  );
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
+
+function VisibilityDropdown({
+  state,
+  onChange,
+}: {
+  state: VisibilityState;
+  onChange?: (next: VisibilityState) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [local, setLocal] = useState(state);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => { setLocal(state); }, [state]);
+
+  useEffect(() => {
+    if (!open) return;
+    const updatePos = () => {
+      if (!btnRef.current) return;
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left + r.width / 2 });
+    };
+    updatePos();
+    const handler = (e: MouseEvent) => {
+      if (btnRef.current?.contains(e.target as Node)) return;
+      const portal = document.getElementById('vis-dropdown-portal-mypage');
+      if (portal?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    window.addEventListener('scroll', updatePos, true);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', updatePos, true);
+    };
+  }, [open]);
+
+  const bg = local === 'public' ? 'bg-green-500/80' : local === 'shared' ? 'bg-blue-500/80' : 'bg-gray-500/80';
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
+        className={`w-8 h-8 rounded-full ${bg} backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer`}
+        title={VISIBILITY_OPTIONS.find((o) => o.key === local)?.label}
+      >
+        <span className="text-white"><VisibilityIcon state={local} /></span>
+      </button>
+
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          id="vis-dropdown-portal-mypage"
+          className="fixed flex gap-1.5 p-1.5 rounded-full bg-white shadow-xl border border-gray-200"
+          style={{ top: pos.top, left: pos.left, transform: 'translateX(-50%)', zIndex: 9999 }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        >
+          {VISIBILITY_OPTIONS.map((opt) => {
+            const active = local === opt.key;
+            const optBg = opt.key === 'public' ? 'bg-green-500' : opt.key === 'shared' ? 'bg-blue-500' : 'bg-gray-500';
+            return (
+              <button
+                key={opt.key}
+                onClick={() => {
+                  setLocal(opt.key);
+                  onChange?.(opt.key);
+                  setOpen(false);
+                }}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 ${
+                  active
+                    ? `${optBg} text-white ring-2 ring-offset-1 ring-blue-300`
+                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                }`}
+                title={`${opt.label}: ${opt.desc}`}
+              >
+                <VisibilityIcon state={opt.key} />
+              </button>
+            );
+          })}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+/* ── 썸네일 슬라이드쇼 ── */
+function ThumbnailSlideshow({ images }: { images: string[] }) {
+  const [idx, setIdx] = useState(0);
+  const ref = useRef<NodeJS.Timeout | null>(null);
+  const start = useCallback(() => {
+    if (images.length <= 1) return;
+    ref.current = setInterval(() => setIdx((p) => (p + 1) % images.length), 1200);
+  }, [images.length]);
+  const stop = useCallback(() => {
+    if (ref.current) { clearInterval(ref.current); ref.current = null; }
+    setIdx(0);
+  }, []);
+  useEffect(() => () => { if (ref.current) clearInterval(ref.current); }, []);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden" onMouseEnter={start} onMouseLeave={stop}>
+      {images.map((src, i) => (
+        <Image key={src} src={src} alt={`thumbnail ${i + 1}`} fill
+          className={`object-cover transition-opacity duration-500 ${i === idx ? 'opacity-100' : 'opacity-0'}`}
+          sizes="360px" />
+      ))}
+    </div>
+  );
+}
+
+/* ── 사이드바 탭 타입 ── */
+type SidebarTab = 'account' | 'my-models' | 'scraps';
 
 export default function MyPage() {
   const router = useRouter();
   const { user, loading: userLoading } = useUser();
-  const { isDarkMode, toggleDarkMode } = useViewerStore();
   const { scraps, loaded: scrapsLoaded, toggleScrap } = useScraps(user);
-  const { models: myModels, loading: modelsLoading } = useUserModels(user);
+  const { models: myModels, loading: modelsLoading, changeVisibility } = useUserModels(user);
   const [scrapUserModels, setScrapUserModels] = useState<UserModelRow[]>([]);
+  const [activeTab, setActiveTab] = useState<SidebarTab>('account');
+  const [loggingOut, startLogout] = useTransition();
+
+  // 닉네임 편집 상태
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Zustand store hydration
   useEffect(() => {
@@ -63,384 +211,502 @@ export default function MyPage() {
     if (combined) return { type: 'combined' as const, model: combined, scrapId: s.id };
     const regular = getModelById(s.model_id);
     if (regular) return { type: 'regular' as const, model: regular, scrapId: s.id };
-    // suspension 등 직접 참조 모델
     if (s.model_id === suspensionModel.id) return { type: 'regular' as const, model: suspensionModel, scrapId: s.id };
     return null;
   }).filter(Boolean) as Array<{ type: 'combined' | 'regular'; model: { id: string; name: string; nameKo: string; description: string; category: string; thumbnail?: string; thumbnails?: string[]; parts: { id: string }[] }; scrapId: string }>;
 
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자';
+  const userScrapModels = scraps.filter((s) => s.model_type === 'user');
+  const totalScraps = builtinModels.length + userScrapModels.length;
+
+  // 닉네임 저장
+  const handleSaveName = async () => {
+    if (!newName.trim() || savingName) return;
+    setSavingName(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ data: { name: newName.trim() } });
+    if (!error) {
+      setEditingName(false);
+    }
+    setSavingName(false);
+  };
+
+  // 닉네임 편집 시작
+  const startEditName = () => {
+    setNewName(displayName);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.focus(), 50);
+  };
+
+  // 로그아웃
+  const handleLogout = () => {
+    startLogout(async () => {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push('/models');
+    });
+  };
+
+  // 가입일 포맷
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
   // 로딩 중
   if (userLoading || !user) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-950' : 'bg-gray-50'} flex items-center justify-center`}>
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#001AFF] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const userScrapModels = scraps.filter((s) => s.model_type === 'user');
-  const totalScraps = builtinModels.length + userScrapModels.length;
+  const SIDEBAR_TABS: { key: SidebarTab; label: string; icon: React.ReactNode }[] = [
+    {
+      key: 'account',
+      label: '계정 설정',
+      icon: (
+        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+    },
+    {
+      key: 'my-models',
+      label: '나의 모델',
+      icon: (
+        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+        </svg>
+      ),
+    },
+    {
+      key: 'scraps',
+      label: '스크랩한 모델',
+      icon: (
+        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      ),
+    },
+  ];
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      {/* 헤더 */}
-      <header className={`h-14 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 flex items-center justify-between`}>
+    <div className="flex flex-col min-h-screen bg-white">
+
+      {/* ══════ 상단 헤더 바 ══════ */}
+      <header className="flex items-center justify-between px-8 bg-white shrink-0 relative z-10" style={{ height: 72, boxShadow: '0 0 8.4px rgba(0,0,0,0.25)' }}>
+        <Link href="/" className="text-[26px] text-black no-underline shrink-0" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
+          SIMVEX
+        </Link>
+
         <div className="flex items-center gap-4">
-          <Link
-            href="/models"
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="SIMVEX" width={90} height={19} className={`object-contain ${isDarkMode ? 'invert' : ''}`} />
-            <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>마이페이지</h1>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[14px] font-medium text-gray-700" style={{ fontFamily: "'Pretendard Variable', Pretendard, sans-serif" }}>{displayName}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <AuthButton />
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            {isDarkMode ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </button>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-12">
-        {/* 사용자 정보 */}
-        <section>
-          <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
-              <svg className={`w-7 h-7 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <div>
-              <p className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {user.email}
-              </p>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                스크랩 {totalScraps}개 · 내 모델 {myModels.length}개
-              </p>
-            </div>
-          </div>
-        </section>
+      {/* ══════ 사이드바 + 메인 ══════ */}
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* 스크랩한 모델 섹션 */}
-        <section>
-          <h2 className={`text-lg font-semibold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            스크랩한 모델
-          </h2>
-          <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            즐겨찾기한 3D 모델
-          </p>
-
-          {!scrapsLoaded ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        {/* ══════ 사이드바 ══════ */}
+        <aside className="models-sidebar w-[240px] flex flex-col justify-between bg-[#F8FAFF] shrink-0 border-0" style={{ fontFamily: "'Pretendard Variable', Pretendard, sans-serif" }}>
+          <div>
+            {/* 프로필 요약 */}
+            <div className="px-5 pt-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[15px] font-bold shadow-inner shrink-0">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[14px] font-bold text-gray-900 truncate">{displayName}</p>
+                  <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+                </div>
+              </div>
             </div>
-          ) : totalScraps === 0 ? (
-            <div className={`text-center py-12 rounded-xl border ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-white'}`}>
-              <svg className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                아직 스크랩한 모델이 없습니다
-              </p>
+
+            {/* 탭 네비게이션 */}
+            <nav className="flex flex-col gap-1 px-4 pt-4">
+              {SIDEBAR_TABS.map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`models-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 text-left ${
+                      isActive
+                        ? 'bg-[#001AFF] text-white models-nav-active'
+                        : 'text-gray-800 hover:bg-[#001AFF] hover:text-white'
+                    }`}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+
+              {/* 구분선 */}
+              <div className="my-2 border-t border-gray-200" />
+
+              {/* 모델 둘러보기 */}
               <Link
                 href="/models"
-                className={`inline-block mt-3 text-sm px-4 py-2 rounded-lg transition-colors ${
-                  isDarkMode ? 'text-blue-400 hover:bg-gray-800' : 'text-blue-600 hover:bg-gray-100'
-                }`}
+                className="models-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium text-gray-800 hover:bg-[#001AFF] hover:text-white transition-all duration-200"
               >
-                모델 둘러보기
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span>모델 둘러보기</span>
               </Link>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* builtin 모델 */}
-              {builtinModels.map(({ type, model }) => (
-                <Link
-                  key={model.id}
-                  href={`/viewer/${model.id}`}
-                  className="group"
-                >
-                  <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                    isDarkMode
-                      ? 'border-green-800/50 bg-gray-900/50 hover:border-green-500/50 hover:shadow-xl hover:shadow-green-500/10'
-                      : 'border-green-200 bg-white shadow-sm hover:border-green-400 hover:shadow-lg'
-                  }`}>
-                    <div className={`aspect-video flex items-center justify-center ${
-                      isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                    }`}>
-                      {model.thumbnails && model.thumbnails.length > 0 ? (
-                        <Image src={model.thumbnails[0]} alt={model.nameKo} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
-                      ) : model.thumbnail ? (
-                        <Image src={model.thumbnail} alt={model.nameKo} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+            </nav>
+          </div>
+
+          {/* 하단 로그아웃 */}
+          <div className="px-4 pb-6">
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>{loggingOut ? '로그아웃 중...' : '로그아웃'}</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* ══════ 메인 콘텐츠 ══════ */}
+        <main className="flex-1 overflow-y-auto bg-white" style={{ fontFamily: "'Pretendard Variable', Pretendard, sans-serif" }}>
+          <div className="max-w-[960px] mx-auto px-8 py-8">
+
+            {/* ── 계정 설정 탭 ── */}
+            {activeTab === 'account' && (
+              <div className="space-y-6" style={{ animation: 'fadeIn 0.3s ease both' }}>
+                <h2 className="text-[22px] font-bold text-gray-900">계정 설정</h2>
+
+                {/* 프로필 카드 */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[22px] font-bold shadow-inner shrink-0">
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {editingName ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            ref={nameInputRef}
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                            className="text-[18px] font-bold text-gray-900 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1 outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-[#001AFF] transition-all w-[200px]"
+                            maxLength={30}
+                          />
+                          <button
+                            onClick={handleSaveName}
+                            disabled={savingName || !newName.trim()}
+                            className="px-3 py-1.5 bg-[#001AFF] text-white text-[13px] font-semibold rounded-lg hover:bg-[#0015CC] transition-colors disabled:opacity-50"
+                          >
+                            {savingName ? '저장 중...' : '저장'}
+                          </button>
+                          <button
+                            onClick={() => setEditingName(false)}
+                            className="px-3 py-1.5 bg-gray-100 text-gray-600 text-[13px] font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            취소
+                          </button>
+                        </div>
                       ) : (
-                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                          </svg>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[18px] font-bold text-gray-900">{displayName}</span>
+                          <button
+                            onClick={startEditName}
+                            className="p-1 rounded-md text-gray-400 hover:text-[#001AFF] hover:bg-blue-50 transition-colors"
+                            title="닉네임 변경"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
                         </div>
                       )}
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className={`font-semibold transition-colors ${
-                          isDarkMode ? 'text-white group-hover:text-green-400' : 'text-gray-900 group-hover:text-green-600'
-                        }`}>
-                          {model.nameKo}
-                        </h4>
-                        <span className={`px-1.5 py-0.5 text-xs rounded ${
-                          isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'
-                        }`}>
-                          {model.parts.length}개 부품
-                        </span>
-                      </div>
-                      <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {model.description}
-                      </p>
-                    </div>
-                    {/* 스크랩 해제 + 카테고리 */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleScrap({ model_type: 'builtin', model_id: model.id });
-                        }}
-                        className="p-1.5 rounded-lg text-red-500 hover:text-red-400 transition-colors"
-                        title="스크랩 해제"
-                      >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                      </button>
-                      <span className={`px-2 py-0.5 text-xs rounded ${
-                        isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {model.category}
-                      </span>
+                      <p className="text-[14px] text-gray-500 mt-0.5">{user.email}</p>
                     </div>
                   </div>
-                </Link>
-              ))}
+                </div>
 
-              {/* user 모델 */}
-              {scrapUserModels.map((model) => {
-                const thumbnailUrl = model.thumbnail_storage_path
-                  ? getPublicUrl(model.thumbnail_storage_path)
-                  : null;
-                const partsCount = (model.parts_config as unknown[]).length;
-
-                return (
-                  <Link
-                    key={model.id}
-                    href={`/viewer/u-${model.id}`}
-                    className="group"
-                  >
-                    <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                      isDarkMode
-                        ? 'border-purple-800/50 bg-gray-900/50 hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10'
-                        : 'border-purple-200 bg-white shadow-sm hover:border-purple-400 hover:shadow-lg'
-                    }`}>
-                      <div className={`aspect-video flex items-center justify-center ${
-                        isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                      }`}>
-                        {thumbnailUrl ? (
-                          <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-semibold transition-colors ${
-                            isDarkMode ? 'text-white group-hover:text-purple-400' : 'text-gray-900 group-hover:text-purple-600'
-                          }`}>
-                            {model.name}
-                          </h4>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${
-                            isDarkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-600'
-                          }`}>
-                            {partsCount}개 부품
-                          </span>
-                        </div>
-                        <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {model.description || '설명 없음'}
-                        </p>
-                      </div>
-                      {/* 스크랩 해제 + 카테고리 */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleScrap({ model_type: 'user', model_id: model.id, user_model_id: model.id });
-                          }}
-                          className="p-1.5 rounded-lg text-red-500 hover:text-red-400 transition-colors"
-                          title="스크랩 해제"
-                        >
-                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                          </svg>
-                        </button>
-                        <span className={`px-2 py-0.5 text-xs rounded ${
-                          isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          {model.category}
-                        </span>
-                      </div>
+                {/* 계정 정보 카드 */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-[16px] font-bold text-gray-900">계정 정보</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[12px] text-gray-400 mb-1">이메일</p>
+                      <p className="text-[14px] font-medium text-gray-700">{user.email}</p>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                    <div>
+                      <p className="text-[12px] text-gray-400 mb-1">가입일</p>
+                      <p className="text-[14px] font-medium text-gray-700">{formatDate(user.created_at)}</p>
+                    </div>
+                  </div>
+                </div>
 
-        {/* 내 업로드 모델 섹션 */}
-        <section>
-          <div className="flex items-center justify-between mb-1">
-            <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              내 업로드 모델
-            </h2>
-            <Link
-              href="/upload"
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                isDarkMode ? 'text-blue-400 hover:bg-gray-800' : 'text-blue-600 hover:bg-gray-100'
-              }`}
-            >
-              모델 업로드
-            </Link>
+                {/* 활동 통계 카드 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6 text-[#001AFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[28px] font-bold text-gray-900">{myModels.length}<span className="text-[14px] font-medium text-gray-400 ml-1">개</span></p>
+                      <p className="text-[13px] text-gray-500">내 모델</p>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[28px] font-bold text-gray-900">{totalScraps}<span className="text-[14px] font-medium text-gray-400 ml-1">개</span></p>
+                      <p className="text-[13px] text-gray-500">스크랩</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── 나의 모델 탭 ── */}
+            {activeTab === 'my-models' && (
+              <div style={{ animation: 'fadeIn 0.3s ease both' }}>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-[22px] font-bold text-gray-900">나의 모델</h2>
+                  <Link
+                    href="/upload"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#001AFF] text-white text-[13px] font-semibold rounded-xl hover:bg-[#0015CC] transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    모델 업로드
+                  </Link>
+                </div>
+
+                {modelsLoading ? (
+                  <div className="flex justify-center py-20">
+                    <div className="w-8 h-8 border-4 border-[#001AFF] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : myModels.length === 0 ? (
+                  <div className="text-center py-20">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-50 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <p className="text-[15px] font-medium text-gray-500 mb-1">아직 업로드한 모델이 없습니다</p>
+                    <p className="text-[13px] text-gray-400 mb-4">GLB 또는 FBX 파일을 업로드해보세요</p>
+                    <Link
+                      href="/upload"
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#001AFF] text-white text-[13px] font-semibold rounded-xl hover:bg-[#0015CC] transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      모델 업로드하기
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-5">
+                    {myModels.map((model, i) => {
+                      const thumbnailUrl = model.thumbnail_storage_path
+                        ? getPublicUrl(model.thumbnail_storage_path)
+                        : null;
+                      const partsCount = (model.parts_config as unknown[]).length;
+                      const vis = (model.visibility || (model.is_public ? 'public' : 'private')) as VisibilityState;
+
+                      return (
+                        <Link key={model.id} href={`/viewer/u-${model.id}`} className="group models-card" style={{ animationDelay: `${i * 60}ms` }}>
+                          <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
+                            <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
+                              {thumbnailUrl ? (
+                                <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <svg className="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* Visibility 드롭다운 */}
+                              <div className="absolute bottom-2.5 right-2.5">
+                                <VisibilityDropdown
+                                  state={vis}
+                                  onChange={(next) => changeVisibility(model.id, next as Visibility)}
+                                />
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors mb-1">
+                                {model.name}
+                              </h3>
+                              <p className="text-[13px] font-semibold text-[#001AFF] mb-1.5">
+                                공학 &gt; {model.category} · {partsCount}개 부품
+                              </p>
+                              <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">
+                                {model.description || '설명 없음'}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── 스크랩한 모델 탭 ── */}
+            {activeTab === 'scraps' && (
+              <div style={{ animation: 'fadeIn 0.3s ease both' }}>
+                <h2 className="text-[22px] font-bold text-gray-900 mb-6">스크랩한 모델</h2>
+
+                {!scrapsLoaded ? (
+                  <div className="flex justify-center py-20">
+                    <div className="w-8 h-8 border-4 border-[#001AFF] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : totalScraps === 0 ? (
+                  <div className="text-center py-20">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-50 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-[15px] font-medium text-gray-500 mb-1">아직 스크랩한 모델이 없습니다</p>
+                    <p className="text-[13px] text-gray-400 mb-4">마음에 드는 모델을 스크랩해보세요</p>
+                    <Link
+                      href="/models"
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#001AFF] text-white text-[13px] font-semibold rounded-xl hover:bg-[#0015CC] transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      모델 둘러보기
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-5">
+                    {/* builtin 스크랩 모델 */}
+                    {builtinModels.map(({ model }, i) => (
+                      <Link key={model.id} href={`/viewer/${model.id}`} className="group models-card" style={{ animationDelay: `${i * 60}ms` }}>
+                        <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
+                          <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
+                            {model.thumbnails && model.thumbnails.length > 0 ? (
+                              <ThumbnailSlideshow images={model.thumbnails} />
+                            ) : model.thumbnail ? (
+                              <Image src={model.thumbnail} alt={model.nameKo} fill className="object-cover" sizes="360px" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <svg className="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                                </svg>
+                              </div>
+                            )}
+                            {/* 스크랩 해제 버튼 */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleScrap({ model_type: 'builtin', model_id: model.id });
+                              }}
+                              className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-black/50 transition-all"
+                              title="스크랩 해제"
+                            >
+                              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="p-4">
+                            <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors mb-1">
+                              {model.nameKo}
+                            </h3>
+                            <p className="text-[13px] font-semibold text-[#001AFF] mb-1.5">
+                              공학 &gt; {model.category} · {model.parts.length}개 부품
+                            </p>
+                            <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">
+                              {model.description}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+
+                    {/* user 스크랩 모델 */}
+                    {scrapUserModels.map((model, i) => {
+                      const thumbnailUrl = model.thumbnail_storage_path
+                        ? getPublicUrl(model.thumbnail_storage_path)
+                        : null;
+                      const partsCount = (model.parts_config as unknown[]).length;
+
+                      return (
+                        <Link key={model.id} href={`/viewer/u-${model.id}`} className="group models-card" style={{ animationDelay: `${(builtinModels.length + i) * 60}ms` }}>
+                          <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
+                            <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
+                              {thumbnailUrl ? (
+                                <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <svg className="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* 스크랩 해제 버튼 */}
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleScrap({ model_type: 'user', model_id: model.id, user_model_id: model.id });
+                                }}
+                                className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-black/50 transition-all"
+                                title="스크랩 해제"
+                              >
+                                <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors mb-1">
+                                {model.name}
+                              </h3>
+                              <p className="text-[13px] font-semibold text-[#001AFF] mb-1.5">
+                                공학 &gt; {model.category} · {partsCount}개 부품
+                              </p>
+                              <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">
+                                {model.description || '설명 없음'}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
-          <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            내가 업로드한 3D 모델
-          </p>
-
-          {modelsLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : myModels.length === 0 ? (
-            <div className={`text-center py-12 rounded-xl border ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-white'}`}>
-              <svg className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                아직 업로드한 모델이 없습니다
-              </p>
-              <Link
-                href="/upload"
-                className={`inline-block mt-3 text-sm px-4 py-2 rounded-lg transition-colors ${
-                  isDarkMode ? 'text-blue-400 hover:bg-gray-800' : 'text-blue-600 hover:bg-gray-100'
-                }`}
-              >
-                모델 업로드하기
-              </Link>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myModels.map((model) => {
-                const thumbnailUrl = model.thumbnail_storage_path
-                  ? getPublicUrl(model.thumbnail_storage_path)
-                  : null;
-                const partsCount = (model.parts_config as unknown[]).length;
-
-                return (
-                  <Link
-                    key={model.id}
-                    href={`/viewer/u-${model.id}`}
-                    className="group"
-                  >
-                    <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                      isDarkMode
-                        ? 'border-blue-800/50 bg-gray-900/50 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/10'
-                        : 'border-blue-200 bg-white shadow-sm hover:border-blue-400 hover:shadow-lg'
-                    }`}>
-                      <div className={`aspect-video flex items-center justify-center ${
-                        isDarkMode ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                      }`}>
-                        {thumbnailUrl ? (
-                          <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-semibold transition-colors ${
-                            isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-gray-900 group-hover:text-blue-600'
-                          }`}>
-                            {model.name}
-                          </h4>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${
-                            isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'
-                          }`}>
-                            {partsCount}개 부품
-                          </span>
-                        </div>
-                        <p className={`text-sm mt-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {model.description || '설명 없음'}
-                        </p>
-                      </div>
-                      {/* 공개/비공개 + 카테고리 */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1">
-                        {model.is_public ? (
-                          <span className={`px-2 py-0.5 text-xs rounded ${
-                            isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'
-                          }`}>
-                            공개
-                          </span>
-                        ) : (
-                          <span className={`px-2 py-0.5 text-xs rounded ${
-                            isDarkMode ? 'bg-gray-800/80 text-yellow-400' : 'bg-yellow-50 text-yellow-600'
-                          }`}>
-                            비공개
-                          </span>
-                        )}
-                        <span className={`px-2 py-0.5 text-xs rounded ${
-                          isDarkMode ? 'bg-gray-800/80 backdrop-blur text-gray-400' : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          {model.category}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        </main>
       </div>
-
-      {/* 푸터 */}
-      <footer className={`px-6 py-8 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-        <div className={`max-w-6xl mx-auto flex items-center justify-between text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-          <p>SIMVEX - 공학 학습 플랫폼</p>
-          <p>교육과 탐구를 위해 만들어졌습니다</p>
-        </div>
-      </footer>
     </div>
   );
 }

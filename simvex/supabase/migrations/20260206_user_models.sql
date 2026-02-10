@@ -57,3 +57,10 @@ CREATE POLICY "Owner update" ON storage.objects FOR UPDATE
   USING (bucket_id = 'user-models' AND auth.uid()::text = (storage.foldername(name))[1]);
 CREATE POLICY "Owner delete" ON storage.objects FOR DELETE
   USING (bucket_id = 'user-models' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+
+  ALTER TABLE user_models ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
+  UPDATE user_models SET visibility = CASE WHEN is_public THEN 'public' ELSE 'private' END;
+  DROP POLICY IF EXISTS "Anyone can view public models" ON user_models;
+  CREATE POLICY "Anyone can view public or shared models" ON user_models
+    FOR SELECT USING (visibility IN ('public', 'shared'));

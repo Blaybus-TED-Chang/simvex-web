@@ -13,6 +13,7 @@ interface PartTreePanelProps {
   focusedPartId: string | null;
   visibleParts: string[];
   groups: PartTreeGroup[];
+  searchFilter?: string;
   onFocusPart: (partId: string | null) => void;
   onSelectPart: (partId: string | null) => void;
   onToggleVisibility: (partId: string) => void;
@@ -76,6 +77,7 @@ export function PartTreePanel({
   onToggleGroupCollapsed,
   onMoveGroupToGroup,
   onReorderGroups,
+  searchFilter,
   onRenameRoot,
 }: PartTreePanelProps) {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -115,6 +117,14 @@ export function PartTreePanel({
   const ungroupedParts = useMemo(
     () => parts.filter((p) => !groupedPartIds.has(p.id)),
     [parts, groupedPartIds],
+  );
+
+  // 검색 필터 적용
+  const isSearching = !!searchFilter?.trim();
+  const searchLower = searchFilter?.trim().toLowerCase() ?? '';
+  const filteredParts = useMemo(
+    () => isSearching ? parts.filter(p => p.nameKo.toLowerCase().includes(searchLower) || p.name.toLowerCase().includes(searchLower)) : parts,
+    [parts, isSearching, searchLower],
   );
 
   // 새 그룹 input 자동 포커스
@@ -388,7 +398,7 @@ export function PartTreePanel({
                 borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
               }}
             />
-            <span className="truncate">{part.nameKo}</span>
+            <span className="truncate">{part.name}</span>
           </button>
 
           {/* 눈 아이콘 */}
@@ -683,18 +693,48 @@ export function PartTreePanel({
   return (
     <div className="h-full flex flex-col">
       {/* 헤더 */}
-      <div className={`px-3 py-2 border-b flex-shrink-0 ${
+      <div className={`px-3 py-2.5 border-b flex-shrink-0 flex items-center justify-between ${
         isDarkMode ? 'border-gray-700' : 'border-gray-200'
       }`}>
-        <h3 className={`text-xs font-semibold uppercase tracking-wider ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+        <h3 className={`text-[13px] font-semibold ${
+          isDarkMode ? 'text-gray-300' : 'text-gray-700'
         }`}>
           부품 트리
         </h3>
+        <button
+          className={`p-1 rounded transition-colors ${
+            isDarkMode ? 'hover:bg-gray-700 text-gray-500' : 'hover:bg-gray-100 text-gray-400'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setCreatingGroupParentId(null);
+            setIsCreatingGroup(true);
+            setNewGroupName('');
+          }}
+          title="새 그룹"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          </svg>
+        </button>
       </div>
 
       {/* 트리 목록 */}
       <div className="flex-1 overflow-y-auto py-1">
+        {/* 검색 결과 (플랫 목록) */}
+        {isSearching ? (
+          <>
+            {filteredParts.length === 0 ? (
+              <div className={`px-4 py-6 text-center text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                검색 결과가 없습니다
+              </div>
+            ) : (
+              filteredParts.map((part) => renderPartRow(part, 1))
+            )}
+          </>
+        ) : (
+        <>
         {/* 최상위: 모델 전체 (그룹 헤더 스타일) */}
         <div
           className={`flex items-center gap-1.5 py-1.5 pr-2 group/root ${
@@ -847,6 +887,8 @@ export function PartTreePanel({
         >
           {ungroupedParts.map((part) => renderPartRow(part, 1))}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
