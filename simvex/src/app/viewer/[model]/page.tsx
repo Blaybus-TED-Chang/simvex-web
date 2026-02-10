@@ -360,15 +360,16 @@ export default function ViewerPage() {
     localStorage.setItem('simvex-open-viewer-tabs', JSON.stringify(tabs));
   }, [modelId]);
 
-  // 현재 모델 탭이 보이도록 스크롤 자동 조정
+  // 현재 모델 탭이 보이도록 스크롤 자동 조정 (모델 또는 탭 목록 변경 시)
   useEffect(() => {
     const idx = openTabs.indexOf(modelId);
-    if (idx < tabScrollOffset) {
-      setTabScrollOffset(idx);
-    } else if (idx >= tabScrollOffset + MAX_VISIBLE_TABS) {
-      setTabScrollOffset(idx - MAX_VISIBLE_TABS + 1);
-    }
-  }, [openTabs, modelId, tabScrollOffset, MAX_VISIBLE_TABS]);
+    if (idx < 0) return;
+    setTabScrollOffset(prev => {
+      if (idx < prev) return idx;
+      if (idx >= prev + MAX_VISIBLE_TABS) return idx - MAX_VISIBLE_TABS + 1;
+      return prev;
+    });
+  }, [openTabs, modelId, MAX_VISIBLE_TABS]);
 
   // 탭 닫기
   const handleCloseTab = useCallback((e: React.MouseEvent, tabId: string) => {
@@ -932,7 +933,7 @@ export default function ViewerPage() {
     <>
     <div className={`viewer-page h-screen flex flex-col ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
       {/* 헤더 */}
-      <header className={`h-[72px] flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} px-6 flex items-center justify-between relative z-10`} style={{ boxShadow: isDarkMode ? '0 0 8.4px rgba(0,0,0,0.5)' : '0 0 8.4px rgba(0,0,0,0.25)' }}>
+      <header className={`h-[72px] flex-shrink-0 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} px-6 flex items-center relative z-10`} style={{ boxShadow: isDarkMode ? '0 0 8.4px rgba(0,0,0,0.5)' : '0 0 8.4px rgba(0,0,0,0.25)' }}>
         {/* 왼쪽: 로고 */}
         <Link href="/models" className="flex items-center shrink-0 hover:opacity-80 transition-opacity">
           <span className={`text-[26px] ${isDarkMode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
@@ -940,21 +941,22 @@ export default function ViewerPage() {
           </span>
         </Link>
 
-        {/* 중앙: 모델 탭 */}
-        <div className="flex items-center gap-1 mx-6">
-          {/* 왼쪽 화살표 */}
-          {canScrollLeft && (
-            <button
-              onClick={() => setTabScrollOffset(prev => Math.max(0, prev - 1))}
-              className={`p-1.5 rounded-md transition-all duration-200 shrink-0 ${
-                isDarkMode ? 'hover:bg-gray-800 text-gray-500 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
+        {/* 모델 탭 */}
+        <div className="flex items-center gap-1 ml-40">
+          {/* 왼쪽 화살표 (항상 공간 확보) */}
+          <button
+            onClick={() => setTabScrollOffset(prev => Math.max(0, prev - 1))}
+            className={`p-1.5 rounded-md transition-all duration-200 shrink-0 ${
+              canScrollLeft
+                ? isDarkMode ? 'hover:bg-gray-800 text-gray-500 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+                : 'invisible'
+            }`}
+            disabled={!canScrollLeft}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
           {/* 탭 목록 */}
           <div className="flex items-stretch gap-0">
@@ -1007,19 +1009,20 @@ export default function ViewerPage() {
             })}
           </div>
 
-          {/* 오른쪽 화살표 */}
-          {canScrollRight && (
-            <button
-              onClick={() => setTabScrollOffset(prev => Math.min(openTabs.length - MAX_VISIBLE_TABS, prev + 1))}
-              className={`p-1.5 rounded-md transition-all duration-200 shrink-0 ${
-                isDarkMode ? 'hover:bg-gray-800 text-gray-500 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
+          {/* 오른쪽 화살표 (항상 공간 확보) */}
+          <button
+            onClick={() => setTabScrollOffset(prev => Math.min(openTabs.length - MAX_VISIBLE_TABS, prev + 1))}
+            className={`p-1.5 rounded-md transition-all duration-200 shrink-0 ${
+              canScrollRight
+                ? isDarkMode ? 'hover:bg-gray-800 text-gray-500 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+                : 'invisible'
+            }`}
+            disabled={!canScrollRight}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
           {/* + 새 모델 탭 추가 */}
           <div className="relative ml-1" ref={addTabMenuRef}>
@@ -1091,7 +1094,7 @@ export default function ViewerPage() {
         </div>
 
         {/* 오른쪽: 액션 아이콘 + 프로필 */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           {/* 뷰어 도구 */}
           {activeTab === 'viewer' && isCombinedModel && (
             <>
@@ -1227,9 +1230,7 @@ export default function ViewerPage() {
             </button>
           </Tooltip>
 
-          <Tooltip label="로그인 / 계정 관리">
-            <AuthButton />
-          </Tooltip>
+          <AuthButton variant="viewer" />
         </div>
       </header>
 
