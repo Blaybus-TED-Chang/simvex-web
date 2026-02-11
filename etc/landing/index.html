@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIMVEX - 3D 공학 시뮬레이션</title>
+  <meta name="description" content="공학 학습을 위한 인터랙티브 3D 시뮬레이션 플랫폼" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Righteous&family=DM+Sans:wght@400;700;800&family=Inter:wght@400;600&family=Anta&family=Roboto:wght@100;500;900&family=Pretendard+Variable:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.cdnfonts.com/css/gmarket-sans" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Pretendard Variable', system-ui, sans-serif;
+      background: #F8FAFF;
+      color: #171717;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { text-decoration: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+
+    /* ── Keyframes ── */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 40px rgba(0, 25, 255, 0.25); }
+      50%      { box-shadow: 0 0 80px rgba(0, 25, 255, 0.45); }
+    }
+    @keyframes drawLine {
+      from { stroke-dashoffset: var(--path-length); }
+      to   { stroke-dashoffset: 0; }
+    }
+    @keyframes watermarkReveal {
+      0%   { opacity: 0; transform: translateX(-50%) scale(1.4); filter: blur(20px); }
+      60%  { opacity: 1; filter: blur(4px); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1); filter: blur(0); }
+    }
+    @keyframes titleReveal {
+      0%   { opacity: 0; letter-spacing: 24px; filter: blur(8px); }
+      50%  { opacity: 1; filter: blur(0); }
+      100% { opacity: 1; letter-spacing: 4px; filter: blur(0); text-shadow: 0 0 30px rgba(255,255,255,0.3); }
+    }
+    @keyframes titleGlow {
+      0%, 100% { text-shadow: 0 0 20px rgba(255,255,255,0.15); }
+      50%      { text-shadow: 0 0 40px rgba(255,255,255,0.35), 0 0 80px rgba(0,26,255,0.15); }
+    }
+    @keyframes clipReveal {
+      0%   { opacity: 0; clip-path: inset(0 100% 0 0); filter: blur(6px); }
+      40%  { opacity: 1; filter: blur(0); }
+      100% { opacity: 1; clip-path: inset(0 0% 0 0); filter: blur(0); }
+    }
+    @keyframes typing {
+      from { width: 0; }
+      to   { width: 100%; }
+    }
+    @keyframes blinkCursor {
+      0%, 100% { border-color: rgba(255,255,255,0.8); }
+      50%      { border-color: transparent; }
+    }
+    @keyframes cursorFadeOut {
+      from { border-color: rgba(255,255,255,0.8); }
+      to   { border-color: transparent; }
+    }
+
+    /* ── Scroll Reveal ── */
+    .fade-in-up {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-in-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Header ── */
+    .landing-header {
+      width: 100%;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #F8FAFF;
+    }
+    .landing-logo {
+      color: black;
+      font-size: 26px;
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+    }
+    .landing-nav-group {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .landing-nav-link {
+      color: #5D5A88;
+      font-size: 15px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      transition: color 0.3s ease;
+    }
+    .landing-nav-link:hover {
+      color: #001AFF;
+    }
+    .landing-btn {
+      padding: 10px 22px;
+      background: #001AFF;
+      border-radius: 24px;
+      color: white;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+    .landing-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(0, 26, 255, 0.4);
+    }
+
+    /* ── Hero ── */
+    .landing-hero {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 72px);
+      min-height: 480px;
+      max-height: 700px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .hero-circle {
+      width: min(38vw, 420px);
+      height: min(38vw, 420px);
+      background: #0019FF;
+      border-radius: 9999px;
+      animation: pulseGlow 6s ease-in-out infinite;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .hero-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      border-top: 2px solid rgba(55,55,55,0.4);
+      transform: translateY(10px);
+      z-index: 2;
+      animation: fadeIn 0.5s ease both;
+      animation-delay: 1.2s;
+    }
+    .hero-catchphrase {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -90px);
+      z-index: 3;
+      text-align: center;
+      white-space: nowrap;
+      animation: fadeIn 1s ease both;
+      animation-delay: 0.8s;
+    }
+    .hero-text-blue {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #0019FF;
+      font-size: clamp(90px, 11vw, 150px);
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+      line-height: 1;
+      z-index: 1;
+      animation: fadeIn 1s ease both;
+      animation-delay: 0.3s;
+    }
+    .hero-clip-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(38vw, 420px);
+      height: min(38vw, 420px);
+      border-radius: 9999px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .hero-text-white {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: clamp(90px, 11vw, 150px);
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+      line-height: 1;
+      white-space: nowrap;
+      animation: fadeIn 1s ease both;
+      animation-delay: 0.3s;
+    }
+
+    /* ── Why Section ── */
+    .why-section {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 500px;
+      overflow: hidden;
+    }
+    .why-shelf-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      opacity: 0;
+      transform: scale(1.12);
+      filter: brightness(0.6);
+      transition: opacity 1.8s ease, transform 4s cubic-bezier(0.16,1,0.3,1), filter 2s ease 0.5s;
+    }
+    .why-section.visible .why-shelf-img {
+      opacity: 1;
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    .why-watermark {
+      position: absolute;
+      top: 3%;
+      left: 35%;
+      transform: translateX(-50%);
+      z-index: 2;
+      font-size: clamp(110px, 14vw, 200px);
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: rgba(255,255,255,0.20);
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+      opacity: 0;
+      filter: blur(20px);
+    }
+    .why-section.visible .why-watermark {
+      animation: watermarkReveal 1.6s cubic-bezier(0.16,1,0.3,1) 0.3s forwards;
+    }
+    .why-title {
+      position: absolute;
+      top: 10%;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 2;
+      opacity: 0;
+    }
+    .why-section.visible .why-title {
+      animation: titleReveal 1.2s cubic-bezier(0.16,1,0.3,1) 0.8s forwards;
+    }
+    .why-section.visible .why-title span {
+      animation: titleGlow 3s ease-in-out 2.5s infinite;
+    }
+    .why-title span {
+      color: white;
+      font-size: clamp(30px, 3.5vw, 50px);
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+      letter-spacing: 4px;
+    }
+    .why-sub1 {
+      position: absolute;
+      top: 36%;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 2;
+      opacity: 0;
+    }
+    .why-section.visible .why-sub1 {
+      animation: clipReveal 1.2s cubic-bezier(0.22,1,0.36,1) 1.4s forwards;
+    }
+    .why-sub1 span {
+      color: rgba(255,255,255,0.8);
+      font-size: clamp(28px, 3.5vw, 50px);
+      font-family: 'Gmarket Sans', sans-serif;
+      font-weight: 300;
+      letter-spacing: 0.2px;
+      line-height: 121%;
+    }
+    .why-sub2 {
+      position: absolute;
+      top: 44%;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 2;
+      opacity: 0;
+    }
+    .why-section.visible .why-sub2 {
+      opacity: 1;
+      transition: opacity 0s 1.8s;
+    }
+    .why-sub2-shimmer {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      width: 0;
+      color: white;
+      -webkit-text-fill-color: white;
+      font-size: clamp(38px, 5vw, 70px);
+      font-family: 'Gmarket Sans', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      line-height: 121%;
+      border-right: 3px solid transparent;
+      vertical-align: bottom;
+    }
+    .why-section.visible .why-sub2-shimmer {
+      animation:
+        typing 1.6s steps(9) 1.8s forwards,
+        blinkCursor 0.6s step-end 1.8s 6,
+        cursorFadeOut 0.4s ease 5.4s forwards;
+    }
+    .why-bottom-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #E0E0E0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* ── Features / About ── */
+    .landing-features {
+      position: relative;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 20px 80px 120px;
+      overflow: visible;
+    }
+    .landing-feature-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .landing-about-title {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 56px;
+    }
+    .landing-about-title span:first-child {
+      color: black;
+      font-size: 30px;
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+      line-height: 44px;
+    }
+    .landing-about-title span:last-child {
+      color: #001AFF;
+      font-size: 30px;
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+      line-height: 44px;
+    }
+    .landing-feature-row {
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      margin-bottom: 80px;
+    }
+    .landing-feature-row-reverse {
+      flex-direction: row-reverse;
+      gap: 40px;
+      margin-bottom: 64px;
+    }
+    .landing-feature-row:last-child {
+      margin-bottom: 0;
+      gap: 40px;
+    }
+    .landing-feature-img {
+      width: 46%;
+      max-width: 500px;
+      border-radius: 14px;
+      object-fit: cover;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .landing-feature-img:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    .landing-feature-img.offset-left {
+      margin-left: -60px;
+    }
+    .feature-text {
+      position: relative;
+      z-index: 1;
+    }
+    .landing-feature-number {
+      position: absolute;
+      left: -40px;
+      top: -110px;
+      opacity: 0.07;
+      font-size: 240px;
+      font-family: 'Anta', sans-serif;
+      font-weight: 400;
+      line-height: 1;
+      color: #000;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .landing-feature-title {
+      color: #212121;
+      font-size: 28px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      text-transform: capitalize;
+      letter-spacing: 0.2px;
+      margin-bottom: 16px;
+    }
+    .feature-desc {
+      line-height: 24px;
+    }
+    .feature-desc span {
+      font-size: 15px;
+      font-family: 'Pretendard Variable', sans-serif;
+    }
+    .feature-desc .normal { color: #474747; font-weight: 400; }
+    .feature-desc .accent { color: #0019FF; font-weight: 600; }
+    .feature-desc .dim    { color: #757575; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 400; max-width: 380px; }
+
+    /* ── Pricing ── */
+    .landing-pricing {
+      width: 100%;
+      padding: 100px 60px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .pricing-label {
+      color: #001AFF;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .landing-pricing-title {
+      color: #212121;
+      font-size: 34px;
+      font-family: 'Pretendard Variable', sans-serif;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .landing-pricing-cards {
+      display: flex;
+      gap: 28px;
+      margin-bottom: 56px;
+      width: 100%;
+      max-width: 1200px;
+      justify-content: center;
+    }
+    .pricing-card {
+      flex: 1;
+      max-width: 380px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 26, 255, 0.15);
+    }
+    .pricing-card-header {
+      background: #001AFF;
+      padding: 36px 0 32px;
+      text-align: center;
+    }
+    .pricing-card-name {
+      color: white;
+      font-size: 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .pricing-card-price {
+      color: white;
+      font-size: 48px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .pricing-card-billing {
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      margin-top: 6px;
+    }
+    .pricing-card-features {
+      padding: 28px 26px 32px;
+    }
+    .pricing-feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .pricing-feature span {
+      color: #374151;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+    }
+    .pricing-cta {
+      display: inline-block;
+      padding: 14px 64px;
+      background: #001AFF;
+      border-radius: 32px;
+      color: white;
+      font-size: 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .pricing-cta:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(0,26,255,0.4);
+    }
+
+    /* ── Footer ── */
+    .landing-footer {
+      width: 100%;
+      background: #4A4A4A;
+      color: #fff;
+      font-family: 'Pretendard Variable', sans-serif;
+    }
+    .footer-contact {
+      text-align: center;
+      padding-top: 36px;
+      padding-bottom: 24px;
+      font-size: 22px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+    }
+    .landing-footer-cols {
+      display: flex;
+      justify-content: center;
+      gap: 100px;
+      padding-bottom: 32px;
+    }
+    .footer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .footer-col-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .footer-col span {
+      color: #B0B0B0;
+      font-size: 13px;
+    }
+    .landing-footer-divider {
+      position: relative;
+      height: 32px;
+      margin: 0 40px;
+    }
+    .footer-divider-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      border-top: 2px dashed #6EB8FF;
+      transform: translateY(-50%);
+    }
+    .footer-divider-x {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #6EB8FF;
+      font-size: 18px;
+      font-weight: 700;
+      background: #4A4A4A;
+      padding: 0 8px;
+    }
+    .footer-photo {
+      text-align: center;
+      padding: 24px 0 36px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #ddd;
+    }
+    .footer-sep {
+      margin: 0 40px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+    }
+    .landing-footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px 24px;
+    }
+    .footer-brand {
+      font-size: 24px;
+      font-family: 'Righteous', cursive;
+      font-weight: 400;
+    }
+    .footer-links {
+      display: flex;
+      gap: 28px;
+    }
+    .footer-links span {
+      font-size: 13px;
+      color: #ccc;
+      cursor: pointer;
+    }
+    .footer-socials {
+      display: flex;
+      gap: 10px;
+    }
+    .social-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid #888;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .social-icon:hover {
+      border-color: #6EB8FF;
+    }
+
+    /* ══════════════════════════════════════
+       Mobile Responsive (max-width: 768px)
+       ══════════════════════════════════════ */
+    @media (max-width: 768px) {
+      /* Header */
+      .landing-header {
+        padding: 0 16px;
+        height: 56px;
+      }
+      .landing-nav-link.landing-nav {
+        display: none;
+      }
+      .landing-logo {
+        font-size: 20px;
+      }
+      .landing-btn {
+        padding: 8px 18px;
+        font-size: 12px;
+        border-radius: 20px;
+      }
+
+      /* Hero */
+      .landing-hero {
+        max-height: none;
+        min-height: 320px;
+        height: calc(100vh - 56px);
+        max-height: 520px;
+      }
+      .hero-circle {
+        width: min(60vw, 260px);
+        height: min(60vw, 260px);
+      }
+      .hero-clip-circle {
+        width: min(60vw, 260px);
+        height: min(60vw, 260px);
+      }
+      .hero-text-blue,
+      .hero-text-white {
+        font-size: clamp(52px, 16vw, 90px);
+      }
+      .hero-catchphrase {
+        white-space: nowrap;
+        text-align: center;
+        padding: 0 16px;
+        transform: translate(-50%, -60px);
+      }
+      .hero-catchphrase span {
+        font-size: 12px !important;
+      }
+      .hero-catchphrase span:last-child {
+        font-size: 15px !important;
+      }
+      .hero-line {
+        border-top-width: 1px;
+      }
+
+      /* Why section */
+      .why-section {
+        aspect-ratio: auto;
+        min-height: 300px;
+        height: 60vh;
+        max-height: 420px;
+      }
+      .why-watermark {
+        font-size: 60px !important;
+        left: 50% !important;
+        top: 2% !important;
+      }
+      .why-title span {
+        font-size: clamp(22px, 6vw, 34px) !important;
+        letter-spacing: 2px !important;
+      }
+      .why-sub1 {
+        top: 40%;
+      }
+      .why-sub1 span {
+        font-size: clamp(18px, 5vw, 30px) !important;
+      }
+      .why-sub2 {
+        top: 50%;
+      }
+      .why-sub2-shimmer {
+        font-size: clamp(24px, 7vw, 42px) !important;
+      }
+
+      /* Features */
+      .landing-features {
+        padding: 32px 24px 48px;
+      }
+      .landing-about-title {
+        margin-bottom: 28px;
+      }
+      .landing-about-title span {
+        font-size: 24px !important;
+        line-height: 36px !important;
+      }
+      .landing-feature-row,
+      .landing-feature-row-reverse {
+        flex-direction: column !important;
+        gap: 18px !important;
+        margin-bottom: 48px !important;
+        position: relative;
+      }
+      .landing-feature-img {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        border-radius: 12px !important;
+      }
+      .feature-text {
+        padding: 0 4px;
+        position: relative;
+      }
+      .landing-feature-number {
+        font-size: 160px !important;
+        left: -10px !important;
+        top: -90px !important;
+        opacity: 0.08 !important;
+      }
+      .landing-feature-title {
+        font-size: 22px !important;
+        margin-bottom: 12px !important;
+      }
+      .feature-desc span {
+        font-size: 14px !important;
+        line-height: 22px !important;
+      }
+      .feature-desc .dim {
+        font-size: 14px !important;
+        max-width: 100% !important;
+        line-height: 22px !important;
+      }
+      .landing-feature-svg {
+        display: none;
+      }
+
+      /* Pricing */
+      .landing-pricing {
+        padding: 56px 24px 56px;
+      }
+      .pricing-label {
+        font-size: 12px;
+        letter-spacing: 2.5px;
+        margin-bottom: 10px;
+      }
+      .landing-pricing-title {
+        font-size: 26px;
+        margin-bottom: 32px;
+      }
+      .landing-pricing-cards {
+        flex-direction: column;
+        gap: 18px;
+        align-items: center;
+      }
+      .pricing-card {
+        max-width: 100%;
+        width: 100%;
+        border-radius: 14px;
+      }
+      .pricing-card-header {
+        padding: 28px 0 24px;
+      }
+      .pricing-card-name {
+        font-size: 18px;
+        margin-bottom: 6px;
+      }
+      .pricing-card-price {
+        font-size: 40px;
+      }
+      .pricing-card-billing {
+        font-size: 12px;
+      }
+      .pricing-card-features {
+        padding: 22px 24px 26px;
+      }
+      .pricing-feature {
+        margin-bottom: 10px;
+        gap: 10px;
+      }
+      .pricing-feature svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+      .pricing-feature span {
+        font-size: 14px;
+      }
+      .pricing-cta {
+        padding: 14px 56px;
+        font-size: 16px;
+        border-radius: 28px;
+      }
+
+      /* Footer */
+      .footer-contact {
+        font-size: 18px;
+        padding-top: 28px;
+        padding-bottom: 18px;
+      }
+      .landing-footer-cols {
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+        text-align: center;
+        padding-bottom: 24px;
+      }
+      .footer-col-title {
+        font-size: 13px;
+      }
+      .footer-col span {
+        font-size: 12px;
+      }
+      .landing-footer-divider {
+        margin: 0 20px;
+      }
+      .footer-photo {
+        font-size: 18px;
+        padding: 18px 0 28px;
+      }
+      .footer-sep {
+        margin: 0 20px;
+      }
+      .landing-footer-bottom {
+        flex-direction: column;
+        gap: 14px;
+        align-items: center;
+        text-align: center;
+        padding: 16px 20px 20px;
+      }
+      .footer-brand {
+        font-size: 20px;
+      }
+      .footer-links {
+        gap: 20px;
+      }
+      .footer-links span {
+        font-size: 12px;
+      }
+      .social-icon {
+        width: 28px;
+        height: 28px;
+      }
+      .social-icon svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header class="landing-header">
+    <div class="landing-logo">
+      <a href="#">SIMVEX</a>
+    </div>
+    <div class="landing-nav-group">
+      <a href="#" class="landing-nav-link landing-nav">Home</a>
+      <a href="#about" class="landing-nav-link landing-nav">About</a>
+      <a href="#pricing" class="landing-nav-link landing-nav">Pricing</a>
+    </div>
+  </header>
+
+  <!-- ── Hero Section ── -->
+  <section class="landing-hero">
+    <div class="hero-circle"></div>
+    <div class="hero-line"></div>
+    <div class="hero-catchphrase">
+      <span style="color:white;font-size:15px;font-family:Roboto;font-weight:100">아무리 크고 복잡한 기계도 내 손에서</span>
+      <span style="color:white;font-size:15px;font-family:Roboto;font-weight:500"> </span>
+      <span style="color:white;font-size:19px;font-family:Roboto;font-weight:900">슥</span>
+    </div>
+    <div class="hero-text-blue">SIMVEX</div>
+    <div class="hero-clip-circle">
+      <div class="hero-text-white">SIMVEX</div>
+    </div>
+  </section>
+
+  <!-- ── Why, SIMVEX? ── -->
+  <section class="why-section">
+    <img class="why-shelf-img" src="images/why-shelf.png" alt="3D 부품 분해 선반" />
+    <div class="why-watermark">Why,</div>
+    <div class="why-title"><span>SIMVEX ?</span></div>
+    <div class="why-sub1"><span>보이지 않던 내부를</span></div>
+    <div class="why-sub2"><span class="why-sub2-shimmer">손에 닿는 이해로.</span></div>
+    <div class="why-bottom-line"></div>
+  </section>
+
+  <!-- ── Features / About ── -->
+  <section id="about" class="landing-features">
+    <svg class="landing-feature-svg" fill="none" viewBox="0 0 1545 1410" preserveAspectRatio="xMidYMid meet">
+      <path id="curvePath" d="M0.0338419 2.34804C246.347 -1.82041 749.414 29.7598 791.178 189.428C832.942 349.096 646.763 532.408 548.453 604.106C398.835 714.319 237.915 965.46 791.178 1088.31C1344.44 1211.17 1522.94 1349.59 1543.03 1403.45" stroke="#373737" stroke-opacity="0.3" stroke-width="4" />
+    </svg>
+
+    <div class="fade-in-up landing-about-title">
+      <span>about </span><span>SIMVEX</span>
+    </div>
+
+    <!-- Feature 1 -->
+    <div class="fade-in-up landing-feature-row">
+      <img class="landing-feature-img offset-left" src="images/feature-explode.png" alt="3D 모델 분해도" />
+      <div class="feature-text">
+        <div class="landing-feature-number">1</div>
+        <div class="landing-feature-title">3D모델 조립·분해 기반 학습</div>
+        <div class="feature-desc">
+          <span class="normal">SIMVEX는 사용자가 업로드한 </span>
+          <span class="accent">3D모델의 조립·분해, 회전·확대·축소 기능을 제공</span>
+          <span class="normal">하며, 부품 간 구조 관계를 시각적으로 확인할 수 있습니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 2 -->
+    <div class="fade-in-up landing-feature-row landing-feature-row-reverse" style="transition-delay:0.2s">
+      <img class="landing-feature-img" src="images/feature-ai.png" alt="AI 부품 설명" />
+      <div class="feature-text">
+        <div class="landing-feature-number">2</div>
+        <div class="landing-feature-title">부품별 실시간 AI 설명 제공</div>
+        <div class="feature-desc" style="max-width:380px">
+          <span class="normal" style="color:#3A3A3A">사용자가 선택한 부품에 대해 </span>
+          <span class="accent">AI 기반 전반적인 구조와 기능에 대한 설명을 실시간으로</span>
+          <span class="normal" style="color:#3A3A3A"> 빠르게 제공합니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 3 -->
+    <div class="fade-in-up landing-feature-row" style="transition-delay:0.4s;margin-bottom:0">
+      <img class="landing-feature-img offset-left" src="images/feature-simulation.png" alt="3D 시뮬레이션" />
+      <div class="feature-text">
+        <div class="landing-feature-number" style="top:-140px">3</div>
+        <div class="landing-feature-title">가상 3D 시뮬레이션</div>
+        <div class="feature-desc">
+          <span class="normal">입력된 3D 모델의 파라미터 조절을 통해 </span><span class="accent" style="font-weight:600">제품의 작동 상태와 변화를 시각적으로 확인</span><span class="normal">합니다.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Pricing ── -->
+  <section id="pricing" class="landing-pricing">
+    <div class="fade-in-up pricing-label">PRICING</div>
+    <div class="fade-in-up landing-pricing-title" style="transition-delay:0.1s">원하는 멤버십을 선택하세요</div>
+
+    <div class="landing-pricing-cards">
+      <!-- Basic -->
+      <div class="fade-in-up pricing-card">
+        <div class="pricing-card-header">
+          <div class="pricing-card-name">Basic</div>
+          <div class="pricing-card-price">₩0</div>
+          <div class="pricing-card-billing" style="visibility:hidden">월간 결제</div>
+        </div>
+        <div class="pricing-card-features">
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>모든 3D 모델 무제한 열람</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>분해/조립 및 부품 정보</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>퀴즈 · 노트 동기화 · 스크랩</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI 어시스턴트 일 5회</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>모델 업로드 1개</span></div>
+        </div>
+      </div>
+
+      <!-- Plus -->
+      <div class="fade-in-up pricing-card" style="transition-delay:0.15s">
+        <div class="pricing-card-header">
+          <div class="pricing-card-name">Plus</div>
+          <div class="pricing-card-price">₩4,900</div>
+          <div class="pricing-card-billing">월간 결제</div>
+        </div>
+        <div class="pricing-card-features">
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Basic 전체 기능 포함</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI 어시스턴트 무제한</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>모델 업로드 50개</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>PDF 출력</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>워크플로우 차트</span></div>
+        </div>
+      </div>
+
+      <!-- Team -->
+      <div class="fade-in-up pricing-card" style="transition-delay:0.3s">
+        <div class="pricing-card-header">
+          <div class="pricing-card-name">Team</div>
+          <div class="pricing-card-price">₩12,900</div>
+          <div class="pricing-card-billing">월간 결제</div>
+        </div>
+        <div class="pricing-card-features">
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Plus 전체 기능 포함</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>모델 업로드 무제한 (100MB)</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>팀 협업 (최대 10명)</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>커스텀 퀴즈 생성</span></div>
+          <div class="pricing-feature"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#001AFF" fill-opacity="0.1"/><path d="M6 10.5L8.5 13L14 7.5" stroke="#001AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>우선 지원</span></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="landing-footer fade-in-up">
+    <div class="footer-contact">Contact Us</div>
+
+    <div class="landing-footer-cols">
+      <div class="footer-col">
+        <div class="footer-col-title">Product</div>
+        <span>3D 뷰어</span><span>모델 업로드</span><span>AI 어시스턴트</span><span>퀴즈</span><span>시뮬레이션</span>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Information</div>
+        <span>사용 가이드</span><span>자주 묻는 질문</span><span>API 문서</span>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Company</div>
+        <span>팀 소개</span><span>연락처</span><span>파트너십</span><span>채용 정보</span>
+      </div>
+    </div>
+
+    <div class="landing-footer-divider">
+      <div class="footer-divider-line"></div>
+      <div class="footer-divider-x">&#10005;</div>
+    </div>
+
+    <div class="footer-photo">단체사진</div>
+
+    <div class="footer-sep"></div>
+
+    <div class="landing-footer-bottom">
+      <div class="footer-brand">SIMVEX</div>
+      <div class="footer-links">
+        <span>Terms</span><span>Privacy</span><span>Cookies</span>
+      </div>
+      <div class="footer-socials">
+        <div class="social-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ccc"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </div>
+        <div class="social-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ccc"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </div>
+        <div class="social-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ── Vanilla JS: Scroll Reveal + SVG Draw ── -->
+  <script>
+    // Scroll reveal for .fade-in-up and .why-section
+    (function () {
+      var els = document.querySelectorAll('.fade-in-up, .why-section');
+      if (!els.length) return;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) e.target.classList.add('visible');
+        });
+      }, { threshold: 0.15 });
+      els.forEach(function (el) { io.observe(el); });
+    })();
+
+    // SVG curve draw animation
+    (function () {
+      var path = document.getElementById('curvePath');
+      if (!path) return;
+      var len = path.getTotalLength();
+      path.style.setProperty('--path-length', String(len));
+      path.style.strokeDasharray = String(len);
+      path.style.strokeDashoffset = String(len);
+
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            path.style.animation = 'drawLine 2s ease forwards';
+          }
+        });
+      }, { threshold: 0.1 });
+      io.observe(path);
+    })();
+  </script>
+</body>
+</html>
