@@ -88,104 +88,60 @@ const FAQ_DATA = [
   },
 ];
 
-/* ── FAQ 모달 ── */
-function FaqModal({ onClose }: { onClose: () => void }) {
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
+/* ── FAQ 카드 컴포넌트 ── */
+function FaqCard({ item, idx }: { item: typeof FAQ_DATA[number]; idx: number }) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ animation: 'fadeIn 0.25s ease both' }}
+      className="rounded-2xl overflow-hidden transition-all duration-300"
+      style={{
+        animation: `fadeInUp 0.35s ease ${idx * 0.06}s both`,
+        background: isOpen ? '#fff' : '#FAFBFC',
+        border: isOpen ? '1px solid #D4D9E4' : '1px solid #F0F0F0',
+        boxShadow: isOpen ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
+      }}
     >
-      {/* 배경 */}
-      <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
+      <button
+        className="w-full flex items-start gap-4 px-6 py-5 text-left"
+        style={{ cursor: 'pointer', background: 'none', border: 'none' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className={`shrink-0 w-7 h-7 mt-0.5 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
+          isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-500'
+        }`}>
+          <span>{idx + 1}</span>
+        </div>
 
-      {/* 모달 */}
+        <div className="flex-1 min-w-0">
+          <p className={`text-[15px] font-semibold leading-snug transition-colors duration-300 ${
+            isOpen ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {item.q}
+          </p>
+        </div>
+
+        <div className="shrink-0 mt-2 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </button>
+
       <div
-        className="relative w-full max-w-[580px] mx-4 max-h-[82vh] flex flex-col rounded-[20px] overflow-hidden bg-white"
+        className="overflow-hidden"
         style={{
-          animation: 'scaleIn 0.3s ease both',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)',
+          maxHeight: isOpen ? 300 : 0,
+          opacity: isOpen ? 1 : 0,
+          transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
         }}
       >
-        {/* 상단 헤더 */}
-        <div className="relative shrink-0 px-7 pt-7 pb-5">
-          <button
-            onClick={onClose}
-            className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all duration-200"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-sm">
-              <svg className="w-[22px] h-[22px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-[20px] font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>자주 묻는 질문</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>SIMVEX 이용 가이드</p>
-            </div>
+        <div className="px-6 pb-5 pl-[60px]">
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-[14px] text-gray-500 leading-[24px] mt-2">
+              {item.a}
+            </p>
           </div>
-
-          {/* 구분선 */}
-          <div className="mt-5 border-b border-gray-100" />
-        </div>
-
-        {/* FAQ 목록 */}
-        <div className="flex-1 overflow-y-auto px-7 pb-6" style={{ scrollbarWidth: 'thin' }}>
-          <div className="flex flex-col gap-2.5">
-            {FAQ_DATA.map((item, idx) => {
-              const isOpen = openIdx === idx;
-              return (
-                <div
-                  key={idx}
-                  className={`faq-item${isOpen ? ' faq-open' : ''}`}
-                  style={{ animation: `fadeInUp 0.3s ease ${idx * 0.05}s both` }}
-                >
-                  <button
-                    className="faq-question"
-                    onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`text-[13px] font-bold shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isOpen
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        {idx + 1}
-                      </span>
-                      <span className={`text-[14.5px] font-semibold transition-colors duration-300 ${
-                        isOpen ? 'text-gray-900' : 'text-gray-700'
-                      }`} style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                        {item.q}
-                      </span>
-                    </div>
-                    <div className="faq-chevron">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </button>
-                  <div className={`faq-answer${isOpen ? ' faq-answer-open' : ''}`}>
-                    <div className="px-6 pb-5 pl-[60px]" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                      <p className="text-[13.5px] text-gray-500 leading-[22px]">{item.a}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 하단 */}
-        <div className="shrink-0 px-7 py-4 border-t border-gray-50 bg-[#FAFBFC]">
-          <p className="text-[12px] text-gray-400 text-center" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-            더 궁금한 점이 있다면 뷰어의 <span className="text-gray-600 font-medium">AI 어시스턴트</span>를 이용해보세요
-          </p>
         </div>
       </div>
     </div>
@@ -239,145 +195,78 @@ const NOTICE_DATA: { tag: string; tagColor: string; title: string; date: string;
   },
 ];
 
-/* ── 공지사항 모달 ── */
-function NoticeModal({ onClose }: { onClose: () => void }) {
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
+/* ── 공지사항 카드 컴포넌트 ── */
+function NoticeCard({ item, idx }: { item: typeof NOTICE_DATA[number]; idx: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const tagColorMap: Record<string, string> = {
+    '점검': '#991B1B', '안내': '#92400E', '업데이트': '#065F46', '서비스': '#3730A3',
+  };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ animation: 'fadeIn 0.25s ease both' }}
+      className="rounded-2xl overflow-hidden transition-all duration-300"
+      style={{
+        animation: `fadeInUp 0.35s ease ${idx * 0.06}s both`,
+        background: isOpen ? '#fff' : '#FAFBFC',
+        border: isOpen ? '1px solid #D4D9E4' : '1px solid #F0F0F0',
+        boxShadow: isOpen ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
+      }}
     >
-      <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
+      <button
+        className="w-full flex items-start gap-4 px-6 py-5 text-left"
+        style={{ cursor: 'pointer', background: 'none', border: 'none' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {/* 핀 또는 번호 */}
+        <div className={`shrink-0 w-7 h-7 mt-0.5 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
+          isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-500'
+        }`}>
+          <span>{idx + 1}</span>
+        </div>
 
+        <div className="flex-1 min-w-0">
+          {/* 태그 + 날짜 */}
+          <div className="flex items-center gap-2.5 mb-2">
+            <span
+              className="px-2.5 py-0.5 rounded-md text-[11.5px] font-semibold"
+              style={{ background: item.tagColor, color: tagColorMap[item.tag] || '#3730A3' }}
+            >
+              {item.tag}
+            </span>
+            <span className="text-[12px] text-gray-400">{item.date}</span>
+          </div>
+
+          {/* 제목 */}
+          <p className={`text-[15px] font-semibold leading-snug transition-colors duration-300 ${
+            isOpen ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {item.title}
+          </p>
+        </div>
+
+        {/* 셰브론 */}
+        <div className="shrink-0 mt-2 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </button>
+
+      {/* 본문 */}
       <div
-        className="relative w-full max-w-[620px] mx-4 max-h-[85vh] flex flex-col rounded-[20px] overflow-hidden bg-white"
+        className="overflow-hidden"
         style={{
-          animation: 'scaleIn 0.3s ease both',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)',
+          maxHeight: isOpen ? 300 : 0,
+          opacity: isOpen ? 1 : 0,
+          transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
         }}
       >
-        {/* 헤더 */}
-        <div className="relative shrink-0 px-7 pt-7 pb-5">
-          <button
-            onClick={onClose}
-            className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all duration-200"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-sm">
-              <svg className="w-[22px] h-[22px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-[20px] font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>공지사항</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>SIMVEX 소식과 업데이트</p>
-            </div>
+        <div className="px-6 pb-5 pl-[60px]">
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-[14px] text-gray-500 leading-[24px] mt-2">
+              {item.body}
+            </p>
           </div>
-
-          <div className="mt-5 border-b border-gray-100" />
-        </div>
-
-        {/* 공지 목록 */}
-        <div className="flex-1 overflow-y-auto px-7 pb-6" style={{ scrollbarWidth: 'thin' }}>
-          <div className="flex flex-col gap-2">
-            {NOTICE_DATA.map((item, idx) => {
-              const isOpen = openIdx === idx;
-              return (
-                <div
-                  key={idx}
-                  className="rounded-2xl overflow-hidden transition-all duration-300"
-                  style={{
-                    animation: `fadeInUp 0.3s ease ${idx * 0.05}s both`,
-                    background: isOpen ? '#fff' : '#FAFBFC',
-                    border: isOpen ? '1px solid #D4D9E4' : '1px solid #F0F0F0',
-                    boxShadow: isOpen ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
-                  }}
-                >
-                  <button
-                    className="w-full flex items-start gap-3 px-5 py-4 text-left"
-                    style={{ cursor: 'pointer', background: 'none', border: 'none' }}
-                    onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  >
-                    {/* 핀 또는 번호 */}
-                    <div className={`shrink-0 w-6 h-6 mt-0.5 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-300 ${
-                      item.pinned
-                        ? 'bg-gray-800 text-white'
-                        : isOpen ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {item.pinned ? (
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M5 5a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H7a2 2 0 01-2-2V5zm0 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H6z" />
-                        </svg>
-                      ) : (
-                        <span>{idx + 1}</span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      {/* 태그 + 날짜 */}
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span
-                          className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
-                          style={{
-                            background: item.tagColor,
-                            color: item.tag === '점검' ? '#991B1B' : item.tag === '안내' ? '#92400E' : item.tag === '업데이트' ? '#065F46' : '#3730A3',
-                          }}
-                        >
-                          {item.tag}
-                        </span>
-                        <span className="text-[11.5px] text-gray-400">{item.date}</span>
-                      </div>
-
-                      {/* 제목 */}
-                      <p className={`text-[14px] font-semibold leading-snug transition-colors duration-300 ${
-                        isOpen ? 'text-gray-900' : 'text-gray-700'
-                      }`} style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                        {item.title}
-                      </p>
-                    </div>
-
-                    {/* 셰브론 */}
-                    <div className="shrink-0 mt-1 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </button>
-
-                  {/* 본문 */}
-                  <div
-                    className="overflow-hidden transition-all duration-400"
-                    style={{
-                      maxHeight: isOpen ? 200 : 0,
-                      opacity: isOpen ? 1 : 0,
-                      transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
-                    }}
-                  >
-                    <div className="px-5 pb-5 pl-[52px]">
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-[13px] text-gray-500 leading-[22px] mt-3" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                          {item.body}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 하단 */}
-        <div className="shrink-0 px-7 py-4 border-t border-gray-50 bg-[#FAFBFC]">
-          <p className="text-[12px] text-gray-400 text-center" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-            SIMVEX 팀은 더 나은 학습 경험을 위해 노력합니다
-          </p>
         </div>
       </div>
     </div>
@@ -559,7 +448,7 @@ export default function ModelsPage() {
   const [communityModels, setCommunityModels] = useState<UserModelRow[]>([]);
 
   // 워크플레이스 뷰 상태
-  const [activeView, setActiveView] = useState<'home' | 'workspace'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'workspace' | 'notice' | 'faq'>('home');
   const [workspaceTab, setWorkspaceTab] = useState<'my' | 'shared' | 'bookmark'>('my');
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
@@ -620,8 +509,6 @@ export default function ModelsPage() {
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자';
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const [showLogin, setShowLogin] = useState(false);
-  const [showFaq, setShowFaq] = useState(false);
-  const [showNotice, setShowNotice] = useState(false);
   const router = useRouter();
   const [loggingOut, startLogout] = useTransition();
 
@@ -768,9 +655,12 @@ export default function ModelsPage() {
 
                 // FAQ
                 if (item.href === '#faq') {
+                  const isActive = activeView === 'faq';
                   return (
-                    <button key={item.label} onClick={() => setShowFaq(true)}
-                      className="models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] text-gray-800 font-medium transition-all duration-200 hover:bg-[#001AFF] hover:text-white text-left">
+                    <button key={item.label} onClick={() => setActiveView(isActive ? 'home' : 'faq')}
+                      className={`models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 text-left ${
+                        isActive ? 'bg-[#001AFF] text-white' : 'text-gray-800 hover:bg-[#001AFF] hover:text-white'
+                      }`}>
                       <span>{item.label}</span>
                     </button>
                   );
@@ -778,9 +668,12 @@ export default function ModelsPage() {
 
                 // 공지사항
                 if (item.href === '#notice') {
+                  const isActive = activeView === 'notice';
                   return (
-                    <button key={item.label} onClick={() => setShowNotice(true)}
-                      className="models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] text-gray-800 font-medium transition-all duration-200 hover:bg-[#001AFF] hover:text-white text-left">
+                    <button key={item.label} onClick={() => setActiveView(isActive ? 'home' : 'notice')}
+                      className={`models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 text-left ${
+                        isActive ? 'bg-[#001AFF] text-white' : 'text-gray-800 hover:bg-[#001AFF] hover:text-white'
+                      }`}>
                       <span>{item.label}</span>
                     </button>
                   );
@@ -816,13 +709,77 @@ export default function ModelsPage() {
         {/* ══════ 메인 콘텐츠 ══════ */}
         <main className="flex-1 overflow-y-auto flex flex-col">
 
-          {activeView === 'workspace' ? (
+          {activeView === 'faq' ? (
+            /* ══════ FAQ 뷰 ══════ */
+            <div className="px-10 pt-10 pb-14 flex-1" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
+              {/* 헤더 */}
+              <div className="mb-10" style={{ animation: 'fadeInUp 0.5s ease both' }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">자주 묻는 질문</h1>
+                    <p className="text-[13px] text-gray-400 mt-0.5">SIMVEX 이용 가이드</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* FAQ 목록 */}
+              <div className="flex flex-col gap-3">
+                {FAQ_DATA.map((item, idx) => (
+                  <FaqCard key={idx} item={item} idx={idx} />
+                ))}
+              </div>
+
+              {/* 하단 */}
+              <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+                <p className="text-[12px] text-gray-400">
+                  더 궁금한 점이 있다면 뷰어의 <span className="text-gray-600 font-medium">AI 어시스턴트</span>를 이용해보세요
+                </p>
+              </div>
+            </div>
+
+          ) : activeView === 'notice' ? (
+            /* ══════ 공지사항 뷰 ══════ */
+            <div className="px-10 pt-10 pb-14 flex-1" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
+              {/* 헤더 */}
+              <div className="mb-10" style={{ animation: 'fadeInUp 0.5s ease both' }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">공지사항</h1>
+                    <p className="text-[13px] text-gray-400 mt-0.5">SIMVEX 소식과 업데이트</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 공지 목록 */}
+              <div className="flex flex-col gap-3">
+                {NOTICE_DATA.map((item, idx) => (
+                  <NoticeCard key={idx} item={item} idx={idx} />
+                ))}
+              </div>
+
+              {/* 하단 */}
+              <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+                <p className="text-[12px] text-gray-400">SIMVEX 팀은 더 나은 학습 경험을 위해 노력합니다</p>
+              </div>
+            </div>
+
+          ) : activeView === 'workspace' ? (
             /* ══════ 워크플레이스 뷰 ══════ */
             <div className="px-10 pt-10 pb-14 flex-1" style={{ fontFamily: "'Pretendard Variable', Pretendard, sans-serif" }}>
               {/* 헤더 + 최신순 필터 */}
-              <div className="flex items-start justify-between mb-6">
-                <h1 className="text-[40px] font-extrabold text-gray-900 tracking-tight">
-                  {displayName}님의 워크플레이스 <span className="inline-block" style={{ fontSize: 36 }}>&#x1F3E0;</span>
+              <div className="flex items-start justify-between mb-10">
+                <h1 className="text-[36px] font-medium text-gray-800 tracking-normal leading-snug" style={{ fontFamily: "'Noto Sans KR', sans-serif" }}>
+                  {displayName}님의 워크플레이스 <span className="inline-block" style={{ fontSize: 32 }}>&#x1F3E0;</span>
                 </h1>
 
                 <div className="flex items-center gap-3 shrink-0 mt-2">
@@ -1263,19 +1220,25 @@ export default function ModelsPage() {
             /* ══════ 홈 뷰 (기존 콘텐츠) ══════ */
             <>
               {/* ── 히어로 ── */}
-              <section className="models-hero px-10 pt-16 pb-14 text-center bg-white">
-                <h1 className="text-[40px] font-extrabold text-gray-900 mb-4 tracking-tight">
+              <section className="models-hero px-10 pt-20 pb-16 text-center bg-white">
+                <h1 className="models-hero-greeting text-[52px] text-gray-900 mb-6 leading-[1.3] pl-12">
                   {user ? (
-                    <>안녕하세요, {displayName}님{' '}<span className="models-wave">&#x1F44B;</span></>
+                    <>
+                      <span className="pen-line-1">안녕하세요, {displayName}님</span>
+                      {' '}<span className="pen-wave-reveal models-wave" style={{ fontSize: 44 }}>&#x1F44B;</span>
+                    </>
                   ) : (
-                    <>안녕하세요{' '}<span className="models-wave">&#x1F44B;</span></>
+                    <>
+                      <span className="pen-line-1">안녕하세요</span>
+                      {' '}<span className="pen-wave-reveal models-wave" style={{ fontSize: 44 }}>&#x1F44B;</span>
+                    </>
                   )}
                 </h1>
-                <p className="text-[16px] text-gray-500 leading-relaxed max-w-md mx-auto">
+                <p className="models-hero-subtitle text-[17px] text-gray-600 leading-relaxed max-w-md mx-auto font-normal" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
                   3D모델을 등록하고 자유롭게 학습하세요.<br />
                   fbx, obj, glb 포맷을 지원합니다.
                 </p>
-                <div className="mt-10">
+                <div className="models-hero-cta mt-12">
                   {user ? (
                     <Link href="/upload"
                       className="models-cta-btn inline-block px-16 py-4 bg-[#001AFF] text-white text-[17px] font-bold rounded-full">
@@ -1397,11 +1360,7 @@ export default function ModelsPage() {
       {/* ══════ 로그인 모달 ══════ */}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
 
-      {/* ══════ FAQ 모달 ══════ */}
-      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
 
-      {/* ══════ 공지사항 모달 ══════ */}
-      {showNotice && <NoticeModal onClose={() => setShowNotice(false)} />}
     </div>
   );
 }

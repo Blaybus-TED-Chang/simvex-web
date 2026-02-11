@@ -32,7 +32,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Righteous&family=DM+Sans:wght@400;700&family=Inter:wght@400;600&family=Anta&family=Roboto:wght@100;500;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Righteous&family=DM+Sans:wght@400;700&family=Inter:wght@400;600&family=Anta&family=Roboto:wght@100;500;900&family=Noto+Sans+KR:wght@300;400;500;700&family=Nanum+Pen+Script&display=swap"
           rel="stylesheet"
         />
         <link href="https://fonts.cdnfonts.com/css/gmarket-sans" rel="stylesheet" />
