@@ -47,26 +47,44 @@ export function useUserModels(user: User | null) {
   // 공개 모델 조회 (World에 표시)
   const fetchPublicModels = useCallback(async (limit = 6): Promise<UserModelRow[]> => {
     const supabase = getSupabase();
-    const { data } = await supabase
+    // visibility 컬럼이 있으면 OR 조건, 없으면 is_public만
+    const { data, error } = await supabase
+      .from('user_models')
+      .select('*')
+      .or('is_public.eq.true,visibility.eq.public')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (!error) return data ?? [];
+    // fallback: visibility 컬럼 미존재 시
+    const { data: fallback } = await supabase
       .from('user_models')
       .select('*')
       .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(limit);
-    return data ?? [];
+    return fallback ?? [];
   }, []);
 
-  // 공개 모델 페이지네이션 조회 (visibility='public'만)
+  // 공개 모델 페이지네이션 조회
   const fetchPublicModelsPaginated = useCallback(
     async (page: number, pageSize = 12, search?: string): Promise<{ data: UserModelRow[]; count: number }> => {
       const supabase = getSupabase();
 
-      // 1) is_public=true 인 모델 조회 (가장 확실한 단일 필터)
-      const { data: allData } = await supabase
+      // 1) visibility 컬럼이 있으면 OR 조건, 없으면 is_public만
+      let { data: allData, error } = await supabase
         .from('user_models')
         .select('*')
-        .eq('is_public', true)
+        .or('is_public.eq.true,visibility.eq.public')
         .order('created_at', { ascending: false });
+
+      if (error) {
+        const { data: fallback } = await supabase
+          .from('user_models')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false });
+        allData = fallback;
+      }
 
       let results: UserModelRow[] = (allData ?? []) as UserModelRow[];
 
