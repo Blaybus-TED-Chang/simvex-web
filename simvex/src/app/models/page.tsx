@@ -441,6 +441,95 @@ function ModelCard({ model, delay }: {
   );
 }
 
+/* ── 최근 열어본 파일 캐러셀 ── */
+function RecentModelsCarousel({ models }: {
+  models: { id: string; href: string; name: string; nameKo: string; description: string; category: string; partsCount: number; thumbnails?: string[]; hasSim: boolean }[];
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+  const CARD_W = 320; // 카드 너비 (px)
+  const GAP = 24;     // gap (px)
+  const SPEED = 35;   // 초당 px
+  const totalW = models.length * (CARD_W + GAP);
+  const duration = totalW / SPEED;
+
+  // 수동 스크롤 (화살표)
+  const scrollManual = (dir: 'left' | 'right') => {
+    const el = trackRef.current;
+    if (!el) return;
+    // 현재 transform 위치 가져오기
+    const style = getComputedStyle(el);
+    const matrix = new DOMMatrix(style.transform);
+    const currentX = matrix.m41;
+    // 일시정지 상태에서 위치 고정 후 이동
+    el.style.animationPlayState = 'paused';
+    const shift = dir === 'left' ? (CARD_W + GAP) : -(CARD_W + GAP);
+    el.style.transform = `translateX(${currentX + shift}px)`;
+    setPaused(true);
+    // 3초 후 애니메이션 재개
+    setTimeout(() => {
+      el.style.transform = '';
+      el.style.animationPlayState = 'running';
+      setPaused(false);
+    }, 3000);
+  };
+
+  return (
+    <section className="pb-14 pt-4">
+      <div className="flex items-center justify-between mb-6 px-10">
+        <h2 className="text-[20px] font-bold text-gray-900">최근 열어본 파일</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => scrollManual('left')}
+            className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400 flex items-center justify-center transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => scrollManual('right')}
+            className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400 flex items-center justify-center transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden">
+        {/* 양쪽 그라데이션 */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+        <div
+          ref={trackRef}
+          className="flex gap-6 carousel-track"
+          style={{
+            width: `${totalW * 2}px`,
+            animationDuration: `${duration}s`,
+            animationPlayState: paused ? 'paused' : 'running',
+          }}
+          onMouseEnter={() => {
+            if (trackRef.current) trackRef.current.style.animationPlayState = 'paused';
+          }}
+          onMouseLeave={() => {
+            if (!paused && trackRef.current) trackRef.current.style.animationPlayState = 'running';
+          }}
+        >
+          {/* 원본 + 복제본 (무한 루프) */}
+          {[...models, ...models].map((model, i) => (
+            <div key={`${model.id}-${i}`} className="shrink-0" style={{ width: CARD_W }}>
+              <ModelCard model={model} delay={0} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function ModelsPage() {
   const { user } = useUser();
   const { models: myUploadedModels, fetchPublicModels, changeVisibility } = useUserModels(user);
@@ -505,7 +594,6 @@ export default function ModelsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'latest' | 'name' | 'oldest'>('latest');
 
-  const recentModels = viewerModels.slice(0, 3);
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자';
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const [showLogin, setShowLogin] = useState(false);
@@ -1255,20 +1343,7 @@ export default function ModelsPage() {
 
               {/* ── 최근 열어본 파일 (로그인 시에만) ── */}
               {user && (
-                <section className="px-10 pb-14 pt-4">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-[20px] font-bold text-gray-900">최근 열어본 파일</h2>
-                    <Link href="#" className="text-[14px] text-gray-400 hover:text-gray-600 transition-colors">
-                      전체보기
-                    </Link>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-6">
-                    {recentModels.map((model, i) => (
-                      <ModelCard key={model.id} model={model} delay={200 + i * 100} />
-                    ))}
-                  </div>
-                </section>
+                <RecentModelsCarousel models={viewerModels} />
               )}
 
               {/* 푸터를 맨 밑으로 밀어주는 스페이서 */}
