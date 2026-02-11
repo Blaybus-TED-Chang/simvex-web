@@ -47,22 +47,12 @@ export function useUserModels(user: User | null) {
   // 공개 모델 조회 (World에 표시)
   const fetchPublicModels = useCallback(async (limit = 6): Promise<UserModelRow[]> => {
     const supabase = getSupabase();
-    // visibility 컬럼 우선 시도, 실패 시 is_public 사용
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('user_models')
       .select('*')
-      .eq('visibility', 'public')
+      .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(limit);
-    if (error) {
-      const { data: fallback } = await supabase
-        .from('user_models')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      return fallback ?? [];
-    }
     return data ?? [];
   }, []);
 
@@ -70,48 +60,32 @@ export function useUserModels(user: User | null) {
   const fetchPublicModelsPaginated = useCallback(
     async (page: number, pageSize = 12, search?: string): Promise<{ data: UserModelRow[]; count: number }> => {
       const supabase = getSupabase();
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
 
-      let query = supabase
+      // 1) is_public=true 인 모델 조회 (가장 확실한 단일 필터)
+      const { data: allData } = await supabase
         .from('user_models')
-        .select('*', { count: 'exact' });
+        .select('*')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
 
+      let results: UserModelRow[] = (allData ?? []) as UserModelRow[];
+
+      // 2) 검색어가 있으면 클라이언트에서 필터링 (이름, 설명, 카테고리)
       if (search && search.trim()) {
-        const term = search.trim();
-        // and()를 or() 안에 명시하여 visibility=public AND 검색어 일치 보장
-        query = query.or(
-          `and(visibility.eq.public,name.ilike.%${term}%),and(visibility.eq.public,description.ilike.%${term}%),and(visibility.eq.public,category.ilike.%${term}%)`
+        const term = search.trim().toLowerCase();
+        results = results.filter((m) =>
+          m.name.toLowerCase().includes(term) ||
+          m.description.toLowerCase().includes(term) ||
+          m.category.toLowerCase().includes(term)
         );
-      } else {
-        query = query.eq('visibility', 'public');
       }
 
-      const { data, count, error } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) {
-        // visibility 컬럼 미존재 시 is_public 폴백
-        let fallbackQuery = supabase
-          .from('user_models')
-          .select('*', { count: 'exact' });
-
-        if (search && search.trim()) {
-          const term = search.trim();
-          fallbackQuery = fallbackQuery.or(
-            `and(is_public.eq.true,name.ilike.%${term}%),and(is_public.eq.true,description.ilike.%${term}%),and(is_public.eq.true,category.ilike.%${term}%)`
-          );
-        } else {
-          fallbackQuery = fallbackQuery.eq('is_public', true);
-        }
-
-        const { data: fallback, count: fbCount } = await fallbackQuery
-          .order('created_at', { ascending: false })
-          .range(from, to);
-        return { data: fallback ?? [], count: fbCount ?? 0 };
-      }
-      return { data: data ?? [], count: count ?? 0 };
+      // 3) 클라이언트 페이지네이션
+      const from = page * pageSize;
+      return {
+        data: results.slice(from, from + pageSize),
+        count: results.length,
+      };
     },
     []
   );
