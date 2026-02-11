@@ -17,11 +17,16 @@ export interface WorkflowNode {
   color?: string;
 }
 
+/** 커넥터 방향 */
+export type ConnectorSide = 'top' | 'bottom' | 'left' | 'right';
+
 /** 노드 간 연결선 */
 export interface WorkflowEdge {
   id: string;
   sourceNodeId: string;
+  sourceSide: ConnectorSide;
   targetNodeId: string;
+  targetSide: ConnectorSide;
 }
 
 /** workflows 테이블 DB Row */

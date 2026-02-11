@@ -1280,7 +1280,7 @@ export default function ModelsPage() {
                 <h1 className="models-hero-greeting text-[52px] text-gray-900 mb-6 leading-[1.3] pl-12">
                   {user ? (
                     <>
-                      <span className="pen-line-1">안녕하세요, {displayName}님</span>
+                      <span className="pen-line-1">안녕하세요, <strong>{displayName}</strong>님</span>
                       {' '}<span className="pen-wave-reveal models-wave" style={{ fontSize: 44 }}>&#x1F44B;</span>
                     </>
                   ) : (

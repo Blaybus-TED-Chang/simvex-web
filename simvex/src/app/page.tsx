@@ -351,16 +351,16 @@ export default function LandingPage() {
         <div className="landing-pricing-cards" style={{ display: 'flex', gap: 28, marginBottom: 56, width: '100%', maxWidth: 1200, justifyContent: 'center' }}>
           {[
             {
-              name: 'Basic', price: '$99', delay: 0,
-              features: ['All analytics features', 'Up to 250,000 tracked visits', 'Normal support', 'Mobile app', 'Up to 3 team members'],
+              name: 'Basic', price: '₩0', delay: 0,
+              features: ['모든 3D 모델 무제한 열람', '분해/조립 및 부품 정보', '퀴즈 · 노트 동기화 · 스크랩', 'AI 어시스턴트 일 5회', '모델 업로드 1개'],
             },
             {
-              name: 'Growth', price: '$199', delay: 0.15,
-              features: ['Everything on Basic plan', 'Up to 1,000,000 tracked visits', 'Premium support', 'Mobile app', 'Up to 10 team members'],
+              name: 'Plus', price: '₩4,900', delay: 0.15,
+              features: ['Basic 전체 기능 포함', 'AI 어시스턴트 무제한', '모델 업로드 50개', 'PDF 출력', '워크플로우 차트'],
             },
             {
-              name: 'Enterprise', price: '$399', delay: 0.3,
-              features: ['Everything on Growth plan', 'Up to 5,000,000 tracked visits', 'Dedicated support', 'Mobile app', 'Up to 50 team members'],
+              name: 'Team', price: '₩12,900', delay: 0.3,
+              features: ['Plus 전체 기능 포함', '모델 업로드 무제한 (100MB)', '팀 협업 (최대 10명)', '커스텀 퀴즈 생성', '우선 지원'],
             },
           ].map((plan) => (
             <div key={plan.name} className="fade-in-up pricing-card" style={{
@@ -373,7 +373,7 @@ export default function LandingPage() {
               }}>
                 <div style={{ color: 'white', fontSize: 20, fontFamily: 'DM Sans', fontWeight: 700, marginBottom: 8 }}>{plan.name}</div>
                 <div className="landing-pricing-price" style={{ color: 'white', fontSize: 48, fontFamily: 'DM Sans', fontWeight: 800, lineHeight: 1.1 }}>{plan.price}</div>
-                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontFamily: 'DM Sans', marginTop: 6 }}>Billed monthly</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontFamily: 'Pretendard Variable', marginTop: 6, visibility: plan.name === 'Basic' ? 'hidden' : 'visible' }}>월간 결제</div>
               </div>
               <div style={{ padding: '28px 26px 32px' }}>
                 {plan.features.map((feat) => (
@@ -394,8 +394,8 @@ export default function LandingPage() {
           <Link href="/models" className="landing-btn landing-pricing-cta" style={{
             display: 'inline-block', padding: '14px 64px',
             background: '#001AFF', borderRadius: 32, textDecoration: 'none',
-            color: 'white', fontSize: 18, fontFamily: 'DM Sans', fontWeight: 700,
-          }}>Next</Link>
+            color: 'white', fontSize: 18, fontFamily: 'Pretendard Variable', fontWeight: 700,
+          }}>시작하기</Link>
         </div>
       </section>
 
