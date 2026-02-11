@@ -393,12 +393,39 @@ function VisibilityDropdown({
 }
 
 /* ── 모델 카드 ── */
-function ModelCard({ model, delay }: {
+function ModelCard({ model, delay, onRename }: {
   model: { id: string; href: string; name: string; nameKo: string; description: string; category: string; partsCount: number; thumbnails?: string[]; hasSim: boolean };
   delay: number;
+  onRename?: (modelId: string, newName: string) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditValue(model.name);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    setIsEditing(false);
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== model.name && onRename) {
+      onRename(model.id, trimmed);
+    }
+  };
+
   return (
-    <Link href={model.href} className="group models-card" style={{ animationDelay: `${delay}ms` }}>
+    <Link href={model.href} className="group models-card" style={{ animationDelay: `${delay}ms` }} onClick={(e) => { if (isEditing) e.preventDefault(); }}>
       <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
         <div className="relative h-[200px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
           {model.thumbnails && model.thumbnails.length > 0 ? (
@@ -418,15 +445,40 @@ function ModelCard({ model, delay }: {
         </div>
         <div className="p-4">
           <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors">
-                {model.name}
-              </h3>
-              <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {isEditing ? (
+                <input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                    if (e.key === 'Escape') setIsEditing(false);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[16px] font-bold w-full px-1.5 py-0.5 rounded-md border border-blue-400 bg-white text-gray-900 outline-none focus:ring-1 focus:ring-blue-200"
+                />
+              ) : (
+                <>
+                  <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors truncate">
+                    {model.name}
+                  </h3>
+                  {onRename && (
+                    <button
+                      onClick={handleStartEdit}
+                      className="p-0.5 rounded text-gray-300 hover:text-[#001AFF] transition-colors shrink-0"
+                      title="이름 편집"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-            <svg className="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-300 shrink-0" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="6" r="1.5" />
               <circle cx="12" cy="12" r="1.5" />
               <circle cx="12" cy="18" r="1.5" />
@@ -442,36 +494,37 @@ function ModelCard({ model, delay }: {
 }
 
 /* ── 최근 열어본 파일 캐러셀 ── */
-function RecentModelsCarousel({ models }: {
+function RecentModelsCarousel({ models, onRename }: {
   models: { id: string; href: string; name: string; nameKo: string; description: string; category: string; partsCount: number; thumbnails?: string[]; hasSim: boolean }[];
+  onRename?: (modelId: string, newName: string) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [paused, setPaused] = useState(false);
-  const CARD_W = 320; // 카드 너비 (px)
-  const GAP = 24;     // gap (px)
-  const SPEED = 35;   // 초당 px
-  const totalW = models.length * (CARD_W + GAP);
-  const duration = totalW / SPEED;
+  const pausedRef = useRef(false);
+  const CARD_W = 320;
+  const GAP = 24;
 
-  // 수동 스크롤 (화살표)
+  // 자동 스크롤 (JS interval 기반)
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const interval = setInterval(() => {
+      if (pausedRef.current) return;
+      el.scrollLeft += 1;
+      // 끝에 도달하면 처음으로
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+        el.scrollLeft = 0;
+      }
+    }, 30);
+    return () => clearInterval(interval);
+  }, []);
+
   const scrollManual = (dir: 'left' | 'right') => {
     const el = trackRef.current;
     if (!el) return;
-    // 현재 transform 위치 가져오기
-    const style = getComputedStyle(el);
-    const matrix = new DOMMatrix(style.transform);
-    const currentX = matrix.m41;
-    // 일시정지 상태에서 위치 고정 후 이동
-    el.style.animationPlayState = 'paused';
-    const shift = dir === 'left' ? (CARD_W + GAP) : -(CARD_W + GAP);
-    el.style.transform = `translateX(${currentX + shift}px)`;
-    setPaused(true);
-    // 3초 후 애니메이션 재개
-    setTimeout(() => {
-      el.style.transform = '';
-      el.style.animationPlayState = 'running';
-      setPaused(false);
-    }, 3000);
+    const shift = dir === 'left' ? -(CARD_W + GAP) : (CARD_W + GAP);
+    el.scrollBy({ left: shift, behavior: 'smooth' });
+    pausedRef.current = true;
+    setTimeout(() => { pausedRef.current = false; }, 3000);
   };
 
   return (
@@ -505,23 +558,15 @@ function RecentModelsCarousel({ models }: {
 
         <div
           ref={trackRef}
-          className="flex gap-6 carousel-track"
-          style={{
-            width: `${totalW * 2}px`,
-            animationDuration: `${duration}s`,
-            animationPlayState: paused ? 'paused' : 'running',
-          }}
-          onMouseEnter={() => {
-            if (trackRef.current) trackRef.current.style.animationPlayState = 'paused';
-          }}
-          onMouseLeave={() => {
-            if (!paused && trackRef.current) trackRef.current.style.animationPlayState = 'running';
-          }}
+          className="flex gap-6 px-10 hide-scrollbar"
+          style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onMouseEnter={() => { pausedRef.current = true; }}
+          onMouseLeave={() => { pausedRef.current = false; }}
         >
           {/* 원본 + 복제본 (무한 루프) */}
           {[...models, ...models].map((model, i) => (
             <div key={`${model.id}-${i}`} className="shrink-0" style={{ width: CARD_W }}>
-              <ModelCard model={model} delay={0} />
+              <ModelCard model={model} delay={0} onRename={onRename} />
             </div>
           ))}
         </div>
@@ -544,6 +589,7 @@ export default function ModelsPage() {
   // 북마크 탭용 스크랩 user 모델 데이터
   const [scrapUserModels, setScrapUserModels] = useState<UserModelRow[]>([]);
 
+  const { getModelState, setModelState } = useViewerStore();
   useEffect(() => { useViewerStore.persist.rehydrate(); }, []);
   useEffect(() => { fetchPublicModels(3).then(setCommunityModels); }, [fetchPublicModels]);
 
@@ -572,19 +618,20 @@ export default function ModelsPage() {
 
   const viewerModels = [
     ...combinedModels.map((m) => ({
-      id: m.id, href: `/viewer/${m.id}`, nameKo: m.nameKo, name: m.name,
+      id: m.id, href: `/viewer/${m.id}`, nameKo: m.nameKo,
+      name: getModelState(m.id)?.rootName || m.name,
       description: m.description, category: m.category, partsCount: m.parts.length,
       thumbnails: m.thumbnails, hasSim: hasSimulation(m.id),
     })),
     {
       id: suspensionModel.id, href: `/viewer/${suspensionModel.id}`,
-      nameKo: suspensionModel.nameKo, name: suspensionModel.name,
+      nameKo: suspensionModel.nameKo, name: getModelState(suspensionModel.id)?.rootName || suspensionModel.name,
       description: suspensionModel.description, category: suspensionModel.category,
       partsCount: suspensionModel.parts.length, thumbnails: suspensionModel.thumbnails, hasSim: false,
     },
     {
       id: 'jet-engine', href: '/viewer/jet-engine?tab=sim',
-      nameKo: '터보팬 엔진', name: 'Turbofan Engine Simulator',
+      nameKo: '터보팬 엔진', name: getModelState('jet-engine')?.rootName || 'Turbofan Engine Simulator',
       description: '제트 엔진의 인터랙티브 시각화와 기류 파티클, 실시간 성능 지표를 확인할 수 있습니다',
       category: '항공', partsCount: 0, thumbnails: undefined as string[] | undefined, hasSim: true,
     },
@@ -1311,7 +1358,10 @@ export default function ModelsPage() {
 
               {/* ── 최근 열어본 파일 (로그인 시에만) ── */}
               {user && (
-                <RecentModelsCarousel models={viewerModels} />
+                <RecentModelsCarousel
+                  models={viewerModels}
+                  onRename={(modelId, newName) => setModelState(modelId, { rootName: newName || undefined })}
+                />
               )}
 
               {/* 푸터를 맨 밑으로 밀어주는 스페이서 */}
