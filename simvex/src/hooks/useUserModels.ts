@@ -66,23 +66,47 @@ export function useUserModels(user: User | null) {
     return data ?? [];
   }, []);
 
-  // 공개 모델 페이지네이션 조회
+  // 공개 모델 페이지네이션 조회 (visibility='public'만)
   const fetchPublicModelsPaginated = useCallback(
-    async (page: number, pageSize = 12): Promise<{ data: UserModelRow[]; count: number }> => {
+    async (page: number, pageSize = 12, search?: string): Promise<{ data: UserModelRow[]; count: number }> => {
       const supabase = getSupabase();
       const from = page * pageSize;
       const to = from + pageSize - 1;
-      const { data, count, error } = await supabase
+
+      let query = supabase
         .from('user_models')
-        .select('*', { count: 'exact' })
-        .eq('visibility', 'public')
+        .select('*', { count: 'exact' });
+
+      if (search && search.trim()) {
+        const term = search.trim();
+        // and()를 or() 안에 명시하여 visibility=public AND 검색어 일치 보장
+        query = query.or(
+          `and(visibility.eq.public,name.ilike.%${term}%),and(visibility.eq.public,description.ilike.%${term}%),and(visibility.eq.public,category.ilike.%${term}%)`
+        );
+      } else {
+        query = query.eq('visibility', 'public');
+      }
+
+      const { data, count, error } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
+
       if (error) {
-        const { data: fallback, count: fbCount } = await supabase
+        // visibility 컬럼 미존재 시 is_public 폴백
+        let fallbackQuery = supabase
           .from('user_models')
-          .select('*', { count: 'exact' })
-          .eq('is_public', true)
+          .select('*', { count: 'exact' });
+
+        if (search && search.trim()) {
+          const term = search.trim();
+          fallbackQuery = fallbackQuery.or(
+            `and(is_public.eq.true,name.ilike.%${term}%),and(is_public.eq.true,description.ilike.%${term}%),and(is_public.eq.true,category.ilike.%${term}%)`
+          );
+        } else {
+          fallbackQuery = fallbackQuery.eq('is_public', true);
+        }
+
+        const { data: fallback, count: fbCount } = await fallbackQuery
           .order('created_at', { ascending: false })
           .range(from, to);
         return { data: fallback ?? [], count: fbCount ?? 0 };
