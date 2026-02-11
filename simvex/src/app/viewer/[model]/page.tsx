@@ -19,6 +19,7 @@ import { ShareButton } from '@/components/share/ShareButton';
 import { DownloadButton } from '@/components/download/DownloadButton';
 import { QuizPanel } from '@/components/quiz/QuizPanel';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
+import { jsonContentToText } from '@/lib/export/pdfGenerator';
 import { useUser } from '@/hooks/useUser';
 import { ModelConfig } from '@/types/viewer';
 import { CombinedModelConfig } from '@/components/viewer/CombinedGLBPart';
@@ -32,6 +33,8 @@ import { useAnnotations } from '@/hooks/useAnnotations';
 import { useAnnotationStore } from '@/lib/store/annotationStore';
 import { AnnotationPanel } from '@/components/annotation/AnnotationPanel';
 import { usePartCustomizations } from '@/hooks/usePartCustomizations';
+import { useNotes } from '@/hooks/useNotes';
+import { useSupabaseChat } from '@/hooks/useSupabaseChat';
 import { PartTreePanel } from '@/components/viewer/PartTreePanel';
 import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
 import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
@@ -103,6 +106,8 @@ export default function ViewerPage() {
   const modelId = params.model as string;
   const { user } = useUser();
   const { isScraped, toggleScrap } = useScraps(user);
+  const { notes: noteItems } = useNotes(user, modelId);
+  const { messages: chatMessages } = useSupabaseChat(user, modelId);
   const [showLogin, setShowLogin] = useState(false);
 
   // 로그인 성공 시 모달 자동 닫기
@@ -226,6 +231,11 @@ export default function ViewerPage() {
   const aiFabDragging = useRef(false);
   const aiFabStartMouse = useRef({ x: 0, y: 0 });
   const aiFabStartPos = useRef({ x: 0, y: 0 });
+
+  // AI 패널 리사이즈
+  const [aiPanelSize, setAiPanelSize] = useState({ w: 420, h: 500 });
+  const aiResizing = useRef(false);
+  const aiResizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
 
   const [sidebarWidth, setSidebarWidth] = useState(320); // 기본 w-80 = 320px
 
@@ -1199,12 +1209,15 @@ export default function ViewerPage() {
                 modelName={pdfModelInfo.name}
                 description={pdfModelInfo.description}
                 theory={pdfModelInfo.theory}
-                parts={pdfModelInfo.parts.map((p) => ({
-                  nameKo: p.nameKo,
-                  name: p.name,
-                  description: p.description,
+                noteItems={noteItems.map((n) => ({
+                  title: n.title,
+                  content: jsonContentToText(n.content),
+                  updatedAt: n.updated_at,
                 }))}
-                notes={notes}
+                chatMessages={chatMessages.map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                }))}
                 isDarkMode={isDarkMode}
               />
             </Tooltip>
@@ -1630,11 +1643,43 @@ export default function ViewerPage() {
       >
         {/* 채팅 패널 (버튼 위에 표시) */}
         <div
-          className={`absolute bottom-14 right-0 w-[360px] rounded-2xl shadow-2xl border overflow-hidden flex flex-col transition-all duration-200 origin-bottom-right ${
+          className={`absolute bottom-14 right-0 rounded-2xl shadow-2xl border overflow-hidden flex flex-col transition-all duration-200 origin-bottom-right ${
             isAIPanelOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'
           } ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}
-          style={{ height: 420 }}
+          style={{ width: aiPanelSize.w, height: aiPanelSize.h }}
         >
+          {/* 좌상단 리사이즈 핸들 */}
+          <div
+            className="absolute left-0 top-0 w-4 h-4 cursor-nw-resize z-10"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              aiResizing.current = true;
+              aiResizeStart.current = { x: e.clientX, y: e.clientY, w: aiPanelSize.w, h: aiPanelSize.h };
+              const onMove = (ev: MouseEvent) => {
+                if (!aiResizing.current) return;
+                const dw = aiResizeStart.current.x - ev.clientX;
+                const dh = aiResizeStart.current.y - ev.clientY;
+                setAiPanelSize({
+                  w: Math.max(320, Math.min(700, aiResizeStart.current.w + dw)),
+                  h: Math.max(300, Math.min(800, aiResizeStart.current.h + dh)),
+                });
+              };
+              const onUp = () => {
+                aiResizing.current = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+              };
+              document.addEventListener('mousemove', onMove);
+              document.addEventListener('mouseup', onUp);
+            }}
+          >
+            <svg className={`w-3 h-3 m-0.5 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} viewBox="0 0 10 10" fill="currentColor">
+              <circle cx="2" cy="2" r="1" />
+              <circle cx="2" cy="6" r="1" />
+              <circle cx="6" cy="2" r="1" />
+            </svg>
+          </div>
           <AIChatPanel
             modelId={modelId}
             modelInfo={notesModelInfo ? {
