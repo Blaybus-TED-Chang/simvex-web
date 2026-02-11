@@ -1,14 +1,45 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+export interface PdfNoteItem {
+  title: string;
+  content: string; // plain text로 변환된 노트 내용
+  updatedAt: string;
+}
+
+export interface PdfChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface PdfExportData {
   modelNameKo: string;
   modelName: string;
   description: string;
   theory: string;
-  parts: { nameKo: string; name: string; description: string }[];
-  notes: string;
+  noteItems: PdfNoteItem[];
+  chatMessages: PdfChatMessage[];
   screenshotDataUrl: string; // base64 data URL
+}
+
+// tiptap JSONContent에서 plain text 추출
+export function jsonContentToText(content: unknown): string {
+  if (!content || typeof content !== 'object') return '';
+  const node = content as { type?: string; text?: string; content?: unknown[] };
+  if (node.text) return node.text;
+  if (!Array.isArray(node.content)) return '';
+  return node.content
+    .map((child) => jsonContentToText(child))
+    .join(node.type === 'doc' || node.type === 'bulletList' || node.type === 'orderedList' ? '\n' : '')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // HTML 요소를 생성하여 이미지로 변환 후 PDF에 추가
@@ -26,11 +57,44 @@ export async function generateModelPdf(data: PdfExportData): Promise<Blob> {
     color: #333;
   `;
 
+  // 노트 HTML 생성
+  const notesHtml = data.noteItems.length > 0
+    ? `
+      <div style="margin-bottom: 24px;">
+        <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">학습 노트</h2>
+        ${data.noteItems.map((note) => `
+          <div style="margin-bottom: 16px; background: #f9fafb; padding: 16px; border-radius: 8px;">
+            <div style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 6px;">${escapeHtml(note.title)}</div>
+            <div style="font-size: 11px; color: #999; margin-bottom: 8px;">${new Date(note.updatedAt).toLocaleDateString('ko-KR')}</div>
+            <div style="font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: #444;">${escapeHtml(note.content)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `
+    : '';
+
+  // AI 대화 HTML 생성
+  const chatHtml = data.chatMessages.length > 0
+    ? `
+      <div style="margin-bottom: 24px;">
+        <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">AI 대화 내역</h2>
+        ${data.chatMessages.map((msg) => `
+          <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+            <div style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: ${msg.role === 'user' ? '#e0e7ff' : '#f0fdf4'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: ${msg.role === 'user' ? '#4338ca' : '#166534'};">
+              ${msg.role === 'user' ? 'Q' : 'A'}
+            </div>
+            <div style="flex: 1; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 8px; background: ${msg.role === 'user' ? '#f0f4ff' : '#f7fdf9'}; color: #333; white-space: pre-wrap;">${escapeHtml(msg.content)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `
+    : '';
+
   // PDF 콘텐츠 HTML 생성
   container.innerHTML = `
     <div style="text-align: center; margin-bottom: 30px;">
-      <h1 style="font-size: 28px; margin: 0 0 8px 0; color: #1a1a1a;">${data.modelNameKo}</h1>
-      <p style="font-size: 16px; color: #666; margin: 0;">${data.modelName}</p>
+      <h1 style="font-size: 28px; margin: 0 0 8px 0; color: #1a1a1a;">${escapeHtml(data.modelNameKo)}</h1>
+      <p style="font-size: 16px; color: #666; margin: 0;">${escapeHtml(data.modelName)}</p>
     </div>
 
     ${data.screenshotDataUrl ? `
@@ -41,44 +105,19 @@ export async function generateModelPdf(data: PdfExportData): Promise<Blob> {
 
     <div style="margin-bottom: 24px;">
       <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">설명</h2>
-      <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.description}</p>
+      <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(data.description)}</p>
     </div>
 
     ${data.theory ? `
       <div style="margin-bottom: 24px;">
         <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">이론 및 원리</h2>
-        <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.theory}</p>
+        <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(data.theory)}</p>
       </div>
     ` : ''}
 
-    <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">부품 목록</h2>
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-        <thead>
-          <tr style="background: #f3f4f6;">
-            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; width: 40px;">#</th>
-            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; width: 150px;">부품명</th>
-            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb;">설명</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.parts.map((part, idx) => `
-            <tr style="border-bottom: 1px solid #e5e7eb;">
-              <td style="padding: 10px; vertical-align: top;">${idx + 1}</td>
-              <td style="padding: 10px; vertical-align: top; font-weight: 500;">${part.nameKo}<br/><span style="font-size: 11px; color: #888;">${part.name}</span></td>
-              <td style="padding: 10px; vertical-align: top; color: #555;">${part.description}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
+    ${notesHtml}
 
-    ${data.notes && data.notes.trim() ? `
-      <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">학습 노트</h2>
-        <div style="font-size: 14px; line-height: 1.6; background: #f9fafb; padding: 16px; border-radius: 8px; white-space: pre-wrap;">${data.notes}</div>
-      </div>
-    ` : ''}
+    ${chatHtml}
 
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
       <p style="font-size: 12px; color: #999; margin: 0;">

@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import {
   generateModelPdf,
   PdfExportData,
+  PdfNoteItem,
+  PdfChatMessage,
   captureCanvasScreenshot,
 } from '@/lib/export/pdfGenerator';
 
@@ -12,8 +14,8 @@ interface ExportPdfButtonProps {
   modelName: string;
   description: string;
   theory: string;
-  parts: { nameKo: string; name: string; description: string }[];
-  notes: string;
+  noteItems: PdfNoteItem[];
+  chatMessages: PdfChatMessage[];
   isDarkMode: boolean;
 }
 
@@ -22,8 +24,8 @@ export function ExportPdfButton({
   modelName,
   description,
   theory,
-  parts,
-  notes,
+  noteItems,
+  chatMessages,
   isDarkMode,
 }: ExportPdfButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
@@ -45,8 +47,8 @@ export function ExportPdfButton({
         modelName,
         description,
         theory,
-        parts,
-        notes,
+        noteItems,
+        chatMessages,
         screenshotDataUrl,
       };
 
@@ -67,7 +69,7 @@ export function ExportPdfButton({
     } finally {
       setIsExporting(false);
     }
-  }, [modelNameKo, modelName, description, theory, parts, notes]);
+  }, [modelNameKo, modelName, description, theory, noteItems, chatMessages]);
 
   return (
     <button
