@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useCallback } from 'react';
-import type { WorkflowNode as WNode } from '@/types/workflow';
+import type { WorkflowNode as WNode, ConnectorSide } from '@/types/workflow';
 
 interface WorkflowNodeProps {
   node: WNode;
@@ -9,15 +9,25 @@ interface WorkflowNodeProps {
   isSelected: boolean;
   isDarkMode: boolean;
   attachmentCount: number;
+  /** 현재 연결 대기 중인 소스 노드 ID (활성화 표시용) */
+  connectingFromNodeId: string | null;
   onSelect: (id: string) => void;
   onDragStart: (id: string, e: React.MouseEvent) => void;
   onTitleChange: (id: string, title: string) => void;
   onContentChange: (id: string, content: string) => void;
   onDelete: (id: string) => void;
-  onConnectStart: (nodeId: string, side: 'left' | 'right', e: React.MouseEvent) => void;
+  onConnectorClick: (nodeId: string, side: ConnectorSide) => void;
 }
 
 const NODE_HEIGHT_MIN = 120;
+
+/** 커넥터 위치 스타일 */
+const connectorPos: Record<ConnectorSide, string> = {
+  top:    '-top-3 left-1/2 -translate-x-1/2',
+  bottom: '-bottom-3 left-1/2 -translate-x-1/2',
+  left:   'top-1/2 -left-3 -translate-y-1/2',
+  right:  'top-1/2 -right-3 -translate-y-1/2',
+};
 
 export function WorkflowNodeComponent({
   node,
@@ -25,30 +35,34 @@ export function WorkflowNodeComponent({
   isSelected,
   isDarkMode,
   attachmentCount,
+  connectingFromNodeId,
   onSelect,
   onDragStart,
   onTitleChange,
   onContentChange,
   onDelete,
-  onConnectStart,
+  onConnectorClick,
 }: WorkflowNodeProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // 텍스트 입력 영역이면 드래그 무시
     const tag = (e.target as HTMLElement).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+    // data-connector 클릭은 별도 처리
+    if ((e.target as HTMLElement).dataset.connector === 'true') return;
     e.stopPropagation();
     onDragStart(node.id, e);
   }, [node.id, onDragStart]);
 
   const bgColor = isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300';
   const selectedBorder = isSelected ? 'ring-2 ring-blue-500' : '';
+  const isConnecting = connectingFromNodeId !== null;
+  const isSource = connectingFromNodeId === node.id;
 
   return (
     <div
       ref={nodeRef}
-      className={`absolute rounded-lg border shadow-md ${bgColor} ${selectedBorder} select-none`}
+      className={`absolute rounded-lg border shadow-md group ${bgColor} ${selectedBorder} select-none`}
       style={{
         left: node.x,
         top: node.y,
@@ -58,16 +72,28 @@ export function WorkflowNodeComponent({
       onClick={(e) => { e.stopPropagation(); onSelect(node.id); }}
       onMouseDown={handleMouseDown}
     >
-      {/* 왼쪽 커넥터 */}
-      <div
-        className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full opacity-0 hover:opacity-100 cursor-crosshair z-10 transition-opacity"
-        onMouseDown={(e) => { e.stopPropagation(); onConnectStart(node.id, 'left', e); }}
-      />
-      {/* 오른쪽 커넥터 */}
-      <div
-        className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full opacity-0 hover:opacity-100 cursor-crosshair z-10 transition-opacity"
-        onMouseDown={(e) => { e.stopPropagation(); onConnectStart(node.id, 'right', e); }}
-      />
+      {/* 4방향 커넥터 */}
+      {isOwner && (['top', 'bottom', 'left', 'right'] as ConnectorSide[]).map((side) => (
+        <div
+          key={side}
+          data-connector="true"
+          className={`absolute ${connectorPos[side]} w-6 h-6 rounded-full border-2 cursor-pointer z-20 transition-all ${
+            isSource
+              ? 'opacity-50 bg-gray-400 border-gray-300'
+              : isConnecting
+                ? 'opacity-100 bg-green-500 border-white scale-125 animate-pulse'
+                : 'opacity-0 group-hover:opacity-100 bg-blue-500 border-white hover:scale-125'
+          }`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onConnectorClick(node.id, side);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        />
+      ))}
 
       {/* 헤더 */}
       <div className={`flex items-center justify-between px-3 py-2 border-b cursor-move ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>

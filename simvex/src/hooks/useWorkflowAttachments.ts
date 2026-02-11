@@ -27,7 +27,11 @@ export function useWorkflowAttachments(user: User | null, workflowId: string) {
     if (!user) return null;
     setUploading(true);
     const supabase = createClient();
-    const storagePath = `${user.id}/${workflowId}/${nodeId}/${file.name}`;
+    // 파일명에 한글 등 비-ASCII 문자가 있으면 Supabase Storage에서 거부하므로
+    // 타임스탬프 기반 안전한 파일명 사용, 원본 이름은 DB에만 저장
+    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const safeName = `${Date.now()}.${ext}`;
+    const storagePath = `${user.id}/${workflowId}/${nodeId}/${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
@@ -50,7 +54,7 @@ export function useWorkflowAttachments(user: User | null, workflowId: string) {
     if (error || !data) return null;
     setAttachments((prev) => [...prev, data]);
     return data;
-  }, [user, workflowId]);
+  }, [user, workflowId]);;
 
   // 첨부 삭제
   const deleteAttachment = useCallback(async (attachmentId: string) => {

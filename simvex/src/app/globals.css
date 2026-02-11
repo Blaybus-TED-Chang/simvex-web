@@ -416,7 +416,7 @@ html {
 }
 
 .models-hero-greeting {
-  font-family: 'Nanum Pen Script', cursive;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
 }
 
 /* 한 줄 펜 필기 */
@@ -444,9 +444,8 @@ html {
 /* 이모지 등장 */
 .pen-wave-reveal {
   display: inline-block;
-  opacity: 0;
-  transform: scale(0) rotate(-20deg);
-  animation: penWavePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 2.2s forwards;
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
 }
 
 @keyframes penWavePop {

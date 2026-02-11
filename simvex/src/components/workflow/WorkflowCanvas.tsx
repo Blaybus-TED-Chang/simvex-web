@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { WorkflowNode, WorkflowEdge as WEdge, WorkflowNodeLink, WorkflowAttachmentRow } from '@/types/workflow';
+import type { WorkflowNode, WorkflowEdge as WEdge, WorkflowNodeLink, WorkflowAttachmentRow, ConnectorSide } from '@/types/workflow';
 import { WorkflowNodeComponent } from './WorkflowNode';
 import { WorkflowEdge } from './WorkflowEdge';
 import { WorkflowNodeEditor } from './WorkflowNodeEditor';
+import { WorkflowMinimap } from './WorkflowMinimap';
 
 interface WorkflowCanvasProps {
   nodes: WorkflowNode[];
@@ -22,6 +23,18 @@ interface WorkflowCanvasProps {
   onUploadFile: (nodeId: string, file: File) => void;
   onDeleteAttachment: (attachmentId: string) => void;
   getDownloadUrl: (storagePath: string) => string;
+}
+
+const NODE_H = 120;
+
+/** 커넥터 앵커 좌표 */
+function getAnchor(node: WorkflowNode, side: ConnectorSide): [number, number] {
+  switch (side) {
+    case 'left':   return [node.x, node.y + NODE_H / 2];
+    case 'right':  return [node.x + node.width, node.y + NODE_H / 2];
+    case 'top':    return [node.x + node.width / 2, node.y];
+    case 'bottom': return [node.x + node.width / 2, node.y + NODE_H];
+  }
 }
 
 export function WorkflowCanvas({
@@ -42,20 +55,37 @@ export function WorkflowCanvas({
   getDownloadUrl,
 }: WorkflowCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editorNodeId, setEditorNodeId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ nodeId: string; startX: number; startY: number; nodeStartX: number; nodeStartY: number } | null>(null);
   const [panning, setPanning] = useState<{ startX: number; startY: number; offsetStart: number[] } | null>(null);
-  const [connecting, setConnecting] = useState<{ sourceId: string; side: 'left' | 'right'; canvasX: number; canvasY: number } | null>(null);
+
+  // 클릭 기반 연결 상태
+  const [connectSource, setConnectSource] = useState<{ nodeId: string; side: ConnectorSide } | null>(null);
+  // 마우스 추적 (캔버스 좌표)
+  const [mouseCanvas, setMouseCanvas] = useState<{ x: number; y: number } | null>(null);
 
   // 노드 선택
   const handleSelectNode = useCallback((id: string) => {
+    // 연결 모드 중 클릭 → 취소
+    if (connectSource) {
+      setConnectSource(null);
+      setMouseCanvas(null);
+      return;
+    }
     setSelectedNodeId(id);
     setEditorNodeId(id);
-  }, []);
+  }, [connectSource]);
 
   // 노드 드래그 시작
   const handleNodeDragStart = useCallback((nodeId: string, e: React.MouseEvent) => {
+    // 연결 모드 중 노드 본문 클릭 → 취소
+    if (connectSource) {
+      setConnectSource(null);
+      setMouseCanvas(null);
+      return;
+    }
     const node = nodes.find((n) => n.id === nodeId);
     if (!node || !isOwner) return;
     setDragging({
@@ -65,7 +95,7 @@ export function WorkflowCanvas({
       nodeStartX: node.x,
       nodeStartY: node.y,
     });
-  }, [nodes, isOwner]);
+  }, [nodes, isOwner, connectSource]);
 
   // 노드 제목/내용 변경
   const handleTitleChange = useCallback((id: string, title: string) => {
@@ -89,17 +119,42 @@ export function WorkflowCanvas({
     onEdgesChange(edges.filter((e) => e.id !== id));
   }, [edges, onEdgesChange]);
 
-  // 커넥터 드래그 시작
-  const handleConnectStart = useCallback((nodeId: string, side: 'left' | 'right', e: React.MouseEvent) => {
-    if (!isOwner) return;
-    e.stopPropagation();
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const cx = (e.clientX - rect.left - canvasOffset[0]) / canvasZoom;
-    const cy = (e.clientY - rect.top - canvasOffset[1]) / canvasZoom;
-    setConnecting({ sourceId: nodeId, side, canvasX: cx, canvasY: cy });
-  }, [isOwner, canvasOffset, canvasZoom]);
+  // 커넥터 클릭 핸들러 (onMouseDown으로 호출됨)
+  const handleConnectorClick = useCallback((nodeId: string, side: ConnectorSide) => {
+    if (!connectSource) {
+      // 첫 번째 클릭: 소스 설정 + 즉시 선 표시를 위한 초기 위치
+      const sourceNode = nodes.find((n) => n.id === nodeId);
+      if (sourceNode) {
+        const [ax, ay] = getAnchor(sourceNode, side);
+        setMouseCanvas({ x: ax, y: ay });
+      }
+      setConnectSource({ nodeId, side });
+    } else {
+      // 두 번째 클릭: 같은 노드면 취소
+      if (connectSource.nodeId === nodeId) {
+        setConnectSource(null);
+        setMouseCanvas(null);
+        return;
+      }
+      // 중복 엣지 방지
+      const exists = edges.some(
+        (e) =>
+          (e.sourceNodeId === connectSource.nodeId && e.targetNodeId === nodeId) ||
+          (e.sourceNodeId === nodeId && e.targetNodeId === connectSource.nodeId),
+      );
+      if (!exists) {
+        onEdgesChange([...edges, {
+          id: crypto.randomUUID(),
+          sourceNodeId: connectSource.nodeId,
+          sourceSide: connectSource.side,
+          targetNodeId: nodeId,
+          targetSide: side,
+        }]);
+      }
+      setConnectSource(null);
+      setMouseCanvas(null);
+    }
+  }, [connectSource, edges, onEdgesChange, nodes]);
 
   // 에디터에서 링크 변경
   const handleLinksChange = useCallback((links: WorkflowNodeLink[]) => {
@@ -107,9 +162,20 @@ export function WorkflowCanvas({
     onNodesChange(nodes.map((n) => (n.id === editorNodeId ? { ...n, links } : n)));
   }, [editorNodeId, nodes, onNodesChange]);
 
-  // 마우스 이벤트: 드래그, 팬, 커넥트
+  // 마우스 이동 추적 (연결 모드용 + 드래그/팬)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // 연결 모드: 마우스 위치 추적
+      if (connectSource) {
+        const container = containerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const cx = (e.clientX - rect.left - canvasOffset[0]) / canvasZoom;
+          const cy = (e.clientY - rect.top - canvasOffset[1]) / canvasZoom;
+          setMouseCanvas({ x: cx, y: cy });
+        }
+        return;
+      }
       if (dragging) {
         const dx = (e.clientX - dragging.startX) / canvasZoom;
         const dy = (e.clientY - dragging.startY) / canvasZoom;
@@ -122,44 +188,12 @@ export function WorkflowCanvas({
         const dx = e.clientX - panning.startX;
         const dy = e.clientY - panning.startY;
         onCanvasOffsetChange([panning.offsetStart[0] + dx, panning.offsetStart[1] + dy]);
-      } else if (connecting) {
-        const container = containerRef.current;
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          const cx = (e.clientX - rect.left - canvasOffset[0]) / canvasZoom;
-          const cy = (e.clientY - rect.top - canvasOffset[1]) / canvasZoom;
-          setConnecting((prev) => prev ? { ...prev, canvasX: cx, canvasY: cy } : null);
-        }
       }
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
-      if (connecting) {
-        // 마우스 위치에서 노드 찾기
-        const container = containerRef.current;
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          const cx = (e.clientX - rect.left - canvasOffset[0]) / canvasZoom;
-          const cy = (e.clientY - rect.top - canvasOffset[1]) / canvasZoom;
-          const targetNode = nodes.find((n) =>
-            cx >= n.x && cx <= n.x + n.width && cy >= n.y && cy <= n.y + 140,
-          );
-          if (targetNode && targetNode.id !== connecting.sourceId) {
-            // 중복 엣지 방지
-            const exists = edges.some(
-              (e) =>
-                (e.sourceNodeId === connecting.sourceId && e.targetNodeId === targetNode.id) ||
-                (e.sourceNodeId === targetNode.id && e.targetNodeId === connecting.sourceId),
-            );
-            if (!exists) {
-              const sourceId = connecting.side === 'right' ? connecting.sourceId : targetNode.id;
-              const tgtId = connecting.side === 'right' ? targetNode.id : connecting.sourceId;
-              onEdgesChange([...edges, { id: crypto.randomUUID(), sourceNodeId: sourceId, targetNodeId: tgtId }]);
-            }
-          }
-        }
-        setConnecting(null);
-      }
+    const handleMouseUp = () => {
+      // 연결 모드에서는 mouseup으로 아무것도 안 함 (클릭 기반이므로)
+      if (connectSource) return;
       setDragging(null);
       setPanning(null);
     };
@@ -170,15 +204,44 @@ export function WorkflowCanvas({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragging, panning, connecting, nodes, edges, canvasOffset, canvasZoom, onNodesChange, onCanvasOffsetChange, onEdgesChange]);
+  }, [dragging, panning, connectSource, nodes, canvasOffset, canvasZoom, onNodesChange, onCanvasOffsetChange]);
 
-  // 캔버스 빈 영역 클릭 시 팬 시작
+  // 캔버스 빈 영역 클릭
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    // 연결 모드 중 캔버스 클릭 → 취소
+    if (connectSource) {
+      setConnectSource(null);
+      setMouseCanvas(null);
+      return;
+    }
     if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.canvas === 'true') {
       setPanning({ startX: e.clientX, startY: e.clientY, offsetStart: [...canvasOffset] });
       setSelectedNodeId(null);
     }
-  }, [canvasOffset]);
+  }, [canvasOffset, connectSource]);
+
+  // Esc로 연결 취소
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && connectSource) {
+        setConnectSource(null);
+        setMouseCanvas(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [connectSource]);
+
+  // 컨테이너 크기 추적
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setContainerSize({ w: entry.contentRect.width, h: entry.contentRect.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // 줌
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -191,28 +254,23 @@ export function WorkflowCanvas({
   const bg = isDarkMode ? 'bg-gray-950' : 'bg-gray-100';
   const editorNode = editorNodeId ? nodes.find((n) => n.id === editorNodeId) : null;
 
-  // 임시 연결선 (드래그 중) - connecting state에 캔버스 좌표가 이미 계산됨
+  // 연결 모드 임시 선
   const connectingLine = (() => {
-    if (!connecting) return null;
-    const sourceNode = nodes.find((n) => n.id === connecting.sourceId);
+    if (!connectSource || !mouseCanvas) return null;
+    const sourceNode = nodes.find((n) => n.id === connectSource.nodeId);
     if (!sourceNode) return null;
-
-    const sx = connecting.side === 'right'
-      ? sourceNode.x + sourceNode.width
-      : sourceNode.x;
-    const sy = sourceNode.y + 60;
-
+    const [sx, sy] = getAnchor(sourceNode, connectSource.side);
     return (
-      <line x1={sx} y1={sy} x2={connecting.canvasX} y2={connecting.canvasY} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" />
+      <line x1={sx} y1={sy} x2={mouseCanvas.x} y2={mouseCanvas.y}
+        stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" />
     );
   })();
 
   return (
     <div className={`flex-1 relative overflow-hidden ${bg}`} ref={containerRef}>
-      {/* 캔버스 영역 */}
       <div
         data-canvas="true"
-        className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        className={`absolute inset-0 ${connectSource ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
         onMouseDown={handleCanvasMouseDown}
         onWheel={handleWheel}
         style={{
@@ -223,15 +281,14 @@ export function WorkflowCanvas({
           backgroundPosition: `${canvasOffset[0]}px ${canvasOffset[1]}px`,
         }}
       >
-        {/* 변환 컨테이너 */}
         <div
           style={{
             transform: `translate(${canvasOffset[0]}px, ${canvasOffset[1]}px) scale(${canvasZoom})`,
             transformOrigin: '0 0',
           }}
         >
-          {/* SVG 엣지 */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
+          {/* SVG 엣지 - width/height를 1로 설정하고 overflow:visible로 전체 렌더링 */}
+          <svg className="absolute top-0 left-0 pointer-events-none" width="1" height="1" style={{ overflow: 'visible' }}>
             <defs>
               <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
                 <polygon points="0 0, 10 3.5, 0 7" fill={isDarkMode ? '#9ca3af' : '#6b7280'} />
@@ -247,7 +304,9 @@ export function WorkflowCanvas({
                     key={edge.id}
                     id={edge.id}
                     sourceNode={sn}
+                    sourceSide={edge.sourceSide || 'right'}
                     targetNode={tn}
+                    targetSide={edge.targetSide || 'left'}
                     isOwner={isOwner}
                     onDelete={handleDeleteEdge}
                   />
@@ -266,22 +325,36 @@ export function WorkflowCanvas({
               isSelected={selectedNodeId === node.id}
               isDarkMode={isDarkMode}
               attachmentCount={attachments.filter((a) => a.node_id === node.id).length}
-
+              connectingFromNodeId={connectSource?.nodeId ?? null}
               onSelect={handleSelectNode}
               onDragStart={handleNodeDragStart}
               onTitleChange={handleTitleChange}
               onContentChange={handleContentChange}
               onDelete={handleDeleteNode}
-              onConnectStart={handleConnectStart}
+              onConnectorClick={handleConnectorClick}
             />
           ))}
         </div>
       </div>
 
-      {/* 줌 표시 */}
+      {/* 줌 표시 + 연결 모드 안내 */}
       <div className={`absolute bottom-4 left-4 text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>
-        {Math.round(canvasZoom * 100)}%
+        {connectSource
+          ? '연결할 노드의 동그라미를 클릭하세요 (Esc: 취소)'
+          : `${Math.round(canvasZoom * 100)}%`}
       </div>
+
+      {/* 미니맵 */}
+      <WorkflowMinimap
+        nodes={nodes}
+        edges={edges}
+        canvasOffset={canvasOffset}
+        canvasZoom={canvasZoom}
+        containerWidth={containerSize.w}
+        containerHeight={containerSize.h}
+        isDarkMode={isDarkMode}
+        onCanvasOffsetChange={onCanvasOffsetChange}
+      />
 
       {/* 노드 에디터 사이드패널 */}
       {editorNode && (

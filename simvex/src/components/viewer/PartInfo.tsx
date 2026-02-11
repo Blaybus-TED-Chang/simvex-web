@@ -18,9 +18,10 @@ interface PartInfoProps {
   customization?: PartCustomization;
   onCustomize?: (partId: string, updates: PartCustomization) => void;
   onResetCustomize?: (partId: string) => void;
+  isDarkMode?: boolean;
 }
 
-export function PartInfo({ part, isLoggedIn, customization, onCustomize, onResetCustomize }: PartInfoProps) {
+export function PartInfo({ part, isLoggedIn, customization, onCustomize, onResetCustomize, isDarkMode }: PartInfoProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -109,11 +110,11 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
                   if (e.key === 'Enter') handleSaveName();
                   if (e.key === 'Escape') setIsEditingName(false);
                 }}
-                className="text-[18px] font-bold w-full px-2 py-0.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-blue-200 transition-all"
+                className={`text-[18px] font-bold w-full px-2 py-0.5 rounded-lg border outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-blue-200 transition-all ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-50 text-gray-900'}`}
               />
             ) : (
               <>
-                <h4 className="text-[18px] font-bold text-gray-900 truncate">{displayNameKo}</h4>
+                <h4 className={`text-[18px] font-bold truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{displayNameKo}</h4>
                 {isLoggedIn && onCustomize && (
                   <button
                     onClick={handleStartEditName}
@@ -135,13 +136,13 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
         <div className="relative shrink-0" ref={colorPickerRef}>
           <button
             onClick={() => isLoggedIn && onCustomize && setShowColorPicker(!showColorPicker)}
-            className={`w-8 h-8 rounded-lg border-2 border-gray-200 transition-all ${isLoggedIn ? 'hover:scale-110 cursor-pointer' : 'cursor-default'}`}
+            className={`w-8 h-8 rounded-lg border-2 transition-all ${isDarkMode ? 'border-gray-600' : 'border-gray-200'} ${isLoggedIn ? 'hover:scale-110 cursor-pointer' : 'cursor-default'}`}
             style={{ backgroundColor: displayColor || '#888888' }}
             title={isLoggedIn ? '색상 변경' : ''}
           />
 
           {showColorPicker && (
-            <div className="absolute right-0 top-full mt-2 p-3 rounded-xl shadow-xl border border-gray-200 bg-white z-50" style={{ animation: 'scaleIn 0.2s ease both' }}>
+            <div className={`absolute right-0 top-full mt-2 p-3 rounded-xl shadow-xl border z-50 ${isDarkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'}`} style={{ animation: 'scaleIn 0.2s ease both' }}>
               <div className="grid grid-cols-5 gap-1.5 mb-2">
                 {presetColors.map((c) => (
                   <button
@@ -172,12 +173,12 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
       {part.material && (
         <div className="flex items-center gap-2 mt-3">
           <span className="text-[12px] text-gray-400">재질</span>
-          <span className="text-[13px] font-medium text-gray-700">{part.material}</span>
+          <span className={`text-[13px] font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{part.material}</span>
         </div>
       )}
 
       {/* 설명 */}
-      <p className={`text-[13px] text-gray-700 leading-relaxed mt-2 ${!isExpanded ? 'line-clamp-2' : ''}`}>
+      <p className={`text-[13px] leading-relaxed mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} ${!isExpanded ? 'line-clamp-2' : ''}`}>
         {part.description}
       </p>
 
@@ -193,7 +194,7 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
 
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex justify-center pt-3 mt-2 border-t border-gray-100"
+        className={`w-full flex justify-center pt-3 mt-2 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}
       >
         <svg
           className={`w-5 h-5 text-gray-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}

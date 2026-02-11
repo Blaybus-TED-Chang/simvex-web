@@ -75,6 +75,7 @@ export default function WorkflowSharePage() {
         isOwner={false}
         saving={false}
         onTitleChange={() => {}}
+        onSave={() => {}}
         onAddNode={() => {}}
         onGenerateShareLink={async () => null}
       />

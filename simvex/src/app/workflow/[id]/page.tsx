@@ -117,6 +117,33 @@ export default function WorkflowEditorPage() {
     triggerSave({ nodes_data: newNodes });
   }, [nodes, canvasOffset, canvasZoom, triggerSave]);
 
+  // 즉시 저장 (버튼 / 단축키용)
+  const handleSaveNow = useCallback(async () => {
+    if (!isOwner) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    setSaving(true);
+    await saveWorkflow(id, {
+      title,
+      nodes_data: nodes,
+      edges_data: edges,
+      canvas_offset: canvasOffset,
+      canvas_zoom: canvasZoom,
+    });
+    setSaving(false);
+  }, [isOwner, id, title, nodes, edges, canvasOffset, canvasZoom, saveWorkflow]);
+
+  // Ctrl+S / Cmd+S 단축키
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveNow();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSaveNow]);
+
   // 공유
   const handleGenerateLink = useCallback(async () => {
     return await generateShareToken(id);
@@ -151,6 +178,7 @@ export default function WorkflowEditorPage() {
         isOwner={isOwner}
         saving={saving}
         onTitleChange={handleTitleChange}
+        onSave={handleSaveNow}
         onAddNode={handleAddNode}
         onGenerateShareLink={handleGenerateLink}
       />

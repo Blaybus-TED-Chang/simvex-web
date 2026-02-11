@@ -1462,7 +1462,9 @@ export default function ViewerPage() {
                       onClick={() => setRightSidebarTab(tab)}
                       className={`flex-1 pb-3 text-[14px] font-medium text-center transition-all duration-200 border-b-2 ${
                         isActive
-                          ? 'text-[#001AFF] border-[#001AFF]'
+                          ? isDarkMode
+                            ? 'text-white border-white'
+                            : 'text-[#001AFF] border-[#001AFF]'
                           : isDarkMode
                             ? 'text-gray-500 border-transparent hover:text-gray-300'
                             : 'text-gray-400 border-transparent hover:text-gray-600'
@@ -1493,6 +1495,7 @@ export default function ViewerPage() {
                           model={currentModelInfo}
                           customName={mergedModel ? getModelState(mergedModel.id)?.rootName : undefined}
                           onRename={mergedModel ? (name) => setModelState(mergedModel.id, { rootName: name || undefined }) : undefined}
+                          isDarkMode={isDarkMode}
                         />
                       )}
                     </div>
@@ -1506,6 +1509,7 @@ export default function ViewerPage() {
                         customization={selectedPartId ? customizations[selectedPartId] : undefined}
                         onCustomize={upsertCustomization}
                         onResetCustomize={resetCustomization}
+                        isDarkMode={isDarkMode}
                       />
                     </div>
                   </div>

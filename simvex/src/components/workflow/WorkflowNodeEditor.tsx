@@ -65,6 +65,22 @@ export function WorkflowNodeEditor({
     return `${(bytes / 1048576).toFixed(1)}MB`;
   };
 
+  const handleDownload = async (storagePath: string, fileName: string) => {
+    try {
+      const url = getDownloadUrl(storagePath);
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      // fallback: 새 탭에서 열기
+      window.open(getDownloadUrl(storagePath), '_blank');
+    }
+  };
+
   return (
     <div className={`fixed top-0 right-0 h-full w-96 border-l shadow-xl z-50 flex flex-col ${bg}`}>
       {/* 헤더 */}
@@ -121,6 +137,17 @@ export function WorkflowNodeEditor({
                   {att.file_name}
                 </a>
                 <span className="text-gray-400 shrink-0">{formatFileSize(att.file_size_bytes)}</span>
+                <button
+                  onClick={() => handleDownload(att.storage_path, att.file_name)}
+                  className="text-gray-400 hover:text-blue-400 shrink-0"
+                  title="다운로드"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
                 {isOwner && (
                   <button onClick={() => onDeleteAttachment(att.id)} className="text-red-400 hover:text-red-600 shrink-0">
                     X
@@ -151,7 +178,7 @@ export function WorkflowNodeEditor({
           <div className="space-y-1">
             {node.links.map((link) => (
               <div key={link.id} className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 truncate text-blue-400 hover:underline">
+                <a href={/^https?:\/\//i.test(link.url) ? link.url : `https://${link.url}`} target="_blank" rel="noopener noreferrer" className="flex-1 truncate text-blue-400 hover:underline">
                   {link.label || link.url}
                 </a>
                 {isOwner && (
