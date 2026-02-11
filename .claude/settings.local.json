@@ -20,7 +20,9 @@
       "Bash(find:*)",
       "WebFetch(domain:cdn.jsdelivr.net)",
       "WebSearch",
-      "WebFetch(domain:www.cdnfonts.com)"
+      "WebFetch(domain:www.cdnfonts.com)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
