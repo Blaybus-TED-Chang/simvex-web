@@ -513,6 +513,20 @@ html {
   transform: scale(1.05);
 }
 
+/* ── 회전초밥 무한 캐러셀 ── */
+@keyframes carouselScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.carousel-track {
+  animation: carouselScroll linear infinite;
+}
+
 .models-nav-item {
   transition: all 0.2s ease;
 }

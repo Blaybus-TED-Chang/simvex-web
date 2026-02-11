@@ -2,12 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useUser } from '@/hooks/useUser';
 import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
 import { useScraps } from '@/hooks/useScraps';
 import { useViewerStore } from '@/lib/store/viewerStore';
-import { AuthButton } from '@/components/auth/AuthButton';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { ScrapButton } from '@/components/scrap/ScrapButton';
 import { ShareButton } from '@/components/share/ShareButton';
@@ -17,7 +15,7 @@ const PAGE_SIZE = 12;
 
 export default function CommunityPage() {
   const { user } = useUser();
-  const { isDarkMode, toggleDarkMode } = useViewerStore();
+  const { isDarkMode } = useViewerStore();
   const { fetchPublicModelsPaginated } = useUserModels(user);
   const { isScraped, toggleScrap } = useScraps(user);
 
@@ -50,48 +48,35 @@ export default function CommunityPage() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* 헤더 */}
-      <header className={`h-14 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b px-4 flex items-center justify-between`}>
+      <header className="flex items-center justify-between px-8 bg-white shrink-0 relative z-10" style={{ height: 72, boxShadow: '0 0 8.4px rgba(0,0,0,0.25)' }}>
+        <Link href="/" className="text-[26px] text-black no-underline shrink-0" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
+          SIMVEX
+        </Link>
+
         <div className="flex items-center gap-4">
-          <Link
-            href="/models"
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          <Link href="/models" className="p-2 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all" title="홈">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
             </svg>
           </Link>
-          <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="SIMVEX" width={90} height={19} className={`object-contain ${isDarkMode ? 'invert' : ''}`} />
-            <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>커뮤니티 모델</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <AuthButton />
-          {user && (
-            <Link
-              href="/mypage"
-              className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-200 text-gray-600'}`}
-              title="마이페이지"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+          {user ? (
+            <Link href="/mypage" className="flex items-center gap-2.5 shrink-0 rounded-full px-2 py-1.5 -mx-2 transition-all duration-200 hover:bg-gray-100 active:scale-[0.97] cursor-pointer">
+              {(user.user_metadata?.avatar_url) ? (
+                <img src={user.user_metadata.avatar_url as string} alt="프로필" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
+                  {(user.user_metadata?.name || user.email?.split('@')[0] || '사').toString().charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-[14px] font-medium text-gray-700">
+                {(user.user_metadata?.name || user.email?.split('@')[0] || '사용자') as string}
+              </span>
+            </Link>
+          ) : (
+            <Link href="/auth/login" className="shrink-0 px-5 py-2 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+              로그인
             </Link>
           )}
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            {isDarkMode ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </button>
         </div>
       </header>
 
