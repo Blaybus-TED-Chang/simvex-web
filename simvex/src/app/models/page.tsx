@@ -538,7 +538,7 @@ export default function ModelsPage() {
 
   // 워크플레이스 뷰 상태
   const [activeView, setActiveView] = useState<'home' | 'workspace' | 'notice' | 'faq'>('home');
-  const [workspaceTab, setWorkspaceTab] = useState<'my' | 'shared' | 'bookmark'>('my');
+  const [workspaceTab, setWorkspaceTab] = useState<'my' | 'shared' | 'bookmark' | 'workflow'>('my');
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   // 북마크 탭용 스크랩 user 모델 데이터
@@ -699,14 +699,24 @@ export default function ModelsPage() {
                       {/* 서브메뉴 */}
                       <div
                         className="overflow-hidden transition-all duration-300"
-                        style={{ maxHeight: workspaceOpen ? 160 : 0, opacity: workspaceOpen ? 1 : 0 }}
+                        style={{ maxHeight: workspaceOpen ? 200 : 0, opacity: workspaceOpen ? 1 : 0 }}
                       >
                         <div className="flex flex-col gap-0.5 pl-4 pt-1">
                           {([
                             { key: 'my' as const, label: '나의 모델' },
                             { key: 'shared' as const, label: '공유받은 모델' },
                             { key: 'bookmark' as const, label: '스크랩한 모델' },
+                            { key: 'workflow' as const, label: '워크플로우' },
                           ]).map((sub) => (
+                            sub.key === 'workflow' ? (
+                              <Link
+                                key={sub.key}
+                                href="/workflow"
+                                className={`w-full text-left px-4 py-2.5 rounded-lg text-[14px] font-medium transition-all duration-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900`}
+                              >
+                                {sub.label}
+                              </Link>
+                            ) : (
                             <button
                               key={sub.key}
                               onClick={() => { setWorkspaceTab(sub.key); setActiveView('workspace'); }}
@@ -718,6 +728,7 @@ export default function ModelsPage() {
                             >
                               {sub.label}
                             </button>
+                            )
                           ))}
                         </div>
                       </div>
