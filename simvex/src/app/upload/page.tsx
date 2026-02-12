@@ -3,11 +3,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useUser } from '@/hooks/useUser';
 import { useUserModels, getPublicUrl } from '@/hooks/useUserModels';
 import { useViewerStore } from '@/lib/store/viewerStore';
-import { AuthButton } from '@/components/auth/AuthButton';
 import { FileDropzone } from '@/components/upload/FileDropzone';
 import { ModelPreview } from '@/components/upload/ModelPreview';
 import { PartConfigEditor } from '@/components/upload/PartConfigEditor';
@@ -227,89 +225,87 @@ export default function UploadPage() {
 
   if (!user) return null;
 
-  const inputClass = `w-full px-3 py-2 text-sm rounded-lg border ${
-    isDarkMode
-      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-  }`;
-
-  const labelClass = `block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`;
+  const inputClass = 'w-full px-4 py-2.5 text-[14px] rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-[#001AFF]/20 transition-all';
+  const labelClass = 'block text-[13px] font-semibold mb-1.5 text-gray-600';
+  const displayName = user.user_metadata?.name || user.email?.split('@')[0] || '사용자';
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className="min-h-screen bg-white text-gray-900" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
       {/* 헤더 */}
-      <header className={`h-14 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} px-4 flex items-center justify-between`}>
+      <header className="flex items-center justify-between px-8 bg-white shrink-0 relative z-10" style={{ height: 72, boxShadow: '0 0 8.4px rgba(0,0,0,0.25)' }}>
+        <Link href="/" className="text-[26px] text-black no-underline shrink-0" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
+          SIMVEX
+        </Link>
+
         <div className="flex items-center gap-4">
-          <Link
-            href="/models"
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          <Link href="/models" className="p-2 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all" title="홈">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
             </svg>
           </Link>
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.svg"
-              alt="SIMVEX"
-              width={90}
-              height={19}
-              className={`object-contain ${isDarkMode ? 'invert' : ''}`}
-            />
-            <h1 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              모델 업로드
-            </h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <AuthButton />
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
-          >
-            {isDarkMode ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </button>
+          {user && (
+            <Link href="/mypage" className="flex items-center gap-2.5 shrink-0 rounded-full px-2 py-1.5 -mx-2 transition-all duration-200 hover:bg-gray-100 active:scale-[0.97] cursor-pointer">
+              {user.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url as string} alt="프로필" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-[14px] font-medium text-gray-700">{displayName}</span>
+            </Link>
+          )}
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-10">
-        {/* 내 모델 섹션 */}
-        <section>
-          <h2 className={`text-lg font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            내 모델
-          </h2>
+      <div className="max-w-6xl mx-auto px-8 py-10 space-y-12">
+
+        {/* ── 페이지 타이틀 ── */}
+        <div style={{ animation: 'fadeInUp 0.5s ease both' }}>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">모델 업로드</h1>
+              <p className="text-[13px] text-gray-400 mt-0.5">3D 모델을 업로드하고 분해 설정을 구성하세요</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 내 모델 섹션 ── */}
+        <section style={{ animation: 'fadeInUp 0.5s ease 0.1s both' }}>
+          <div className="flex items-center gap-2.5 mb-5">
+            <h2 className="text-[20px] font-bold text-gray-900 tracking-tight">내 모델</h2>
+            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-[12px] font-semibold text-gray-500">{models.length}</span>
+          </div>
           <MyModelGrid
             models={models}
             loading={modelsLoading}
-            isDarkMode={isDarkMode}
+            isDarkMode={false}
             onEdit={handleEdit}
             onDelete={deleteModel}
             onTogglePublic={togglePublic}
           />
         </section>
 
-        {/* 업로드 섹션 */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {editingModel ? '모델 수정' : '새 모델 업로드'}
-            </h2>
+        {/* ── 업로드 섹션 ── */}
+        <section style={{ animation: 'fadeInUp 0.5s ease 0.2s both' }}>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-[20px] font-bold text-gray-900 tracking-tight">
+                {editingModel ? '모델 수정' : '새 모델 업로드'}
+              </h2>
+              {editingModel && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[12px] font-semibold">수정 중</span>
+              )}
+            </div>
             {(step !== 'idle' || editingModel) && (
               <button
                 onClick={resetForm}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  isDarkMode
-                    ? 'text-gray-400 hover:text-white hover:bg-gray-800'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
-                }`}
+                className="px-4 py-2 text-[13px] font-medium rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-all"
               >
                 취소
               </button>
@@ -318,7 +314,10 @@ export default function UploadPage() {
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="mb-5 px-5 py-3.5 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-[14px] flex items-center gap-3">
+              <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
               {error}
             </div>
           )}
@@ -327,7 +326,7 @@ export default function UploadPage() {
           {!editingModel && (
             <FileDropzone
               onFileSelected={handleFileSelected}
-              isDarkMode={isDarkMode}
+              isDarkMode={false}
               disabled={step === 'processing' || step === 'uploading'}
               currentFileName={fileName}
             />
@@ -335,34 +334,35 @@ export default function UploadPage() {
 
           {/* 처리 중 */}
           {step === 'processing' && (
-            <div className="mt-6 text-center">
-              <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>파일 분석 중...</p>
+            <div className="mt-8 text-center py-12">
+              <div className="w-12 h-12 border-[3px] border-[#001AFF] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-[15px] text-gray-500 font-medium">파일을 분석하고 있어요...</p>
+              <p className="text-[13px] text-gray-400 mt-1">부품 자동 감지 및 분해 설정을 생성합니다</p>
             </div>
           )}
 
-          {/* 설정 단계: 좌(렌더링+폼 고정) / 우(부품설정 스크롤) */}
+          {/* 설정 단계 */}
           {(step === 'configure' || step === 'uploading') && glbUrl && (
-            <div className="mt-6 flex gap-6" style={{ height: 'calc(100vh - 12rem)' }}>
-              {/* 좌: 렌더링(상) + 입력폼(하) — 고정 */}
-              <div className="w-1/2 flex-shrink-0 flex flex-col gap-4 overflow-hidden">
+            <div className="mt-6 flex gap-8" style={{ height: 'calc(100vh - 14rem)' }}>
+              {/* 좌: 렌더링 + 입력폼 */}
+              <div className="w-1/2 flex-shrink-0 flex flex-col gap-5 overflow-hidden">
                 {/* 3D 미리보기 */}
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 rounded-2xl overflow-hidden border border-gray-200" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                   <ModelPreview
                     glbUrl={glbUrl}
                     parts={parts}
                     scale={scale}
                     cameraPosition={cameraPosition}
                     cameraTarget={cameraTarget}
-                    isDarkMode={isDarkMode}
+                    isDarkMode={false}
                     selectedPartId={selectedPartId}
                     onSelectPart={setSelectedPartId}
                   />
                 </div>
 
                 {/* 모델 정보 입력 */}
-                <div className="flex-shrink-0 space-y-3 overflow-y-auto">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="flex-shrink-0 space-y-4 overflow-y-auto rounded-2xl border border-gray-200 bg-[#FAFBFC] p-5" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>모델 이름 *</label>
                       <input
@@ -406,11 +406,11 @@ export default function UploadPage() {
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="모델에 대한 간단한 설명"
                       rows={2}
-                      className={inputClass}
+                      className={`${inputClass} resize-none`}
                     />
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className={labelClass}>스케일</label>
                       <input
@@ -454,7 +454,7 @@ export default function UploadPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 pt-1">
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -462,19 +462,17 @@ export default function UploadPage() {
                         onChange={(e) => setIsPublic(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-600 peer-checked:bg-green-500 rounded-full peer-focus:ring-2 peer-focus:ring-green-500/30 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                      <div className="w-10 h-[22px] bg-gray-300 peer-checked:bg-[#001AFF] rounded-full transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all after:shadow-sm peer-checked:after:translate-x-[18px]" />
                     </label>
-                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      커뮤니티에 공개
-                    </span>
+                    <span className="text-[13px] text-gray-600 font-medium">커뮤니티에 공개</span>
 
                     <button
                       onClick={handleSubmit}
                       disabled={step === 'uploading' || !name.trim()}
-                      className={`ml-auto px-6 py-2 rounded-lg font-medium text-sm transition-colors ${
+                      className={`ml-auto px-7 py-2.5 rounded-full font-semibold text-[14px] transition-all ${
                         step === 'uploading' || !name.trim()
-                          ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-500 text-white'
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-[#001AFF] hover:bg-[#0014CC] text-white shadow-sm hover:shadow-md'
                       }`}
                     >
                       {step === 'uploading' ? (
@@ -488,12 +486,12 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {/* 우: 부품 설정 — 독립 스크롤 */}
-              <div className="w-1/2 overflow-y-auto pr-1">
+              {/* 우: 부품 설정 */}
+              <div className="w-1/2 overflow-y-auto pr-1 rounded-2xl border border-gray-200 bg-[#FAFBFC] p-5" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <PartConfigEditor
                   parts={parts}
                   onChange={setParts}
-                  isDarkMode={isDarkMode}
+                  isDarkMode={false}
                   selectedPartId={selectedPartId}
                   onSelectPart={setSelectedPartId}
                 />

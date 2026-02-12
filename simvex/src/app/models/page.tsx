@@ -55,7 +55,7 @@ const NAV_ITEMS = [
   { label: '홈', href: '/models', requireAuth: false },
   { label: '나의 워크플레이스', href: '#workspace', requireAuth: true },
   { label: 'World', href: '/community', requireAuth: false },
-  { label: '설정', href: '#', requireAuth: false },
+  { label: '마이페이지', href: '/mypage', requireAuth: true },
   { label: 'FAQ', href: '#faq', requireAuth: false },
   { label: '공지사항', href: '#notice', requireAuth: false },
 ];
@@ -88,104 +88,60 @@ const FAQ_DATA = [
   },
 ];
 
-/* ── FAQ 모달 ── */
-function FaqModal({ onClose }: { onClose: () => void }) {
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
+/* ── FAQ 카드 컴포넌트 ── */
+function FaqCard({ item, idx }: { item: typeof FAQ_DATA[number]; idx: number }) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ animation: 'fadeIn 0.25s ease both' }}
+      className="rounded-2xl overflow-hidden transition-all duration-300"
+      style={{
+        animation: `fadeInUp 0.35s ease ${idx * 0.06}s both`,
+        background: isOpen ? '#fff' : '#FAFBFC',
+        border: isOpen ? '1px solid #D4D9E4' : '1px solid #F0F0F0',
+        boxShadow: isOpen ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
+      }}
     >
-      {/* 배경 */}
-      <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
+      <button
+        className="w-full flex items-start gap-4 px-6 py-5 text-left"
+        style={{ cursor: 'pointer', background: 'none', border: 'none' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className={`shrink-0 w-7 h-7 mt-0.5 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
+          isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-500'
+        }`}>
+          <span>{idx + 1}</span>
+        </div>
 
-      {/* 모달 */}
+        <div className="flex-1 min-w-0">
+          <p className={`text-[15px] font-semibold leading-snug transition-colors duration-300 ${
+            isOpen ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {item.q}
+          </p>
+        </div>
+
+        <div className="shrink-0 mt-2 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </button>
+
       <div
-        className="relative w-full max-w-[580px] mx-4 max-h-[82vh] flex flex-col rounded-[20px] overflow-hidden bg-white"
+        className="overflow-hidden"
         style={{
-          animation: 'scaleIn 0.3s ease both',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)',
+          maxHeight: isOpen ? 300 : 0,
+          opacity: isOpen ? 1 : 0,
+          transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
         }}
       >
-        {/* 상단 헤더 */}
-        <div className="relative shrink-0 px-7 pt-7 pb-5">
-          <button
-            onClick={onClose}
-            className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all duration-200"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-sm">
-              <svg className="w-[22px] h-[22px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-[20px] font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>자주 묻는 질문</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>SIMVEX 이용 가이드</p>
-            </div>
+        <div className="px-6 pb-5 pl-[60px]">
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-[14px] text-gray-500 leading-[24px] mt-2">
+              {item.a}
+            </p>
           </div>
-
-          {/* 구분선 */}
-          <div className="mt-5 border-b border-gray-100" />
-        </div>
-
-        {/* FAQ 목록 */}
-        <div className="flex-1 overflow-y-auto px-7 pb-6" style={{ scrollbarWidth: 'thin' }}>
-          <div className="flex flex-col gap-2.5">
-            {FAQ_DATA.map((item, idx) => {
-              const isOpen = openIdx === idx;
-              return (
-                <div
-                  key={idx}
-                  className={`faq-item${isOpen ? ' faq-open' : ''}`}
-                  style={{ animation: `fadeInUp 0.3s ease ${idx * 0.05}s both` }}
-                >
-                  <button
-                    className="faq-question"
-                    onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`text-[13px] font-bold shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isOpen
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        {idx + 1}
-                      </span>
-                      <span className={`text-[14.5px] font-semibold transition-colors duration-300 ${
-                        isOpen ? 'text-gray-900' : 'text-gray-700'
-                      }`} style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                        {item.q}
-                      </span>
-                    </div>
-                    <div className="faq-chevron">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </button>
-                  <div className={`faq-answer${isOpen ? ' faq-answer-open' : ''}`}>
-                    <div className="px-6 pb-5 pl-[60px]" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                      <p className="text-[13.5px] text-gray-500 leading-[22px]">{item.a}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 하단 */}
-        <div className="shrink-0 px-7 py-4 border-t border-gray-50 bg-[#FAFBFC]">
-          <p className="text-[12px] text-gray-400 text-center" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-            더 궁금한 점이 있다면 뷰어의 <span className="text-gray-600 font-medium">AI 어시스턴트</span>를 이용해보세요
-          </p>
         </div>
       </div>
     </div>
@@ -239,145 +195,78 @@ const NOTICE_DATA: { tag: string; tagColor: string; title: string; date: string;
   },
 ];
 
-/* ── 공지사항 모달 ── */
-function NoticeModal({ onClose }: { onClose: () => void }) {
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
+/* ── 공지사항 카드 컴포넌트 ── */
+function NoticeCard({ item, idx }: { item: typeof NOTICE_DATA[number]; idx: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const tagColorMap: Record<string, string> = {
+    '점검': '#991B1B', '안내': '#92400E', '업데이트': '#065F46', '서비스': '#3730A3',
+  };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ animation: 'fadeIn 0.25s ease both' }}
+      className="rounded-2xl overflow-hidden transition-all duration-300"
+      style={{
+        animation: `fadeInUp 0.35s ease ${idx * 0.06}s both`,
+        background: isOpen ? '#fff' : '#FAFBFC',
+        border: isOpen ? '1px solid #D4D9E4' : '1px solid #F0F0F0',
+        boxShadow: isOpen ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
+      }}
     >
-      <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
+      <button
+        className="w-full flex items-start gap-4 px-6 py-5 text-left"
+        style={{ cursor: 'pointer', background: 'none', border: 'none' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {/* 핀 또는 번호 */}
+        <div className={`shrink-0 w-7 h-7 mt-0.5 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
+          isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-500'
+        }`}>
+          <span>{idx + 1}</span>
+        </div>
 
+        <div className="flex-1 min-w-0">
+          {/* 태그 + 날짜 */}
+          <div className="flex items-center gap-2.5 mb-2">
+            <span
+              className="px-2.5 py-0.5 rounded-md text-[11.5px] font-semibold"
+              style={{ background: item.tagColor, color: tagColorMap[item.tag] || '#3730A3' }}
+            >
+              {item.tag}
+            </span>
+            <span className="text-[12px] text-gray-400">{item.date}</span>
+          </div>
+
+          {/* 제목 */}
+          <p className={`text-[15px] font-semibold leading-snug transition-colors duration-300 ${
+            isOpen ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {item.title}
+          </p>
+        </div>
+
+        {/* 셰브론 */}
+        <div className="shrink-0 mt-2 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </button>
+
+      {/* 본문 */}
       <div
-        className="relative w-full max-w-[620px] mx-4 max-h-[85vh] flex flex-col rounded-[20px] overflow-hidden bg-white"
+        className="overflow-hidden"
         style={{
-          animation: 'scaleIn 0.3s ease both',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)',
+          maxHeight: isOpen ? 300 : 0,
+          opacity: isOpen ? 1 : 0,
+          transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
         }}
       >
-        {/* 헤더 */}
-        <div className="relative shrink-0 px-7 pt-7 pb-5">
-          <button
-            onClick={onClose}
-            className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all duration-200"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-sm">
-              <svg className="w-[22px] h-[22px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-[20px] font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>공지사항</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>SIMVEX 소식과 업데이트</p>
-            </div>
+        <div className="px-6 pb-5 pl-[60px]">
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-[14px] text-gray-500 leading-[24px] mt-2">
+              {item.body}
+            </p>
           </div>
-
-          <div className="mt-5 border-b border-gray-100" />
-        </div>
-
-        {/* 공지 목록 */}
-        <div className="flex-1 overflow-y-auto px-7 pb-6" style={{ scrollbarWidth: 'thin' }}>
-          <div className="flex flex-col gap-2">
-            {NOTICE_DATA.map((item, idx) => {
-              const isOpen = openIdx === idx;
-              return (
-                <div
-                  key={idx}
-                  className="rounded-2xl overflow-hidden transition-all duration-300"
-                  style={{
-                    animation: `fadeInUp 0.3s ease ${idx * 0.05}s both`,
-                    background: isOpen ? '#fff' : '#FAFBFC',
-                    border: isOpen ? '1px solid #D4D9E4' : '1px solid #F0F0F0',
-                    boxShadow: isOpen ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
-                  }}
-                >
-                  <button
-                    className="w-full flex items-start gap-3 px-5 py-4 text-left"
-                    style={{ cursor: 'pointer', background: 'none', border: 'none' }}
-                    onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  >
-                    {/* 핀 또는 번호 */}
-                    <div className={`shrink-0 w-6 h-6 mt-0.5 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-300 ${
-                      item.pinned
-                        ? 'bg-gray-800 text-white'
-                        : isOpen ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {item.pinned ? (
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M5 5a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H7a2 2 0 01-2-2V5zm0 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H6z" />
-                        </svg>
-                      ) : (
-                        <span>{idx + 1}</span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      {/* 태그 + 날짜 */}
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span
-                          className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
-                          style={{
-                            background: item.tagColor,
-                            color: item.tag === '점검' ? '#991B1B' : item.tag === '안내' ? '#92400E' : item.tag === '업데이트' ? '#065F46' : '#3730A3',
-                          }}
-                        >
-                          {item.tag}
-                        </span>
-                        <span className="text-[11.5px] text-gray-400">{item.date}</span>
-                      </div>
-
-                      {/* 제목 */}
-                      <p className={`text-[14px] font-semibold leading-snug transition-colors duration-300 ${
-                        isOpen ? 'text-gray-900' : 'text-gray-700'
-                      }`} style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                        {item.title}
-                      </p>
-                    </div>
-
-                    {/* 셰브론 */}
-                    <div className="shrink-0 mt-1 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M4 6L8 10L12 6" stroke={isOpen ? '#374151' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </button>
-
-                  {/* 본문 */}
-                  <div
-                    className="overflow-hidden transition-all duration-400"
-                    style={{
-                      maxHeight: isOpen ? 200 : 0,
-                      opacity: isOpen ? 1 : 0,
-                      transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
-                    }}
-                  >
-                    <div className="px-5 pb-5 pl-[52px]">
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-[13px] text-gray-500 leading-[22px] mt-3" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-                          {item.body}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 하단 */}
-        <div className="shrink-0 px-7 py-4 border-t border-gray-50 bg-[#FAFBFC]">
-          <p className="text-[12px] text-gray-400 text-center" style={{ fontFamily: "'Pretendard Variable', sans-serif" }}>
-            SIMVEX 팀은 더 나은 학습 경험을 위해 노력합니다
-          </p>
         </div>
       </div>
     </div>
@@ -504,12 +393,39 @@ function VisibilityDropdown({
 }
 
 /* ── 모델 카드 ── */
-function ModelCard({ model, delay }: {
+function ModelCard({ model, delay, onRename }: {
   model: { id: string; href: string; name: string; nameKo: string; description: string; category: string; partsCount: number; thumbnails?: string[]; hasSim: boolean };
   delay: number;
+  onRename?: (modelId: string, newName: string) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditValue(model.name);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    setIsEditing(false);
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== model.name && onRename) {
+      onRename(model.id, trimmed);
+    }
+  };
+
   return (
-    <Link href={model.href} className="group models-card" style={{ animationDelay: `${delay}ms` }}>
+    <Link href={model.href} className="group models-card" style={{ animationDelay: `${delay}ms` }} onClick={(e) => { if (isEditing) e.preventDefault(); }}>
       <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
         <div className="relative h-[200px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
           {model.thumbnails && model.thumbnails.length > 0 ? (
@@ -529,15 +445,40 @@ function ModelCard({ model, delay }: {
         </div>
         <div className="p-4">
           <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors">
-                {model.name}
-              </h3>
-              <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {isEditing ? (
+                <input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                    if (e.key === 'Escape') setIsEditing(false);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[16px] font-bold w-full px-1.5 py-0.5 rounded-md border border-blue-400 bg-white text-gray-900 outline-none focus:ring-1 focus:ring-blue-200"
+                />
+              ) : (
+                <>
+                  <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors truncate">
+                    {model.name}
+                  </h3>
+                  {onRename && (
+                    <button
+                      onClick={handleStartEdit}
+                      className="p-0.5 rounded text-gray-300 hover:text-[#001AFF] transition-colors shrink-0"
+                      title="이름 편집"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-            <svg className="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-300 shrink-0" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="6" r="1.5" />
               <circle cx="12" cy="12" r="1.5" />
               <circle cx="12" cy="18" r="1.5" />
@@ -552,6 +493,88 @@ function ModelCard({ model, delay }: {
   );
 }
 
+/* ── 최근 열어본 파일 캐러셀 ── */
+function RecentModelsCarousel({ models, onRename }: {
+  models: { id: string; href: string; name: string; nameKo: string; description: string; category: string; partsCount: number; thumbnails?: string[]; hasSim: boolean }[];
+  onRename?: (modelId: string, newName: string) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+  const CARD_W = 320;
+  const GAP = 24;
+
+  // 자동 스크롤 (JS interval 기반)
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const interval = setInterval(() => {
+      if (pausedRef.current) return;
+      el.scrollLeft += 1;
+      // 끝에 도달하면 처음으로
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+        el.scrollLeft = 0;
+      }
+    }, 30);
+    return () => clearInterval(interval);
+  }, []);
+
+  const scrollManual = (dir: 'left' | 'right') => {
+    const el = trackRef.current;
+    if (!el) return;
+    const shift = dir === 'left' ? -(CARD_W + GAP) : (CARD_W + GAP);
+    el.scrollBy({ left: shift, behavior: 'smooth' });
+    pausedRef.current = true;
+    setTimeout(() => { pausedRef.current = false; }, 3000);
+  };
+
+  return (
+    <section className="pb-14 pt-4">
+      <div className="flex items-center justify-between mb-6 px-10">
+        <h2 className="text-[20px] font-bold text-gray-900">최근 열어본 파일</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => scrollManual('left')}
+            className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400 flex items-center justify-center transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => scrollManual('right')}
+            className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400 flex items-center justify-center transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden">
+        {/* 양쪽 그라데이션 */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+        <div
+          ref={trackRef}
+          className="flex gap-6 px-10 hide-scrollbar"
+          style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onMouseEnter={() => { pausedRef.current = true; }}
+          onMouseLeave={() => { pausedRef.current = false; }}
+        >
+          {/* 원본 + 복제본 (무한 루프) */}
+          {[...models, ...models].map((model, i) => (
+            <div key={`${model.id}-${i}`} className="shrink-0" style={{ width: CARD_W }}>
+              <ModelCard model={model} delay={0} onRename={onRename} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function ModelsPage() {
   const { user } = useUser();
   const { models: myUploadedModels, fetchPublicModels, changeVisibility } = useUserModels(user);
@@ -559,13 +582,14 @@ export default function ModelsPage() {
   const [communityModels, setCommunityModels] = useState<UserModelRow[]>([]);
 
   // 워크플레이스 뷰 상태
-  const [activeView, setActiveView] = useState<'home' | 'workspace'>('home');
-  const [workspaceTab, setWorkspaceTab] = useState<'my' | 'shared' | 'bookmark'>('my');
+  const [activeView, setActiveView] = useState<'home' | 'workspace' | 'notice' | 'faq'>('home');
+  const [workspaceTab, setWorkspaceTab] = useState<'my' | 'shared' | 'bookmark' | 'workflow'>('my');
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   // 북마크 탭용 스크랩 user 모델 데이터
   const [scrapUserModels, setScrapUserModels] = useState<UserModelRow[]>([]);
 
+  const { getModelState, setModelState } = useViewerStore();
   useEffect(() => { useViewerStore.persist.rehydrate(); }, []);
   useEffect(() => { fetchPublicModels(3).then(setCommunityModels); }, [fetchPublicModels]);
 
@@ -594,19 +618,20 @@ export default function ModelsPage() {
 
   const viewerModels = [
     ...combinedModels.map((m) => ({
-      id: m.id, href: `/viewer/${m.id}`, nameKo: m.nameKo, name: m.name,
+      id: m.id, href: `/viewer/${m.id}`, nameKo: m.nameKo,
+      name: getModelState(m.id)?.rootName || m.name,
       description: m.description, category: m.category, partsCount: m.parts.length,
       thumbnails: m.thumbnails, hasSim: hasSimulation(m.id),
     })),
     {
       id: suspensionModel.id, href: `/viewer/${suspensionModel.id}`,
-      nameKo: suspensionModel.nameKo, name: suspensionModel.name,
+      nameKo: suspensionModel.nameKo, name: getModelState(suspensionModel.id)?.rootName || suspensionModel.name,
       description: suspensionModel.description, category: suspensionModel.category,
       partsCount: suspensionModel.parts.length, thumbnails: suspensionModel.thumbnails, hasSim: false,
     },
     {
       id: 'jet-engine', href: '/viewer/jet-engine?tab=sim',
-      nameKo: '터보팬 엔진', name: 'Turbofan Engine Simulator',
+      nameKo: '터보팬 엔진', name: getModelState('jet-engine')?.rootName || 'Turbofan Engine Simulator',
       description: '제트 엔진의 인터랙티브 시각화와 기류 파티클, 실시간 성능 지표를 확인할 수 있습니다',
       category: '항공', partsCount: 0, thumbnails: undefined as string[] | undefined, hasSim: true,
     },
@@ -616,18 +641,15 @@ export default function ModelsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'latest' | 'name' | 'oldest'>('latest');
 
-  const recentModels = viewerModels.slice(0, 3);
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자';
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const [showLogin, setShowLogin] = useState(false);
-  const [showFaq, setShowFaq] = useState(false);
-  const [showNotice, setShowNotice] = useState(false);
   const router = useRouter();
   const [loggingOut, startLogout] = useTransition();
 
   // 스크롤 ref
   const scrollMyRef = useRef<HTMLDivElement>(null);
   const scrollSharedRef = useRef<HTMLDivElement>(null);
-  const scrollBookmarkRef = useRef<HTMLDivElement>(null);
 
   const scrollRight = (ref: React.RefObject<HTMLDivElement | null>) => {
     ref.current?.scrollBy({ left: 320, behavior: 'smooth' });
@@ -661,9 +683,13 @@ export default function ModelsPage() {
           {/* 사용자 프로필 / 로그인 */}
           {user ? (
             <Link href="/mypage" className="flex items-center gap-2.5 shrink-0 rounded-full px-2 py-1.5 -mx-2 transition-all duration-200 hover:bg-gray-100 active:scale-[0.97] cursor-pointer">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="프로필" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[14px] font-bold shadow-inner">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="text-[14px] font-medium text-gray-700">{displayName}</span>
             </Link>
           ) : (
@@ -720,14 +746,24 @@ export default function ModelsPage() {
                       {/* 서브메뉴 */}
                       <div
                         className="overflow-hidden transition-all duration-300"
-                        style={{ maxHeight: workspaceOpen ? 160 : 0, opacity: workspaceOpen ? 1 : 0 }}
+                        style={{ maxHeight: workspaceOpen ? 200 : 0, opacity: workspaceOpen ? 1 : 0 }}
                       >
                         <div className="flex flex-col gap-0.5 pl-4 pt-1">
                           {([
                             { key: 'my' as const, label: '나의 모델' },
                             { key: 'shared' as const, label: '공유받은 모델' },
-                            { key: 'bookmark' as const, label: '북마크' },
+                            { key: 'bookmark' as const, label: '스크랩한 모델' },
+                            { key: 'workflow' as const, label: '워크플로우' },
                           ]).map((sub) => (
+                            sub.key === 'workflow' ? (
+                              <Link
+                                key={sub.key}
+                                href="/workflow"
+                                className={`w-full text-left px-4 py-2.5 rounded-lg text-[14px] font-medium transition-all duration-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900`}
+                              >
+                                {sub.label}
+                              </Link>
+                            ) : (
                             <button
                               key={sub.key}
                               onClick={() => { setWorkspaceTab(sub.key); setActiveView('workspace'); }}
@@ -739,6 +775,7 @@ export default function ModelsPage() {
                             >
                               {sub.label}
                             </button>
+                            )
                           ))}
                         </div>
                       </div>
@@ -763,9 +800,12 @@ export default function ModelsPage() {
 
                 // FAQ
                 if (item.href === '#faq') {
+                  const isActive = activeView === 'faq';
                   return (
-                    <button key={item.label} onClick={() => setShowFaq(true)}
-                      className="models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] text-gray-800 font-medium transition-all duration-200 hover:bg-[#001AFF] hover:text-white text-left">
+                    <button key={item.label} onClick={() => setActiveView(isActive ? 'home' : 'faq')}
+                      className={`models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 text-left ${
+                        isActive ? 'bg-[#001AFF] text-white' : 'text-gray-800 hover:bg-[#001AFF] hover:text-white'
+                      }`}>
                       <span>{item.label}</span>
                     </button>
                   );
@@ -773,9 +813,12 @@ export default function ModelsPage() {
 
                 // 공지사항
                 if (item.href === '#notice') {
+                  const isActive = activeView === 'notice';
                   return (
-                    <button key={item.label} onClick={() => setShowNotice(true)}
-                      className="models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] text-gray-800 font-medium transition-all duration-200 hover:bg-[#001AFF] hover:text-white text-left">
+                    <button key={item.label} onClick={() => setActiveView(isActive ? 'home' : 'notice')}
+                      className={`models-nav-item w-full flex items-center px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 text-left ${
+                        isActive ? 'bg-[#001AFF] text-white' : 'text-gray-800 hover:bg-[#001AFF] hover:text-white'
+                      }`}>
                       <span>{item.label}</span>
                     </button>
                   );
@@ -811,13 +854,77 @@ export default function ModelsPage() {
         {/* ══════ 메인 콘텐츠 ══════ */}
         <main className="flex-1 overflow-y-auto flex flex-col">
 
-          {activeView === 'workspace' ? (
+          {activeView === 'faq' ? (
+            /* ══════ FAQ 뷰 ══════ */
+            <div className="px-10 pt-10 pb-14 flex-1" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
+              {/* 헤더 */}
+              <div className="mb-10" style={{ animation: 'fadeInUp 0.5s ease both' }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">자주 묻는 질문</h1>
+                    <p className="text-[13px] text-gray-400 mt-0.5">SIMVEX 이용 가이드</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* FAQ 목록 */}
+              <div className="flex flex-col gap-3">
+                {FAQ_DATA.map((item, idx) => (
+                  <FaqCard key={idx} item={item} idx={idx} />
+                ))}
+              </div>
+
+              {/* 하단 */}
+              <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+                <p className="text-[12px] text-gray-400">
+                  더 궁금한 점이 있다면 뷰어의 <span className="text-gray-600 font-medium">AI 어시스턴트</span>를 이용해보세요
+                </p>
+              </div>
+            </div>
+
+          ) : activeView === 'notice' ? (
+            /* ══════ 공지사항 뷰 ══════ */
+            <div className="px-10 pt-10 pb-14 flex-1" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
+              {/* 헤더 */}
+              <div className="mb-10" style={{ animation: 'fadeInUp 0.5s ease both' }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">공지사항</h1>
+                    <p className="text-[13px] text-gray-400 mt-0.5">SIMVEX 소식과 업데이트</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 공지 목록 */}
+              <div className="flex flex-col gap-3">
+                {NOTICE_DATA.map((item, idx) => (
+                  <NoticeCard key={idx} item={item} idx={idx} />
+                ))}
+              </div>
+
+              {/* 하단 */}
+              <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+                <p className="text-[12px] text-gray-400">SIMVEX 팀은 더 나은 학습 경험을 위해 노력합니다</p>
+              </div>
+            </div>
+
+          ) : activeView === 'workspace' ? (
             /* ══════ 워크플레이스 뷰 ══════ */
             <div className="px-10 pt-10 pb-14 flex-1" style={{ fontFamily: "'Pretendard Variable', Pretendard, sans-serif" }}>
               {/* 헤더 + 최신순 필터 */}
-              <div className="flex items-start justify-between mb-6">
-                <h1 className="text-[40px] font-extrabold text-gray-900 tracking-tight">
-                  {displayName}님의 워크플레이스 <span className="inline-block" style={{ fontSize: 36 }}>&#x1F3E0;</span>
+              <div className="flex items-start justify-between mb-10">
+                <h1 className="text-[36px] font-medium text-gray-800 tracking-normal leading-snug" style={{ fontFamily: "'Noto Sans KR', sans-serif" }}>
+                  {displayName}님의 워크플레이스 <span className="inline-block" style={{ fontSize: 32 }}>&#x1F3E0;</span>
                 </h1>
 
                 <div className="flex items-center gap-3 shrink-0 mt-2">
@@ -1093,162 +1200,120 @@ export default function ModelsPage() {
                 </section>
               )}
 
-              {/* ── 북마크 섹션 ── */}
+              {/* ── 스크랩한 모델 섹션 ── */}
               {workspaceTab === 'bookmark' && (
                 <section>
-                  <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-[22px] font-bold text-gray-900">북마크</h2>
-                    <button className="text-[14px] font-medium text-gray-400 hover:text-gray-600 transition-colors">전체보기</button>
-                  </div>
+                  <h2 className="text-[22px] font-bold text-gray-900 mb-6">스크랩한 모델</h2>
 
                   {!scrapsLoaded ? (
                     <div className="flex justify-center py-20">
-                      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-8 h-8 border-4 border-[#001AFF] border-t-transparent rounded-full animate-spin" />
                     </div>
                   ) : builtinScrapModels.length === 0 && scrapUserModels.length === 0 ? (
                     <div className="text-center py-20">
-                      <svg className="w-16 h-16 mx-auto mb-4 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                      <p className="text-[16px] text-gray-400 mb-4">아직 북마크한 모델이 없습니다</p>
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-50 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-[15px] font-medium text-gray-500 mb-1">아직 스크랩한 모델이 없습니다</p>
+                      <p className="text-[13px] text-gray-400 mb-4">마음에 드는 모델을 스크랩해보세요</p>
                       <button
                         onClick={() => { setActiveView('home'); setWorkspaceOpen(false); }}
-                        className="inline-block px-6 py-2.5 rounded-full bg-[#001AFF] text-white text-[14px] font-semibold hover:bg-[#0015CC] transition-colors">
+                        className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#001AFF] text-white text-[13px] font-semibold rounded-xl hover:bg-[#0015CC] transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                         모델 둘러보기
                       </button>
                     </div>
                   ) : (
-                    <div className="relative group/scroll">
-                      <button
-                        onClick={() => scrollLeft(scrollBookmarkRef)}
-                        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-all opacity-0 group-hover/scroll:opacity-100 shadow-lg"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
+                    <div className="grid grid-cols-3 gap-5">
+                      {/* builtin 스크랩 모델 */}
+                      {builtinScrapModels.map(({ model }, i) => (
+                        <Link key={model.id} href={`/viewer/${model.id}`} className="group models-card" style={{ animationDelay: `${i * 60}ms` }}>
+                          <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
+                            <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
+                              {model.thumbnails && model.thumbnails.length > 0 ? (
+                                <ThumbnailSlideshow images={model.thumbnails} />
+                              ) : model.thumbnail ? (
+                                <Image src={model.thumbnail} alt={model.nameKo} fill className="object-cover" sizes="360px" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <svg className="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                                  </svg>
+                                </div>
+                              )}
+                              <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleScrap({ model_type: 'builtin', model_id: model.id }); }}
+                                className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-black/50 transition-all"
+                                title="스크랩 해제"
+                              >
+                                <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors mb-1">
+                                {model.nameKo}
+                              </h3>
+                              <p className="text-[13px] font-semibold text-[#001AFF] mb-1.5">
+                                공학 &gt; {model.category} · {model.parts.length}개 부품
+                              </p>
+                              <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">
+                                {model.description}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
 
-                      <div ref={scrollBookmarkRef} className="flex gap-5 overflow-x-auto pb-4 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        {/* builtin 스크랩 */}
-                        {builtinScrapModels.map(({ model }, i) => {
-                          const thumb = model.thumbnails?.[0] || model.thumbnail;
-                          return (
-                            <Link key={model.id} href={`/viewer/${model.id}`}
-                              className="group shrink-0 w-[280px] models-card" style={{ animationDelay: `${i * 60}ms` }}>
-                              <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200 h-full">
-                                <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
-                                  {thumb ? (
-                                    <Image src={thumb} alt={model.nameKo} fill className="object-cover" sizes="280px" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <svg className="w-14 h-14 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleScrap({ model_type: 'builtin', model_id: model.id }); }}
-                                    className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/30 text-red-400 hover:text-red-300 transition-colors"
-                                    title="북마크 해제"
-                                  >
-                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                    </svg>
-                                  </button>
-                                  <div className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      {/* user 스크랩 모델 */}
+                      {scrapUserModels.map((model, i) => {
+                        const thumbnailUrl = model.thumbnail_storage_path
+                          ? getPublicUrl(model.thumbnail_storage_path)
+                          : null;
+                        const partsCount = (model.parts_config as unknown[]).length;
+                        return (
+                          <Link key={model.id} href={`/viewer/u-${model.id}`} className="group models-card" style={{ animationDelay: `${(builtinScrapModels.length + i) * 60}ms` }}>
+                            <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200">
+                              <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
+                                {thumbnailUrl ? (
+                                  <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <svg className="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
                                     </svg>
                                   </div>
-                                </div>
-                                <div className="p-4">
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors truncate">
-                                        {model.name}
-                                      </h3>
-                                      <svg className="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                      </svg>
-                                    </div>
-                                    <svg className="w-5 h-5 text-gray-300 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                                      <circle cx="12" cy="6" r="1.5" />
-                                      <circle cx="12" cy="12" r="1.5" />
-                                      <circle cx="12" cy="18" r="1.5" />
-                                    </svg>
-                                  </div>
-                                  <p className="text-[13px] font-semibold text-[#001AFF] mb-2">공학 &gt; {model.category}</p>
-                                  <p className="text-[12px] text-gray-500 mb-0.5 truncate">{model.nameKo}</p>
-                                  <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">{model.description}</p>
-                                </div>
+                                )}
+                                <button
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleScrap({ model_type: 'user', model_id: model.id, user_model_id: model.id }); }}
+                                  className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-black/50 transition-all"
+                                  title="스크랩 해제"
+                                >
+                                  <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                  </svg>
+                                </button>
                               </div>
-                            </Link>
-                          );
-                        })}
-
-                        {/* user 스크랩 */}
-                        {scrapUserModels.map((model, i) => {
-                          const thumbnailUrl = model.thumbnail_storage_path
-                            ? getPublicUrl(model.thumbnail_storage_path)
-                            : null;
-                          return (
-                            <Link key={model.id} href={`/viewer/u-${model.id}`}
-                              className="group shrink-0 w-[280px] models-card" style={{ animationDelay: `${(builtinScrapModels.length + i) * 60}ms` }}>
-                              <div className="models-card-inner rounded-2xl overflow-hidden bg-white border border-gray-200 h-full">
-                                <div className="relative h-[180px] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] overflow-hidden">
-                                  {thumbnailUrl ? (
-                                    <img src={thumbnailUrl} alt={model.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <svg className="w-14 h-14 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleScrap({ model_type: 'user', model_id: model.id, user_model_id: model.id }); }}
-                                    className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/30 text-red-400 hover:text-red-300 transition-colors"
-                                    title="북마크 해제"
-                                  >
-                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                    </svg>
-                                  </button>
-                                </div>
-                                <div className="p-4">
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors truncate">
-                                        {model.name}
-                                      </h3>
-                                      <svg className="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                      </svg>
-                                    </div>
-                                    <svg className="w-5 h-5 text-gray-300 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                                      <circle cx="12" cy="6" r="1.5" />
-                                      <circle cx="12" cy="12" r="1.5" />
-                                      <circle cx="12" cy="18" r="1.5" />
-                                    </svg>
-                                  </div>
-                                  <p className="text-[13px] font-semibold text-[#001AFF] mb-2">공학 &gt; {model.category}</p>
-                                  <p className="text-[12px] text-gray-500 mb-0.5 truncate">{model.name}</p>
-                                  <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">{model.description || '설명 없음'}</p>
-                                </div>
+                              <div className="p-4">
+                                <h3 className="text-[16px] font-bold text-gray-900 group-hover:text-[#001AFF] transition-colors mb-1">
+                                  {model.name}
+                                </h3>
+                                <p className="text-[13px] font-semibold text-[#001AFF] mb-1.5">
+                                  공학 &gt; {model.category} · {partsCount}개 부품
+                                </p>
+                                <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">
+                                  {model.description || '설명 없음'}
+                                </p>
                               </div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-
-                      <button
-                        onClick={() => scrollRight(scrollBookmarkRef)}
-                        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-all shadow-lg"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                            </div>
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </section>
@@ -1258,19 +1323,25 @@ export default function ModelsPage() {
             /* ══════ 홈 뷰 (기존 콘텐츠) ══════ */
             <>
               {/* ── 히어로 ── */}
-              <section className="models-hero px-10 pt-16 pb-14 text-center bg-white">
-                <h1 className="text-[40px] font-extrabold text-gray-900 mb-4 tracking-tight">
+              <section className="models-hero px-10 pt-20 pb-16 text-center bg-white">
+                <h1 className="models-hero-greeting text-[52px] text-gray-900 mb-6 leading-[1.3] pl-12">
                   {user ? (
-                    <>안녕하세요, {displayName}님{' '}<span className="models-wave">&#x1F44B;</span></>
+                    <>
+                      <span className="pen-line-1">안녕하세요, <strong>{displayName}</strong>님</span>
+                      {' '}<span className="pen-wave-reveal models-wave" style={{ fontSize: 44 }}>&#x1F44B;</span>
+                    </>
                   ) : (
-                    <>안녕하세요{' '}<span className="models-wave">&#x1F44B;</span></>
+                    <>
+                      <span className="pen-line-1">안녕하세요</span>
+                      {' '}<span className="pen-wave-reveal models-wave" style={{ fontSize: 44 }}>&#x1F44B;</span>
+                    </>
                   )}
                 </h1>
-                <p className="text-[16px] text-gray-500 leading-relaxed max-w-md mx-auto">
+                <p className="models-hero-subtitle text-[17px] text-gray-600 leading-relaxed max-w-md mx-auto font-normal" style={{ fontFamily: "'Apple SD Gothic Neo', 'Pretendard Variable', sans-serif" }}>
                   3D모델을 등록하고 자유롭게 학습하세요.<br />
                   fbx, obj, glb 포맷을 지원합니다.
                 </p>
-                <div className="mt-10">
+                <div className="models-hero-cta mt-12">
                   {user ? (
                     <Link href="/upload"
                       className="models-cta-btn inline-block px-16 py-4 bg-[#001AFF] text-white text-[17px] font-bold rounded-full">
@@ -1287,20 +1358,10 @@ export default function ModelsPage() {
 
               {/* ── 최근 열어본 파일 (로그인 시에만) ── */}
               {user && (
-                <section className="px-10 pb-14 pt-4">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-[20px] font-bold text-gray-900">최근 열어본 파일</h2>
-                    <Link href="#" className="text-[14px] text-gray-400 hover:text-gray-600 transition-colors">
-                      전체보기
-                    </Link>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-6">
-                    {recentModels.map((model, i) => (
-                      <ModelCard key={model.id} model={model} delay={200 + i * 100} />
-                    ))}
-                  </div>
-                </section>
+                <RecentModelsCarousel
+                  models={viewerModels}
+                  onRename={(modelId, newName) => setModelState(modelId, { rootName: newName || undefined })}
+                />
               )}
 
               {/* 푸터를 맨 밑으로 밀어주는 스페이서 */}
@@ -1392,11 +1453,7 @@ export default function ModelsPage() {
       {/* ══════ 로그인 모달 ══════ */}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
 
-      {/* ══════ FAQ 모달 ══════ */}
-      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
 
-      {/* ══════ 공지사항 모달 ══════ */}
-      {showNotice && <NoticeModal onClose={() => setShowNotice(false)} />}
     </div>
   );
 }

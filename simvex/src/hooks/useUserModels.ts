@@ -47,47 +47,63 @@ export function useUserModels(user: User | null) {
   // 공개 모델 조회 (World에 표시)
   const fetchPublicModels = useCallback(async (limit = 6): Promise<UserModelRow[]> => {
     const supabase = getSupabase();
-    // visibility 컬럼 우선 시도, 실패 시 is_public 사용
+    // visibility 컬럼이 있으면 OR 조건, 없으면 is_public만
     const { data, error } = await supabase
       .from('user_models')
       .select('*')
-      .eq('visibility', 'public')
+      .or('is_public.eq.true,visibility.eq.public')
       .order('created_at', { ascending: false })
       .limit(limit);
-    if (error) {
-      const { data: fallback } = await supabase
-        .from('user_models')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      return fallback ?? [];
-    }
-    return data ?? [];
+    if (!error) return data ?? [];
+    // fallback: visibility 컬럼 미존재 시
+    const { data: fallback } = await supabase
+      .from('user_models')
+      .select('*')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    return fallback ?? [];
   }, []);
 
   // 공개 모델 페이지네이션 조회
   const fetchPublicModelsPaginated = useCallback(
-    async (page: number, pageSize = 12): Promise<{ data: UserModelRow[]; count: number }> => {
+    async (page: number, pageSize = 12, search?: string): Promise<{ data: UserModelRow[]; count: number }> => {
       const supabase = getSupabase();
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-      const { data, count, error } = await supabase
+
+      // 1) visibility 컬럼이 있으면 OR 조건, 없으면 is_public만
+      let { data: allData, error } = await supabase
         .from('user_models')
-        .select('*', { count: 'exact' })
-        .eq('visibility', 'public')
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .select('*')
+        .or('is_public.eq.true,visibility.eq.public')
+        .order('created_at', { ascending: false });
+
       if (error) {
-        const { data: fallback, count: fbCount } = await supabase
+        const { data: fallback } = await supabase
           .from('user_models')
-          .select('*', { count: 'exact' })
+          .select('*')
           .eq('is_public', true)
-          .order('created_at', { ascending: false })
-          .range(from, to);
-        return { data: fallback ?? [], count: fbCount ?? 0 };
+          .order('created_at', { ascending: false });
+        allData = fallback;
       }
-      return { data: data ?? [], count: count ?? 0 };
+
+      let results: UserModelRow[] = (allData ?? []) as UserModelRow[];
+
+      // 2) 검색어가 있으면 클라이언트에서 필터링 (이름, 설명, 카테고리)
+      if (search && search.trim()) {
+        const term = search.trim().toLowerCase();
+        results = results.filter((m) =>
+          m.name.toLowerCase().includes(term) ||
+          m.description.toLowerCase().includes(term) ||
+          m.category.toLowerCase().includes(term)
+        );
+      }
+
+      // 3) 클라이언트 페이지네이션
+      const from = page * pageSize;
+      return {
+        data: results.slice(from, from + pageSize),
+        count: results.length,
+      };
     },
     []
   );

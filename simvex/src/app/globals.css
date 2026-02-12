@@ -207,6 +207,143 @@ html {
   box-shadow: 0 20px 40px rgba(0, 26, 255, 0.15);
 }
 
+/* ── Landing page: Why section animations ── */
+.why-section {
+  --shelf-y: 0px;
+}
+
+/* 배경 이미지: 서서히 확대되며 등장 */
+.why-shelf-img {
+  opacity: 0;
+  transform: scale(1.12);
+  filter: brightness(0.6);
+  transition: opacity 1.8s ease, transform 4s cubic-bezier(0.16, 1, 0.3, 1), filter 2s ease 0.5s;
+}
+.why-section.visible .why-shelf-img {
+  opacity: 1;
+  transform: scale(1);
+  filter: brightness(1);
+}
+
+/* "Why," 워터마크: 블러에서 선명하게 + 스케일 다운 */
+@keyframes watermarkReveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.4);
+    filter: blur(20px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    filter: blur(0);
+  }
+}
+.why-watermark {
+  opacity: 0;
+  transform: translateX(-50%) scale(1.4);
+  filter: blur(20px);
+}
+.why-section.visible .why-watermark {
+  animation: watermarkReveal 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+}
+
+/* "SIMVEX ?" 타이틀: 자간 넓음→좁음 + 글로우 */
+@keyframes titleReveal {
+  0% {
+    opacity: 0;
+    letter-spacing: 24px;
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 4px;
+    filter: blur(0);
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+  }
+}
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.15); }
+  50% { text-shadow: 0 0 40px rgba(255, 255, 255, 0.35), 0 0 80px rgba(0, 26, 255, 0.15); }
+}
+.why-title {
+  opacity: 0;
+}
+.why-section.visible .why-title {
+  animation: titleReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+}
+.why-section.visible .why-title span {
+  animation: titleGlow 3s ease-in-out 2.5s infinite;
+}
+
+/* "보이지 않던 내부를": 클립 패스로 좌→우 펼쳐지며 등장 */
+@keyframes clipReveal {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    filter: blur(6px);
+  }
+  40% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0% 0 0);
+    filter: blur(0);
+  }
+}
+.why-sub1 {
+  opacity: 0;
+}
+.why-section.visible .why-sub1 {
+  animation: clipReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) 1.4s forwards;
+}
+
+/* "손에 닿는 이해로.": 타이핑 효과 */
+@keyframes typing {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes blinkCursor {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.8); }
+  50%      { border-color: transparent; }
+}
+@keyframes cursorFadeOut {
+  from { border-color: rgba(255, 255, 255, 0.8); }
+  to   { border-color: transparent; }
+}
+.why-sub2 {
+  opacity: 0;
+}
+.why-section.visible .why-sub2 {
+  opacity: 1;
+  transition: opacity 0s 1.8s;
+}
+.why-sub2-shimmer {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  color: white;
+  -webkit-text-fill-color: white;
+  border-right: 3px solid transparent;
+  vertical-align: bottom;
+}
+.why-section.visible .why-sub2-shimmer {
+  animation:
+    typing 1.6s steps(9) 1.8s forwards,
+    blinkCursor 0.6s step-end 1.8s 6,
+    cursorFadeOut 0.4s ease 5.4s forwards;
+}
+
 /* ── Models page: animations ── */
 @keyframes slideInLeft {
   from { opacity: 0; transform: translateX(-24px); }
@@ -245,6 +382,91 @@ html {
 
 .models-hero {
   animation: fadeIn 0.6s ease 0.15s both;
+}
+
+/* ── Handwriting pen animation ── */
+@keyframes penReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0% 0 0);
+  }
+}
+
+@keyframes penCursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes penCursorSlide {
+  0% { left: 0%; }
+  100% { left: 100%; }
+}
+
+@keyframes heroSubFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.models-hero-greeting {
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+}
+
+/* 한 줄 펜 필기 */
+.pen-line-1 {
+  display: inline-block;
+  position: relative;
+  clip-path: inset(0 100% 0 0);
+  animation: penReveal 1.8s cubic-bezier(0.25, 0.1, 0.25, 1) 0.3s forwards;
+}
+
+/* 펜 커서 (세로 막대) */
+.pen-line-1::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 15%;
+  width: 3px;
+  height: 70%;
+  background: #333;
+  border-radius: 2px;
+  opacity: 0;
+  animation: penCursorBlink 0.6s step-end 0.3s 4;
+}
+
+/* 이모지 등장 */
+.pen-wave-reveal {
+  display: inline-block;
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+@keyframes penWavePop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.models-hero-subtitle {
+  opacity: 0;
+  animation: heroSubFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) 2.4s forwards;
+}
+
+.models-hero-cta {
+  opacity: 0;
+  animation: heroSubFadeIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) 2.8s forwards;
 }
 
 .models-card {
@@ -288,6 +510,20 @@ html {
 }
 .models-card-inner:hover .models-card-thumb {
   transform: scale(1.05);
+}
+
+/* ── 회전초밥 무한 캐러셀 ── */
+@keyframes carouselScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.carousel-track {
+  animation: carouselScroll linear infinite;
 }
 
 .models-nav-item {
@@ -370,4 +606,130 @@ html {
 .faq-answer.faq-answer-open {
   max-height: 300px;
   opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════
+   Landing page – Mobile responsive (≤768px)
+   ══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* ── Header ── */
+  .landing-header {
+    padding: 0 16px !important;
+    height: 56px !important;
+  }
+  .landing-header .landing-nav {
+    display: none !important;
+  }
+  .landing-header .landing-logo {
+    font-size: 22px !important;
+  }
+  .landing-header .landing-btn {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+  }
+
+  /* ── Hero ── */
+  .landing-hero {
+    max-height: none !important;
+    min-height: 360px !important;
+    height: calc(100vh - 56px) !important;
+  }
+  .landing-hero-catchphrase {
+    white-space: normal !important;
+    text-align: center !important;
+    padding: 0 20px !important;
+    transform: translate(-50%, -80px) !important;
+  }
+
+  /* ── Why section ── */
+  .why-section {
+    aspect-ratio: auto !important;
+    min-height: 350px !important;
+    height: 70vh !important;
+    max-height: 500px !important;
+  }
+  .why-watermark {
+    font-size: 80px !important;
+    left: 50% !important;
+  }
+  .why-sub1 span,
+  .why-sub2 span {
+    font-size: clamp(22px, 6vw, 38px) !important;
+  }
+
+  /* ── Feature / About section ── */
+  .landing-features {
+    padding: 20px 20px 60px !important;
+  }
+  .landing-features .landing-about-title {
+    font-size: 24px !important;
+    margin-bottom: 32px !important;
+  }
+  .landing-feature-row {
+    flex-direction: column !important;
+    gap: 20px !important;
+    margin-bottom: 48px !important;
+  }
+  .landing-feature-row-reverse {
+    flex-direction: column !important;
+  }
+  .landing-feature-img {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .landing-feature-number {
+    font-size: 120px !important;
+    left: 0 !important;
+    top: -70px !important;
+  }
+  .landing-feature-title {
+    font-size: 22px !important;
+  }
+  .landing-feature-svg {
+    display: none !important;
+  }
+
+  /* ── Pricing section ── */
+  .landing-pricing {
+    padding: 60px 20px 60px !important;
+  }
+  .landing-pricing-title {
+    font-size: 26px !important;
+  }
+  .landing-pricing-cards {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: center !important;
+  }
+  .pricing-card {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .landing-pricing-price {
+    font-size: 36px !important;
+  }
+  .landing-pricing-cta {
+    padding: 12px 48px !important;
+    font-size: 16px !important;
+  }
+
+  /* ── Footer ── */
+  .landing-footer-cols {
+    flex-direction: column !important;
+    gap: 24px !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .landing-footer-divider {
+    margin: 0 20px !important;
+  }
+  .landing-footer-bottom {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 20px 20px 24px !important;
+  }
 }

@@ -15,9 +15,10 @@ interface ProductInfoProps {
   model: ModelInfo | null;
   customName?: string;
   onRename?: (name: string) => void;
+  isDarkMode?: boolean;
 }
 
-export function ProductInfo({ model, customName, onRename }: ProductInfoProps) {
+export function ProductInfo({ model, customName, onRename, isDarkMode }: ProductInfoProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -63,11 +64,11 @@ export function ProductInfo({ model, customName, onRename }: ProductInfoProps) {
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') setIsEditing(false);
             }}
-            className="text-[18px] font-bold w-full px-2 py-0.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-blue-200 transition-all"
+            className={`text-[18px] font-bold w-full px-2 py-0.5 rounded-lg border outline-none focus:border-[#001AFF] focus:ring-1 focus:ring-blue-200 transition-all ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-50 text-gray-900'}`}
           />
         ) : (
           <>
-            <h4 className="text-[18px] font-bold text-gray-900">{displayName}</h4>
+            <h4 className={`text-[18px] font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{displayName}</h4>
             {onRename && (
               <button
                 onClick={handleStartEdit}
@@ -85,7 +86,7 @@ export function ProductInfo({ model, customName, onRename }: ProductInfoProps) {
       <p className="text-[13px] text-gray-400 mt-0.5">{model.name}</p>
 
       <div className="flex items-center gap-2 mt-3">
-        <span className="px-2.5 py-1 text-[12px] font-semibold rounded-md bg-blue-50 text-[#001AFF]">
+        <span className={`px-2.5 py-1 text-[12px] font-semibold rounded-md ${isDarkMode ? 'bg-emerald-900/40 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
           {model.category}
         </span>
         <span className="text-[13px] text-gray-500 font-medium">
@@ -93,19 +94,19 @@ export function ProductInfo({ model, customName, onRename }: ProductInfoProps) {
         </span>
       </div>
 
-      <p className={`text-[13px] text-gray-500 leading-relaxed mt-3 ${!isExpanded ? 'line-clamp-3' : ''}`}>
+      <p className={`text-[13px] leading-relaxed mt-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} ${!isExpanded ? 'line-clamp-3' : ''}`}>
         {model.description}
       </p>
 
       {model.theory && (
-        <p className={`text-[13px] text-gray-400 leading-relaxed mt-2 whitespace-pre-line ${!isExpanded ? 'hidden' : ''}`}>
+        <p className={`text-[13px] leading-relaxed mt-2 whitespace-pre-line ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} ${!isExpanded ? 'hidden' : ''}`}>
           {model.theory}
         </p>
       )}
 
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex justify-center pt-3 mt-2 border-t border-gray-100"
+        className={`w-full flex justify-center pt-3 mt-2 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}
       >
         <svg
           className={`w-5 h-5 text-gray-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
