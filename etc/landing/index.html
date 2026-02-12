@@ -562,10 +562,32 @@
 
     /* ── Footer ── */
     .landing-footer {
+      position: relative;
       width: 100%;
-      background: #4A4A4A;
       color: #fff;
       font-family: 'Pretendard Variable', sans-serif;
+      overflow: hidden;
+    }
+    .footer-bg-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+      filter: blur(4px);
+      transform: scale(1.05);
+    }
+    .footer-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+    }
+    .footer-content {
+      position: relative;
+      z-index: 1;
+      padding-top: 100px;
+      padding-bottom: 25px;
     }
     .footer-contact {
       text-align: center;
@@ -579,7 +601,7 @@
       display: flex;
       justify-content: center;
       gap: 100px;
-      padding-bottom: 32px;
+      padding-bottom: 132px;
     }
     .footer-col {
       display: flex;
@@ -594,37 +616,6 @@
     .footer-col span {
       color: #B0B0B0;
       font-size: 13px;
-    }
-    .landing-footer-divider {
-      position: relative;
-      height: 32px;
-      margin: 0 40px;
-    }
-    .footer-divider-line {
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      border-top: 2px dashed #6EB8FF;
-      transform: translateY(-50%);
-    }
-    .footer-divider-x {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #6EB8FF;
-      font-size: 18px;
-      font-weight: 700;
-      background: #4A4A4A;
-      padding: 0 8px;
-    }
-    .footer-photo {
-      text-align: center;
-      padding: 24px 0 36px;
-      font-size: 22px;
-      font-weight: 700;
-      color: #ddd;
     }
     .footer-sep {
       margin: 0 40px;
@@ -863,30 +854,34 @@
       }
 
       /* Footer */
+      .footer-bg-img {
+        object-fit: contain;
+        object-position: top center;
+      }
+      .landing-footer {
+        background: #222;
+      }
       .footer-contact {
         font-size: 18px;
         padding-top: 28px;
         padding-bottom: 18px;
       }
+      .footer-content {
+        padding-top: 60px;
+        padding-bottom: 16px;
+      }
       .landing-footer-cols {
-        flex-direction: column;
-        gap: 20px;
-        align-items: center;
+        flex-direction: row;
+        gap: 30px;
+        justify-content: center;
         text-align: center;
-        padding-bottom: 24px;
+        padding-bottom: 60px;
       }
       .footer-col-title {
         font-size: 13px;
       }
       .footer-col span {
         font-size: 12px;
-      }
-      .landing-footer-divider {
-        margin: 0 20px;
-      }
-      .footer-photo {
-        font-size: 18px;
-        padding: 18px 0 28px;
       }
       .footer-sep {
         margin: 0 20px;
@@ -1067,33 +1062,30 @@
 
   <!-- ── Footer ── -->
   <footer class="landing-footer fade-in-up">
-    <div class="footer-contact">Contact Us</div>
+    <img class="footer-bg-img" src="images/team-photo.jpeg" alt="">
+    <div class="footer-overlay"></div>
 
-    <div class="landing-footer-cols">
-      <div class="footer-col">
-        <div class="footer-col-title">Product</div>
-        <span>3D 뷰어</span><span>모델 업로드</span><span>AI 어시스턴트</span><span>퀴즈</span><span>시뮬레이션</span>
+    <div class="footer-content">
+      <div class="footer-contact">Contact Us</div>
+
+      <div class="landing-footer-cols">
+        <div class="footer-col">
+          <div class="footer-col-title">Product</div>
+          <span>3D 뷰어</span><span>모델 업로드</span><span>AI 어시스턴트</span><span>퀴즈</span><span>시뮬레이션</span>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Information</div>
+          <span>사용 가이드</span><span>자주 묻는 질문</span><span>API 문서</span>
+        </div>
+        <div class="footer-col">
+          <div class="footer-col-title">Company</div>
+          <span>팀 소개</span><span>연락처</span><span>파트너십</span><span>채용 정보</span>
+        </div>
       </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Information</div>
-        <span>사용 가이드</span><span>자주 묻는 질문</span><span>API 문서</span>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Company</div>
-        <span>팀 소개</span><span>연락처</span><span>파트너십</span><span>채용 정보</span>
-      </div>
-    </div>
 
-    <div class="landing-footer-divider">
-      <div class="footer-divider-line"></div>
-      <div class="footer-divider-x">&#10005;</div>
-    </div>
+      <div class="footer-sep"></div>
 
-    <div class="footer-photo">단체사진</div>
-
-    <div class="footer-sep"></div>
-
-    <div class="landing-footer-bottom">
+      <div class="landing-footer-bottom">
       <div class="footer-brand">SIMVEX</div>
       <div class="footer-links">
         <span>Terms</span><span>Privacy</span><span>Cookies</span>
@@ -1109,6 +1101,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         </div>
       </div>
+    </div>
     </div>
   </footer>
 

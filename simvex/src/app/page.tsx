@@ -401,43 +401,51 @@ export default function LandingPage() {
 
       {/* ── 푸터 ── */}
       <footer className="fade-in-up" style={{
-        width: '100%', background: '#4A4A4A', color: '#fff',
-        fontFamily: 'Pretendard Variable',
+        position: 'relative', width: '100%', color: '#fff',
+        fontFamily: 'Pretendard Variable', overflow: 'hidden',
       }}>
-        <div style={{
-          textAlign: 'center', paddingTop: 36, paddingBottom: 24,
-          fontSize: 22, fontWeight: 700, fontFamily: 'Inter',
-        }}>Contact Us</div>
+        {/* 배경 사진 + 블러 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/team-photo.jpeg"
+          alt=""
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', objectPosition: 'top', filter: 'blur(4px)', transform: 'scale(1.05)',
+          }}
+        />
+        {/* 어두운 오버레이 */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />
 
-        <div className="landing-footer-cols" style={{ display: 'flex', justifyContent: 'center', gap: 100, paddingBottom: 32 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Product</div>
-            {['3D 뷰어', '모델 업로드', 'AI 어시스턴트', '퀴즈', '시뮬레이션'].map((t) => (
-              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
-            ))}
+        {/* 푸터 콘텐츠 */}
+        <div style={{ position: 'relative', zIndex: 1, paddingTop: 100, paddingBottom: 25 }}>
+          <div style={{
+            textAlign: 'center', paddingTop: 36, paddingBottom: 24,
+            fontSize: 22, fontWeight: 700, fontFamily: 'Inter',
+          }}>Contact Us</div>
+
+          <div className="landing-footer-cols" style={{ display: 'flex', justifyContent: 'center', gap: 100, paddingBottom: 132 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Product</div>
+              {['3D 뷰어', '모델 업로드', 'AI 어시스턴트', '퀴즈', '시뮬레이션'].map((t) => (
+                <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Information</div>
+              {['사용 가이드', '자주 묻는 질문', 'API 문서'].map((t) => (
+                <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Company</div>
+              {['팀 소개', '연락처', '파트너십', '채용 정보'].map((t) => (
+                <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Information</div>
-            {['사용 가이드', '자주 묻는 질문', 'API 문서'].map((t) => (
-              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
-            ))}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Company</div>
-            {['팀 소개', '연락처', '파트너십', '채용 정보'].map((t) => (
-              <span key={t} style={{ color: '#B0B0B0', fontSize: 13 }}>{t}</span>
-            ))}
-          </div>
-        </div>
 
-        <div className="landing-footer-divider" style={{ position: 'relative', height: 32, margin: '0 40px' }}>
-          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '2px dashed #6EB8FF', transform: 'translateY(-50%)' }} />
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#6EB8FF', fontSize: 18, fontWeight: 700, background: '#4A4A4A', padding: '0 8px' }}>&#10005;</div>
-        </div>
-
-        <div style={{ textAlign: 'center', padding: '24px 0 36px', fontSize: 22, fontWeight: 700, color: '#ddd' }}>단체사진</div>
-
-        <div style={{ margin: '0 40px', borderTop: '1px solid rgba(255,255,255,0.15)' }} />
+          <div style={{ margin: '0 40px', borderTop: '1px solid rgba(255,255,255,0.15)' }} />
 
         <div className="landing-footer-bottom" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px 24px' }}>
           <div style={{ fontSize: 24, fontFamily: 'Righteous', fontWeight: 400 }}>SIMVEX</div>
@@ -457,6 +465,7 @@ export default function LandingPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </div>
           </div>
+        </div>
         </div>
       </footer>
 
