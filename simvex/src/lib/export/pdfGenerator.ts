@@ -121,7 +121,7 @@ export async function generateModelPdf(data: PdfExportData): Promise<Blob> {
 
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
       <p style="font-size: 12px; color: #999; margin: 0;">
-        SIMVEX - 3D 기계 부품 학습 뷰어 | ${new Date().toLocaleDateString('ko-KR')}
+        VEXA - 3D 기계 부품 학습 뷰어 | ${new Date().toLocaleDateString('ko-KR')}
       </p>
     </div>
   `;

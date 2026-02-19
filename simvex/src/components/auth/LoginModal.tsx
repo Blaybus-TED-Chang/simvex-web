@@ -67,12 +67,12 @@ function LoginScreen() {
       <div className="px-8 pt-8 pb-9">
         {/* 로고 + 제목 */}
         <div className="text-center mb-7">
-          <div className="text-[26px] text-black mb-4" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>SIMVEX</div>
+          <div className="text-[26px] text-black mb-4" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>VEXA</div>
           <h1 className="text-[22px] font-bold text-gray-900 mb-1.5 tracking-tight">
             {isSignUp ? '새 계정 만들기' : '다시 만나서 반가워요'}
           </h1>
           <p className="text-[13px] text-gray-400">
-            {isSignUp ? '정보를 입력하고 간편하게 가입하세요' : 'SIMVEX에 로그인하고 3D 모델을 탐색하세요'}
+            {isSignUp ? '정보를 입력하고 간편하게 가입하세요' : 'VEXA에 로그인하고 3D 모델을 탐색하세요'}
           </p>
         </div>
 

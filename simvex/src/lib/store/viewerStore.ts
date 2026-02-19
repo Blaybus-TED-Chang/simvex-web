@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ViewerState, ViewerActions, ModelViewState, PartTreeGroup } from '@/types/viewer';
+import { ViewerState, ViewerActions, ModelViewState, PartTreeGroup, CrossSectionState, CrossSectionAxis } from '@/types/viewer';
 
 /* ── 헬퍼 함수 ── */
 
@@ -36,6 +36,13 @@ function getGroups(ms: ModelViewState | undefined): PartTreeGroup[] {
   return (ms?.partTreeGroups ?? []).map(normalizeGroup);
 }
 
+const initialCrossSection: CrossSectionState = {
+  crossSectionEnabled: false,
+  crossSectionAxis: 'y',
+  crossSectionOffset: 0.5,
+  crossSectionFlipped: false,
+};
+
 const initialState: ViewerState = {
   currentModel: null,
   explodeValue: 0,
@@ -47,6 +54,9 @@ const initialState: ViewerState = {
   globalOpacity: 1,
   modelStates: {},
   showControlsGuide: true,
+  crossSection: initialCrossSection,
+  xRayMode: false,
+  autoFocusEnabled: true,
 };
 
 export const useViewerStore = create<ViewerState & ViewerActions>()(
@@ -311,6 +321,27 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
 
       toggleControlsGuide: () =>
         set((state) => ({ showControlsGuide: !state.showControlsGuide })),
+
+      setCrossSectionEnabled: (enabled) =>
+        set((s) => ({ crossSection: { ...s.crossSection, crossSectionEnabled: enabled } })),
+
+      setCrossSectionAxis: (axis) =>
+        set((s) => ({ crossSection: { ...s.crossSection, crossSectionAxis: axis, crossSectionOffset: 0.5 } })),
+
+      setCrossSectionOffset: (offset) =>
+        set((s) => ({ crossSection: { ...s.crossSection, crossSectionOffset: Math.max(0, Math.min(1, offset)) } })),
+
+      setCrossSectionFlipped: (flipped) =>
+        set((s) => ({ crossSection: { ...s.crossSection, crossSectionFlipped: flipped } })),
+
+      resetCrossSection: () =>
+        set({ crossSection: initialCrossSection }),
+
+      setXRayMode: (enabled) =>
+        set({ xRayMode: enabled }),
+
+      setAutoFocusEnabled: (enabled) =>
+        set({ autoFocusEnabled: enabled }),
     }),
     {
       name: 'viewer-storage',
@@ -322,6 +353,7 @@ export const useViewerStore = create<ViewerState & ViewerActions>()(
         globalOpacity: state.globalOpacity,
         modelStates: state.modelStates,
         showControlsGuide: state.showControlsGuide,
+        crossSection: state.crossSection,
       }),
       skipHydration: true,
     }

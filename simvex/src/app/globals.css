@@ -251,7 +251,7 @@ html {
   animation: watermarkReveal 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
 }
 
-/* "SIMVEX ?" 타이틀: 자간 넓음→좁음 + 글로우 */
+/* "VEXA ?" 타이틀: 자간 넓음→좁음 + 글로우 */
 @keyframes titleReveal {
   0% {
     opacity: 0;

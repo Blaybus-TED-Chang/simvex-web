@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { TTSButton } from '@/components/ui/TTSButton';
 
 interface ModelInfo {
   nameKo: string;
@@ -94,9 +95,12 @@ export function ProductInfo({ model, customName, onRename, isDarkMode }: Product
         </span>
       </div>
 
-      <p className={`text-[13px] leading-relaxed mt-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} ${!isExpanded ? 'line-clamp-3' : ''}`}>
-        {model.description}
-      </p>
+      <div className="flex items-start gap-1 mt-3">
+        <p className={`text-[13px] leading-relaxed flex-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} ${!isExpanded ? 'line-clamp-3' : ''}`}>
+          {model.description}
+        </p>
+        <TTSButton text={`${displayName}. ${model.description}. ${model.theory || ''}`} isDarkMode={isDarkMode} />
+      </div>
 
       {model.theory && (
         <p className={`text-[13px] leading-relaxed mt-2 whitespace-pre-line ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} ${!isExpanded ? 'hidden' : ''}`}>

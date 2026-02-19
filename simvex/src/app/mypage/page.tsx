@@ -254,7 +254,7 @@ export default function MyPage() {
       {/* ══════ 상단 헤더 바 ══════ */}
       <header className="flex items-center justify-between px-8 bg-white shrink-0 relative z-10" style={{ height: 72, boxShadow: '0 0 8.4px rgba(0,0,0,0.25)' }}>
         <Link href="/" className="text-[26px] text-black no-underline shrink-0" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
-          SIMVEX
+          VEXA
         </Link>
 
         <div className="flex items-center gap-4">
