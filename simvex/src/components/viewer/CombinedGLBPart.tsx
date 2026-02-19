@@ -1,10 +1,92 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
+import { useViewerStore } from '@/lib/store/viewerStore';
+import type { CrossSectionAxis, CrossSectionState } from '@/types/viewer';
 import { AnnotationPins } from '@/components/annotation/AnnotationPins';
+import { MeasurementOverlay } from '@/components/viewer/MeasurementOverlay';
+
+// 단면도 절단면 채색 (Cap Plane)
+function CapPlane({
+  crossSection,
+  boundsMin,
+  boundsMax,
+  isDarkMode,
+}: {
+  crossSection: CrossSectionState;
+  boundsMin: THREE.Vector3;
+  boundsMax: THREE.Vector3;
+  isDarkMode: boolean;
+}) {
+  if (!crossSection.crossSectionEnabled) return null;
+
+  const { crossSectionAxis: axis, crossSectionOffset: offset, crossSectionFlipped: flipped } = crossSection;
+
+  // 절단 위치 계산
+  const worldOffset = boundsMin[axis] + offset * (boundsMax[axis] - boundsMin[axis]);
+
+  // 평면 크기: 모델 바운딩박스 기반
+  const sizeMap = {
+    x: [boundsMax.z - boundsMin.z + 0.2, boundsMax.y - boundsMin.y + 0.2] as [number, number],
+    y: [boundsMax.x - boundsMin.x + 0.2, boundsMax.z - boundsMin.z + 0.2] as [number, number],
+    z: [boundsMax.x - boundsMin.x + 0.2, boundsMax.y - boundsMin.y + 0.2] as [number, number],
+  };
+  const size = sizeMap[axis];
+
+  // 위치
+  const center: [number, number, number] = [
+    axis === 'x' ? worldOffset : (boundsMin.x + boundsMax.x) / 2,
+    axis === 'y' ? worldOffset : (boundsMin.y + boundsMax.y) / 2,
+    axis === 'z' ? worldOffset : (boundsMin.z + boundsMax.z) / 2,
+  ];
+
+  // 회전: 축에 따라 평면을 회전
+  const rotation: [number, number, number] = axis === 'x'
+    ? [0, Math.PI / 2, 0]
+    : axis === 'y'
+    ? [-Math.PI / 2, 0, 0]
+    : [0, 0, 0];
+
+  return (
+    <mesh position={center} rotation={rotation} renderOrder={1}>
+      <planeGeometry args={size} />
+      <meshStandardMaterial
+        color={isDarkMode ? '#444444' : '#D0D0D0'}
+        side={THREE.DoubleSide}
+        metalness={0.1}
+        roughness={0.8}
+        transparent
+        opacity={0.9}
+      />
+    </mesh>
+  );
+}
+
+// 단면도 클리핑 플레인 생성
+function buildClippingPlane(
+  axis: CrossSectionAxis,
+  offset: number,
+  flipped: boolean,
+  boundsMin: number,
+  boundsMax: number,
+): THREE.Plane {
+  const worldOffset = boundsMin + offset * (boundsMax - boundsMin);
+  const sign = flipped ? 1 : -1;
+  const normal = new THREE.Vector3(
+    axis === 'x' ? sign : 0,
+    axis === 'y' ? sign : 0,
+    axis === 'z' ? sign : 0,
+  );
+  const planePoint = new THREE.Vector3(
+    axis === 'x' ? worldOffset : 0,
+    axis === 'y' ? worldOffset : 0,
+    axis === 'z' ? worldOffset : 0,
+  );
+  return new THREE.Plane(normal, -normal.dot(planePoint));
+}
 
 // 텍스쳐 관련 경고/에러 억제
 const originalWarn = console.warn;
@@ -71,10 +153,17 @@ interface CombinedGLBViewerProps {
   onPlacePin?: (point: [number, number, number], partId?: string) => void;
   focusedPartId?: string | null;
   onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
+  onMeshBounds?: (bounds: Record<string, { center: [number, number, number]; size: [number, number, number] }>) => void;
   globalOpacity?: number;
   // 핀 드래그 이동
   isDraggingPin?: boolean;
   onDragMove?: (point: [number, number, number], partId?: string) => void;
+  // 조립 순서 애니메이션: 부품별 개별 분해값
+  partExplodeOverrides?: Record<string, number>;
+  // 측정 모드
+  onMeasurementClick?: (point: [number, number, number]) => void;
+  measurementMode?: boolean;
+  isDarkMode?: boolean;
 }
 
 // Individual part mesh component
@@ -90,6 +179,8 @@ function PartMesh({
   onPointerOver,
   onPointerOut,
   onPointerMoveWithPoint,
+  modelBoundsMin,
+  modelBoundsMax,
 }: {
   meshData: ExtractedMeshData;
   explodeValue: number;
@@ -102,6 +193,8 @@ function PartMesh({
   onPointerOver: () => void;
   onPointerOut: () => void;
   onPointerMoveWithPoint?: (point: [number, number, number]) => void;
+  modelBoundsMin?: THREE.Vector3;
+  modelBoundsMax?: THREE.Vector3;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { worldPosition, worldQuaternion, worldScale, partConfig, geometry, material } = meshData;
@@ -130,6 +223,30 @@ function PartMesh({
     return mat;
   }, [partConfig.color, opacity]);
 
+  // X-Ray 모드 & 단면도 상태 구독
+  const xRayMode = useViewerStore((s) => s.xRayMode);
+  const crossSection = useViewerStore((s) => s.crossSection);
+
+  useEffect(() => {
+    const mat = clonedMaterial as THREE.MeshStandardMaterial;
+    if (!crossSection.crossSectionEnabled || !modelBoundsMin || !modelBoundsMax) {
+      mat.clippingPlanes = [];
+      mat.needsUpdate = true;
+      return;
+    }
+    const axis = crossSection.crossSectionAxis;
+    const plane = buildClippingPlane(
+      axis,
+      crossSection.crossSectionOffset,
+      crossSection.crossSectionFlipped,
+      modelBoundsMin[axis],
+      modelBoundsMax[axis],
+    );
+    mat.clippingPlanes = [plane];
+    mat.clipShadows = true;
+    mat.needsUpdate = true;
+  }, [crossSection, clonedMaterial, modelBoundsMin, modelBoundsMax]);
+
   // Update emissive for highlight
   useEffect(() => {
     const mat = clonedMaterial as THREE.MeshStandardMaterial;
@@ -147,17 +264,31 @@ function PartMesh({
     }
   }, [clonedMaterial, isSelected, isHovered]);
 
-  // Update opacity dynamically
+  // X-Ray 모드: 선택/호버 부품만 불투명, 나머지 와이어프레임
   useEffect(() => {
     const mat = clonedMaterial as THREE.MeshStandardMaterial;
-    if (mat) {
+    if (!xRayMode) {
+      mat.wireframe = false;
       const isTransparent = opacity < 1;
       mat.transparent = isTransparent;
       mat.opacity = opacity;
       mat.depthWrite = !isTransparent;
       mat.needsUpdate = true;
+      return;
     }
-  }, [clonedMaterial, opacity]);
+    if (isSelected || isHovered) {
+      mat.wireframe = false;
+      mat.transparent = false;
+      mat.opacity = 1;
+      mat.depthWrite = true;
+    } else {
+      mat.wireframe = true;
+      mat.transparent = true;
+      mat.opacity = 0.15;
+      mat.depthWrite = false;
+    }
+    mat.needsUpdate = true;
+  }, [clonedMaterial, xRayMode, isSelected, isHovered, opacity]);
 
   if (!isVisible || opacity <= 0.01) return null;
 
@@ -228,12 +359,19 @@ export function CombinedGLBViewer({
   onPlacePin,
   focusedPartId,
   onMeshPositions,
+  onMeshBounds,
   globalOpacity = 1,
   isDraggingPin = false,
   onDragMove,
+  partExplodeOverrides,
+  onMeasurementClick,
+  measurementMode = false,
+  isDarkMode = false,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
+  const [boundsMin, setBoundsMin] = useState<THREE.Vector3 | null>(null);
+  const [boundsMax, setBoundsMax] = useState<THREE.Vector3 | null>(null);
 
   // 메시 이름 → 부품 설정 매핑
   const meshToPartMap = useMemo(() => {
@@ -249,14 +387,11 @@ export function CombinedGLBViewer({
     const extracted: ExtractedMeshData[] = [];
     const allMeshNames: string[] = [];
 
-    console.log('=== GLB 메시 추출 시작 ===');
-
     // 씬의 월드 행렬 업데이트
     scene.updateMatrixWorld(true);
 
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        console.log(`Found mesh: "${child.name}"`);
         allMeshNames.push(child.name || '(unnamed)');
 
         // 정확한 매칭 먼저 시도
@@ -267,15 +402,12 @@ export function CombinedGLBViewer({
           for (const [meshName, config] of meshToPartMap.entries()) {
             if (child.name.includes(meshName) || meshName.includes(child.name)) {
               partConfig = config;
-              console.log(`  -> 부분 매칭: "${child.name}" ~ "${meshName}"`);
               break;
             }
           }
         }
 
         if (partConfig) {
-          console.log(`  -> Matched: ${partConfig.id}`);
-
           // 월드 변환 가져오기
           const worldPosition = new THREE.Vector3();
           const worldQuaternion = new THREE.Quaternion();
@@ -285,8 +417,6 @@ export function CombinedGLBViewer({
           child.getWorldQuaternion(worldQuaternion);
           child.getWorldScale(worldScale);
 
-          console.log(`  -> World position: [${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)}]`);
-
           extracted.push({
             geometry: child.geometry,
             material: child.material as THREE.Material,
@@ -295,15 +425,28 @@ export function CombinedGLBViewer({
             worldScale: worldScale.clone(),
             partConfig,
           });
-        } else {
-          console.log(`  -> No matching config`);
         }
       }
     });
 
-    console.log(`=== 총 ${extracted.length}개 메시 추출됨 ===`);
-    console.log(`=== 발견된 모든 메시 이름: ${allMeshNames.join(', ')} ===`);
     setExtractedMeshes(extracted);
+
+    // 단면도용 바운딩박스 계산
+    if (extracted.length > 0) {
+      const box = new THREE.Box3();
+      extracted.forEach((e) => {
+        const geomBox = new THREE.Box3().setFromBufferAttribute(
+          e.geometry.attributes.position as THREE.BufferAttribute,
+        );
+        geomBox.applyMatrix4(
+          new THREE.Matrix4().compose(e.worldPosition, e.worldQuaternion, e.worldScale),
+        );
+        box.union(geomBox);
+      });
+      box.expandByScalar(0.1);
+      setBoundsMin(box.min.clone());
+      setBoundsMax(box.max.clone());
+    }
 
     // Debug callback
     if (onDebugInfo) {
@@ -326,12 +469,39 @@ export function CombinedGLBViewer({
       });
       onMeshPositions(positions);
     }
-  }, [scene, meshToPartMap, onDebugInfo, onMeshPositions]);
+
+    // 부품별 바운딩박스 콜백 (자동 포커스용)
+    if (onMeshBounds) {
+      const bounds: Record<string, { center: [number, number, number]; size: [number, number, number] }> = {};
+      extracted.forEach((e) => {
+        const geomBox = new THREE.Box3().setFromBufferAttribute(
+          e.geometry.attributes.position as THREE.BufferAttribute,
+        );
+        geomBox.applyMatrix4(
+          new THREE.Matrix4().compose(e.worldPosition, e.worldQuaternion, e.worldScale),
+        );
+        const center = new THREE.Vector3();
+        const size = new THREE.Vector3();
+        geomBox.getCenter(center);
+        geomBox.getSize(size);
+        bounds[e.partConfig.id] = {
+          center: [center.x, center.y, center.z],
+          size: [size.x, size.y, size.z],
+        };
+      });
+      onMeshBounds(bounds);
+    }
+  }, [scene, meshToPartMap, onDebugInfo, onMeshPositions, onMeshBounds]);
 
   const modelScale = model.scale || 1;
+  const crossSection = useViewerStore((s) => s.crossSection);
 
   return (
     <group scale={[modelScale, modelScale, modelScale]}>
+      {/* 단면도 절단면 채색 (Cap Plane) */}
+      {boundsMin && boundsMax && (
+        <CapPlane crossSection={crossSection} boundsMin={boundsMin} boundsMax={boundsMax} isDarkMode={isDarkMode} />
+      )}
       {extractedMeshes.map((meshData, index) => {
         const { partConfig } = meshData;
         const isVisible = visibleParts.includes(partConfig.id);
@@ -340,19 +510,27 @@ export function CombinedGLBViewer({
         const opacity = focusedPartId
           ? (focusedPartId === partConfig.id ? globalOpacity : Math.min(0.15, globalOpacity))
           : globalOpacity;
+        // 조립 순서 애니메이션: 개별 분해값 오버라이드
+        const effectiveExplodeValue = partExplodeOverrides?.[partConfig.id] ?? explodeValue;
 
         return (
           <PartMesh
             key={`${partConfig.id}-${index}`}
             meshData={meshData}
-            explodeValue={explodeValue}
+            explodeValue={effectiveExplodeValue}
             isSelected={isSelected}
             isHovered={isHovered}
             isVisible={isVisible}
             opacity={opacity}
+            modelBoundsMin={boundsMin ?? undefined}
+            modelBoundsMax={boundsMax ?? undefined}
             onClick={() => onSelectPart(partConfig.id)}
             onClickWithPoint={
-              isPlacingPin && onPlacePin
+              measurementMode && onMeasurementClick
+                ? (point) => {
+                    onMeasurementClick(point);
+                  }
+                : isPlacingPin && onPlacePin
                 ? (point) => {
                     // 핀 배치 모드: 모델 스케일 보정 + 분해 오프셋 제거 (비분해 좌표로 저장)
                     const scale = model.scale || 1;
@@ -419,6 +597,7 @@ interface CombinedModelViewerProps {
   // 부품 트리 탐색기 관련
   focusedPartId?: string | null;
   onMeshPositions?: (positions: Record<string, [number, number, number]>) => void;
+  onMeshBounds?: (bounds: Record<string, { center: [number, number, number]; size: [number, number, number] }>) => void;
   // 투명도
   globalOpacity?: number;
   // 핀 드래그 이동
@@ -428,9 +607,67 @@ interface CombinedModelViewerProps {
   dragPreviewPosition?: [number, number, number] | null;
   dragTargetInfo?: { targetType: 'part' | 'coordinate'; partId?: string } | null;
   onDragStart?: (id: string) => void;
+  // 조립 순서 애니메이션
+  partExplodeOverrides?: Record<string, number>;
+  // 측정 도구
+  onMeasurementClick?: (point: [number, number, number]) => void;
+  measurementMode?: boolean;
+  measurements?: { pointA: [number, number, number]; pointB: [number, number, number]; distance: number }[];
+  pendingMeasurePoint?: [number, number, number] | null;
 }
 
-// 카메라 위치/타겟을 prop 변경에 따라 동적으로 업데이트
+// 부드러운 줌
+function SmoothZoom() {
+  const { camera, controls } = useThree();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const velocityRef = useRef(0);
+  const activeRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = (controls as unknown as { domElement?: HTMLCanvasElement })?.domElement
+      ?? document.querySelector('canvas');
+    if (!canvas) return;
+    canvasRef.current = canvas;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      velocityRef.current += e.deltaY * 0.0008;
+      activeRef.current = true;
+    };
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [controls]);
+
+  useFrame(() => {
+    if (!activeRef.current) return;
+
+    const v = velocityRef.current;
+    if (Math.abs(v) < 0.0005) {
+      velocityRef.current = 0;
+      activeRef.current = false;
+      return;
+    }
+
+    const orbitTarget = controls && 'target' in controls
+      ? (controls as unknown as { target: THREE.Vector3 }).target
+      : new THREE.Vector3(0, 0, 0);
+
+    const dir = new THREE.Vector3().subVectors(camera.position, orbitTarget);
+    const dist = dir.length();
+    const move = v * (0.4 + dist * 0.25);
+    const newDist = Math.max(0.3, Math.min(30, dist + move));
+
+    dir.normalize().multiplyScalar(newDist);
+    camera.position.copy(orbitTarget).add(dir);
+
+    velocityRef.current *= 0.75;
+  });
+
+  return null;
+}
+
+// 카메라 위치/타겟을 prop 변경에 따라 부드럽게 업데이트 (lerp)
 function CameraSync({
   position,
   target,
@@ -443,19 +680,49 @@ function CameraSync({
   const { camera, controls } = useThree();
   const isFirstRender = useRef(true);
   const lastReportedPosition = useRef<string>('');
+  const targetPos = useRef(new THREE.Vector3(...position));
+  const targetTgt = useRef(new THREE.Vector3(...target));
+  const isLerping = useRef(false);
 
   useEffect(() => {
-    // 첫 렌더링 시에는 Canvas 초기화가 처리하므로 스킵
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      targetPos.current.set(...position);
+      targetTgt.current.set(...target);
       return;
     }
-    camera.position.set(...position);
+    targetPos.current.set(...position);
+    targetTgt.current.set(...target);
+    isLerping.current = true;
+  }, [position, target]);
+
+  // 부드러운 카메라 이동 (lerp)
+  useFrame(() => {
+    if (!isLerping.current) return;
+
+    const factor = 0.08;
+    camera.position.lerp(targetPos.current, factor);
+
     if (controls && 'target' in controls) {
-      (controls as unknown as { target: THREE.Vector3; update: () => void }).target.set(...target);
+      const orbitTarget = (controls as unknown as { target: THREE.Vector3 }).target;
+      orbitTarget.lerp(targetTgt.current, factor);
       (controls as unknown as { update: () => void }).update();
     }
-  }, [position, target, camera, controls]);
+
+    // 충분히 가까우면 lerp 중단
+    const posDist = camera.position.distanceTo(targetPos.current);
+    const tgtDist = controls && 'target' in controls
+      ? (controls as unknown as { target: THREE.Vector3 }).target.distanceTo(targetTgt.current)
+      : 0;
+    if (posDist < 0.005 && tgtDist < 0.005) {
+      camera.position.copy(targetPos.current);
+      if (controls && 'target' in controls) {
+        (controls as unknown as { target: THREE.Vector3 }).target.copy(targetTgt.current);
+        (controls as unknown as { update: () => void }).update();
+      }
+      isLerping.current = false;
+    }
+  });
 
   // 카메라 변경 감지 및 콜백 호출
   useEffect(() => {
@@ -479,7 +746,6 @@ function CameraSync({
         Math.round(orbitControls.target.z * 100) / 100,
       ];
 
-      // 동일한 값이면 스킵
       const key = `${pos.join(',')}_${tgt.join(',')}`;
       if (key === lastReportedPosition.current) return;
       lastReportedPosition.current = key;
@@ -526,6 +792,7 @@ export function CombinedModelViewer({
   containerRef,
   focusedPartId,
   onMeshPositions,
+  onMeshBounds,
   globalOpacity,
   isDraggingPin = false,
   onDragMove,
@@ -533,6 +800,11 @@ export function CombinedModelViewer({
   dragPreviewPosition,
   dragTargetInfo,
   onDragStart,
+  partExplodeOverrides,
+  onMeasurementClick,
+  measurementMode = false,
+  measurements,
+  pendingMeasurePoint,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -559,7 +831,7 @@ export function CombinedModelViewer({
   }
 
   return (
-    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isDraggingPin ? { cursor: 'grabbing' } : isPlacingPin ? { cursor: 'crosshair' } : undefined}>
+    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isDraggingPin ? { cursor: 'grabbing' } : isPlacingPin ? { cursor: 'crosshair' } : measurementMode ? { cursor: 'crosshair' } : undefined}>
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -574,6 +846,7 @@ export function CombinedModelViewer({
           antialias: true,
           preserveDrawingBuffer: true,
           powerPreference: 'high-performance',
+          localClippingEnabled: true,
         }}
       >
         <color attach="background" args={[bgColor]} />
@@ -605,9 +878,14 @@ export function CombinedModelViewer({
             onPlacePin={onPlacePin}
             focusedPartId={focusedPartId}
             onMeshPositions={onMeshPositions}
+            onMeshBounds={onMeshBounds}
             globalOpacity={globalOpacity}
             isDraggingPin={isDraggingPin}
             onDragMove={onDragMove}
+            partExplodeOverrides={partExplodeOverrides}
+            onMeasurementClick={onMeasurementClick}
+            measurementMode={measurementMode}
+            isDarkMode={isDarkMode}
           />
         </Suspense>
 
@@ -626,6 +904,15 @@ export function CombinedModelViewer({
             dragTargetInfo={dragTargetInfo}
             onDragStart={onDragStart}
             isPlacingPin={isPlacingPin}
+          />
+        )}
+
+        {/* 측정 도구 오버레이 */}
+        {(measurements || pendingMeasurePoint) && (
+          <MeasurementOverlay
+            measurements={measurements ?? []}
+            pendingPoint={pendingMeasurePoint ?? null}
+            modelScale={model.scale || 1}
           />
         )}
 
@@ -703,11 +990,11 @@ export function CombinedModelViewer({
           makeDefault
           enableDamping
           dampingFactor={0.05}
-          minDistance={0.1}
-          maxDistance={30}
+          enableZoom={false}
           target={finalCameraTarget}
           enabled={!isDraggingPin}
         />
+        <SmoothZoom />
 
         {/* 카메라 위치 동기화 (prop 변경 시) */}
         <CameraSync position={finalCameraPosition} target={finalCameraTarget} onCameraChange={onCameraChange} />

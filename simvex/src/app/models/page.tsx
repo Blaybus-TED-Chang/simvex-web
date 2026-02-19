@@ -63,8 +63,8 @@ const NAV_ITEMS = [
 /* ── FAQ 데이터 ── */
 const FAQ_DATA = [
   {
-    q: 'SIMVEX는 어떤 서비스인가요?',
-    a: 'SIMVEX는 3D 기계 부품 모델을 웹에서 조립·분해하며 학습할 수 있는 공학 교육 플랫폼입니다. 드론, 로봇팔, 서스펜션 등 다양한 모델을 직접 회전·확대하며 구조를 파악할 수 있습니다.',
+    q: 'VEXA는 어떤 서비스인가요?',
+    a: 'VEXA는 3D 기계 부품 모델을 웹에서 조립·분해하며 학습할 수 있는 공학 교육 플랫폼입니다. 드론, 로봇팔, 서스펜션 등 다양한 모델을 직접 회전·확대하며 구조를 파악할 수 있습니다.',
   },
   {
     q: '3D 모델을 직접 업로드할 수 있나요?',
@@ -80,7 +80,7 @@ const FAQ_DATA = [
   },
   {
     q: '어떤 기기에서 사용할 수 있나요?',
-    a: 'SIMVEX는 웹 기반 서비스로, Chrome·Edge·Safari 등 최신 브라우저가 설치된 PC·태블릿에서 별도 설치 없이 바로 사용할 수 있습니다.',
+    a: 'VEXA는 웹 기반 서비스로, Chrome·Edge·Safari 등 최신 브라우저가 설치된 PC·태블릿에서 별도 설치 없이 바로 사용할 수 있습니다.',
   },
   {
     q: '분해도 슬라이더는 어떻게 사용하나요?',
@@ -153,9 +153,9 @@ const NOTICE_DATA: { tag: string; tagColor: string; title: string; date: string;
   {
     tag: '서비스',
     tagColor: '#E0E7FF',
-    title: 'SIMVEX 오픈 베타 출시 안내',
+    title: 'VEXA 오픈 베타 출시 안내',
     date: '2026.02.10',
-    body: '안녕하세요, SIMVEX 팀입니다. 오늘부터 SIMVEX 오픈 베타 서비스를 시작합니다. 3D 모델 뷰어, 분해도 학습, AI 어시스턴트 등 핵심 기능을 자유롭게 이용해보세요. 베타 기간 동안 발견되는 버그나 개선 의견은 언제든 환영합니다.',
+    body: '안녕하세요, VEXA 팀입니다. 오늘부터 VEXA 오픈 베타 서비스를 시작합니다. 3D 모델 뷰어, 분해도 학습, AI 어시스턴트 등 핵심 기능을 자유롭게 이용해보세요. 베타 기간 동안 발견되는 버그나 개선 의견은 언제든 환영합니다.',
     pinned: true,
   },
   {
@@ -676,7 +676,7 @@ export default function ModelsPage() {
       {/* ══════ 상단 헤더 바 ══════ */}
       <header className="flex items-center justify-between px-8 bg-white shrink-0 relative z-10" style={{ height: 72, boxShadow: '0 0 8.4px rgba(0,0,0,0.25)' }}>
         <Link href="/" className="text-[26px] text-black no-underline shrink-0" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
-          SIMVEX
+          VEXA
         </Link>
 
         <div className="flex items-center gap-4">
@@ -867,7 +867,7 @@ export default function ModelsPage() {
                   </div>
                   <div>
                     <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">자주 묻는 질문</h1>
-                    <p className="text-[13px] text-gray-400 mt-0.5">SIMVEX 이용 가이드</p>
+                    <p className="text-[13px] text-gray-400 mt-0.5">VEXA 이용 가이드</p>
                   </div>
                 </div>
               </div>
@@ -900,7 +900,7 @@ export default function ModelsPage() {
                   </div>
                   <div>
                     <h1 className="text-[28px] font-bold text-gray-900 tracking-tight leading-tight">공지사항</h1>
-                    <p className="text-[13px] text-gray-400 mt-0.5">SIMVEX 소식과 업데이트</p>
+                    <p className="text-[13px] text-gray-400 mt-0.5">VEXA 소식과 업데이트</p>
                   </div>
                 </div>
               </div>
@@ -914,7 +914,7 @@ export default function ModelsPage() {
 
               {/* 하단 */}
               <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-                <p className="text-[12px] text-gray-400">SIMVEX 팀은 더 나은 학습 경험을 위해 노력합니다</p>
+                <p className="text-[12px] text-gray-400">VEXA 팀은 더 나은 학습 경험을 위해 노력합니다</p>
               </div>
             </div>
 
@@ -1420,7 +1420,7 @@ export default function ModelsPage() {
                   {/* 하단 바 */}
                   <footer className="bg-[#3d3d3d] border-t border-gray-600 px-8 py-5">
                     <div className="flex items-center justify-between max-w-4xl mx-auto">
-                      <span className="text-[18px] font-extrabold text-white tracking-tight" style={{ fontFamily: 'Righteous' }}>SIMVEX</span>
+                      <span className="text-[18px] font-extrabold text-white tracking-tight" style={{ fontFamily: 'Righteous' }}>VEXA</span>
                       <div className="flex items-center gap-5 text-[12px] text-gray-300">
                         <span className="hover:text-white cursor-pointer transition-colors">Terms</span>
                         <span className="hover:text-white cursor-pointer transition-colors">Privacy</span>

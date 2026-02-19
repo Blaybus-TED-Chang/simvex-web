@@ -69,7 +69,7 @@ export default function CommunityPage() {
       {/* 헤더 */}
       <header className="flex items-center justify-between px-8 bg-white shrink-0 relative z-20" style={{ height: 72, boxShadow: '0 0 8.4px rgba(0,0,0,0.25)' }}>
         <Link href="/" className="text-[26px] text-black no-underline shrink-0" style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
-          SIMVEX
+          VEXA
         </Link>
         <div className="flex items-center gap-4">
           <Link href="/models" className="p-2 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all" title="홈">
@@ -355,7 +355,7 @@ export default function CommunityPage() {
           {/* 푸터 */}
           <footer className="px-8 py-6 border-t border-gray-100 mt-auto">
             <div className="max-w-6xl mx-auto flex items-center justify-between text-[12px] text-gray-400">
-              <p>SIMVEX - 공학 학습 플랫폼</p>
+              <p>VEXA - 공학 학습 플랫폼</p>
               <p>교육과 탐구를 위해 만들어졌습니다</p>
             </div>
           </footer>

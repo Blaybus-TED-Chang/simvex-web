@@ -49,6 +49,16 @@ export interface ModelViewState {
   rootName?: string;
 }
 
+// 단면도 (Cross-Section) 상태
+export type CrossSectionAxis = 'x' | 'y' | 'z';
+
+export interface CrossSectionState {
+  crossSectionEnabled: boolean;
+  crossSectionAxis: CrossSectionAxis;
+  crossSectionOffset: number;   // 0..1 (바운딩박스 범위에 매핑)
+  crossSectionFlipped: boolean;
+}
+
 // 뷰어 상태
 export interface ViewerState {
   currentModel: string | null;
@@ -61,6 +71,9 @@ export interface ViewerState {
   globalOpacity: number;
   modelStates: Record<string, ModelViewState>;
   showControlsGuide: boolean;
+  crossSection: CrossSectionState;
+  xRayMode: boolean;
+  autoFocusEnabled: boolean;
 }
 
 // 뷰어 액션
@@ -85,4 +98,11 @@ export interface ViewerActions {
   moveGroupToGroup: (modelId: string, sourceGroupId: string, targetGroupId: string | null) => void;
   reorderGroups: (modelId: string, parentGroupId: string | null, orderedGroupIds: string[]) => void;
   toggleControlsGuide: () => void;
+  setCrossSectionEnabled: (enabled: boolean) => void;
+  setCrossSectionAxis: (axis: CrossSectionAxis) => void;
+  setCrossSectionOffset: (offset: number) => void;
+  setCrossSectionFlipped: (flipped: boolean) => void;
+  resetCrossSection: () => void;
+  setXRayMode: (enabled: boolean) => void;
+  setAutoFocusEnabled: (enabled: boolean) => void;
 }

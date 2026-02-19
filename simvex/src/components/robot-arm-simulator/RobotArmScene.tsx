@@ -1,13 +1,9 @@
-/**
- * [보류] 로봇 암 시뮬레이션 — Canvas 래퍼 (조명, 바닥, OrbitControls)
- * 현재 미사용. RobotArmSimModel.tsx 상단 주석 참고.
- */
 'use client';
 
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from '@react-three/drei';
-import RobotArmSimModel from './RobotArmSimModel';
+import RobotArmModel from './RobotArmModel';
 
 function LoadingFallback() {
   return (
@@ -18,14 +14,11 @@ function LoadingFallback() {
   );
 }
 
-interface RobotArmSimSceneProps {
+interface RobotArmSceneProps {
   isDarkMode?: boolean;
-  isRunning: boolean;
-  speed: number;
-  onJointAnglesChange?: (angles: number[]) => void;
 }
 
-export default function RobotArmSimScene({ isDarkMode = true, isRunning, speed, onJointAnglesChange }: RobotArmSimSceneProps) {
+export default function RobotArmScene({ isDarkMode = true }: RobotArmSceneProps) {
   const groundColor = isDarkMode ? '#1a1a2e' : '#e2e8f0';
   const gridColors: [string, string] = isDarkMode ? ['#333355', '#222244'] : ['#94a3b8', '#cbd5e1'];
   const fogColor = isDarkMode ? '#0f172a' : '#f1f5f9';
@@ -40,7 +33,7 @@ export default function RobotArmSimScene({ isDarkMode = true, isRunning, speed, 
         powerPreference: 'high-performance',
       }}
     >
-      <PerspectiveCamera makeDefault position={[7, 7, 7]} fov={50} near={0.01} far={100} />
+      <PerspectiveCamera makeDefault position={[2, 2, 2]} fov={50} near={0.01} far={100} />
 
       {/* Lighting */}
       <ambientLight intensity={isDarkMode ? 1.2 : 1.5} />
@@ -52,33 +45,28 @@ export default function RobotArmSimScene({ isDarkMode = true, isRunning, speed, 
       />
       <directionalLight position={[-5, 5, -5]} intensity={isDarkMode ? 0.8 : 1.0} />
       <directionalLight position={[0, -5, 0]} intensity={0.4} />
-      <directionalLight position={[5, 0, -5]} intensity={0.5} />
 
       {/* Robot Arm Model */}
       <Suspense fallback={<LoadingFallback />}>
-        <RobotArmSimModel
-          isRunning={isRunning}
-          speed={speed}
-          onJointAnglesChange={onJointAnglesChange}
-        />
+        <RobotArmModel />
       </Suspense>
 
       {/* Ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[30, 30]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
         <meshStandardMaterial color={groundColor} />
       </mesh>
 
       {/* Grid */}
-      <gridHelper args={[30, 30, gridColors[0], gridColors[1]]} position={[0, -0.49, 0]} />
+      <gridHelper args={[20, 20, gridColors[0], gridColors[1]]} position={[0, 0, 0]} />
 
       {/* Controls */}
       <OrbitControls
         makeDefault
         enableDamping
         dampingFactor={0.05}
-        minDistance={0.1}
-        maxDistance={30}
+        minDistance={0.5}
+        maxDistance={20}
       />
 
       {/* Gizmo */}
@@ -86,7 +74,7 @@ export default function RobotArmSimScene({ isDarkMode = true, isRunning, speed, 
         <GizmoViewport axisColors={['#ef4444', '#22c55e', '#3b82f6']} labelColor="white" />
       </GizmoHelper>
 
-      <fog attach="fog" args={[fogColor, 15, 40]} />
+      <fog attach="fog" args={[fogColor, 10, 30]} />
     </Canvas>
   );
 }

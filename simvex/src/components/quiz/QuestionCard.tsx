@@ -1,6 +1,7 @@
 'use client';
 
 import { QuizQuestion } from '@/data/quizzes/types';
+import { TTSButton } from '@/components/ui/TTSButton';
 
 interface QuestionCardProps {
   question: QuizQuestion;
@@ -25,12 +26,15 @@ export function QuestionCard({
   return (
     <div className="space-y-4">
       {/* 문제 */}
-      <div
-        className={`text-lg font-medium ${
-          isDarkMode ? 'text-white' : 'text-gray-900'
-        }`}
-      >
-        {question.question}
+      <div className="flex items-start gap-2">
+        <div
+          className={`text-lg font-medium flex-1 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          {question.question}
+        </div>
+        <TTSButton text={question.question} isDarkMode={isDarkMode} />
       </div>
 
       {/* identify-part 문제인 경우 */}

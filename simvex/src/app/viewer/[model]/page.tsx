@@ -7,10 +7,12 @@ import Link from 'next/link';
 import { getModelById, getCombinedModelById, combinedModels } from '@/data/models';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { ExplodeSlider } from '@/components/viewer/ExplodeSlider';
+import { CrossSectionSlider } from '@/components/viewer/CrossSectionSlider';
 import { ProductInfo } from '@/components/viewer/ProductInfo';
 import { PartInfo } from '@/components/viewer/PartInfo';
 import { NotesPanel } from '@/components/notes/NotesPanel';
 import { AIChatPanel } from '@/components/ai/AIChatPanel';
+import { AssemblyControls } from '@/components/viewer/AssemblyControls';
 
 import { AuthButton } from '@/components/auth/AuthButton';
 import { LoginModal } from '@/components/auth/LoginModal';
@@ -202,6 +204,7 @@ export default function ViewerPage() {
     getModelState,
     setModelState,
     globalOpacity,
+    autoFocusEnabled,
     createPartGroup,
     deletePartGroup,
     renamePartGroup,
@@ -245,8 +248,23 @@ export default function ViewerPage() {
   const [focusedPartId, setFocusedPartId] = useState<string | null>(null);
   const [treeSearchFilter, setTreeSearchFilter] = useState('');
   const [meshPositions, setMeshPositions] = useState<Record<string, [number, number, number]>>({});
+  const [meshBounds, setMeshBounds] = useState<Record<string, { center: [number, number, number]; size: [number, number, number] }>>({});
   const isTreeResizing = useRef(false);
   const isSidebarResizing = useRef(false);
+
+  // === 조립 순서 애니메이션 (Feature 5) ===
+  const [isAssemblyMode, setIsAssemblyMode] = useState(false);
+  const [assemblyStep, setAssemblyStep] = useState(0);
+  const [assemblyPlaying, setAssemblyPlaying] = useState(false);
+  const [assemblySpeed, setAssemblySpeed] = useState(1.0);
+  const [partExplodeOverrides, setPartExplodeOverrides] = useState<Record<string, number> | undefined>(undefined);
+  const assemblyAnimRef = useRef<number | null>(null);
+  const assemblyProgressRef = useRef(0); // 현재 부품 애니메이션 진행도 (0~1)
+
+  // === 측정 도구 (Feature 6) ===
+  const [measurementMode, setMeasurementMode] = useState(false);
+  const [measurements, setMeasurements] = useState<{ pointA: [number, number, number]; pointB: [number, number, number]; distance: number }[]>([]);
+  const [pendingMeasurePoint, setPendingMeasurePoint] = useState<[number, number, number] | null>(null);
 
   // 우측 사이드바 리사이즈 핸들러
   const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
@@ -601,6 +619,163 @@ export default function ViewerPage() {
     setMeshPositions(positions);
   }, []);
 
+  // 부품 바운딩박스 콜백 (자동 포커스용)
+  const handleMeshBounds = useCallback((bounds: Record<string, { center: [number, number, number]; size: [number, number, number] }>) => {
+    setMeshBounds(bounds);
+  }, []);
+
+  // === 조립 순서 애니메이션 로직 (Feature 5) ===
+  const assemblyParts = useMemo(() => {
+    const modelObj = combinedModel;
+    if (!modelObj) return [];
+    // 역순: 맨 바깥 부품부터 (분해 거리가 큰 것부터)
+    return [...modelObj.parts].sort((a, b) => b.explodeDistance - a.explodeDistance);
+  }, [combinedModel]);
+
+  const handleAssemblyToggle = useCallback(() => {
+    if (isAssemblyMode) {
+      // 끄기
+      setIsAssemblyMode(false);
+      setAssemblyPlaying(false);
+      setPartExplodeOverrides(undefined);
+      setAssemblyStep(0);
+      assemblyProgressRef.current = 0;
+      if (assemblyAnimRef.current) {
+        cancelAnimationFrame(assemblyAnimRef.current);
+        assemblyAnimRef.current = null;
+      }
+    } else {
+      // 켜기: 모든 부품을 분해 상태로 시작
+      setIsAssemblyMode(true);
+      setAssemblyStep(0);
+      assemblyProgressRef.current = 0;
+      const overrides: Record<string, number> = {};
+      assemblyParts.forEach((p) => { overrides[p.id] = 1; });
+      setPartExplodeOverrides(overrides);
+      setExplodeValue(1); // 글로벌도 1로 (비활성 표시용)
+    }
+  }, [isAssemblyMode, assemblyParts, setExplodeValue]);
+
+  // 조립 애니메이션 프레임 루프
+  useEffect(() => {
+    if (!isAssemblyMode || !assemblyPlaying) {
+      if (assemblyAnimRef.current) {
+        cancelAnimationFrame(assemblyAnimRef.current);
+        assemblyAnimRef.current = null;
+      }
+      return;
+    }
+
+    let lastTime = performance.now();
+
+    const animate = (now: number) => {
+      const dt = (now - lastTime) / 1000; // 초 단위
+      lastTime = now;
+
+      // 현재 부품 애니메이션 진행
+      assemblyProgressRef.current += dt * assemblySpeed * 0.8; // 속도 조절
+
+      if (assemblyProgressRef.current >= 1) {
+        assemblyProgressRef.current = 0;
+        // 다음 단계로
+        setAssemblyStep((prev) => {
+          const next = prev + 1;
+          if (next >= assemblyParts.length) {
+            setAssemblyPlaying(false);
+            return prev;
+          }
+          return next;
+        });
+      }
+
+      // partExplodeOverrides 업데이트
+      setPartExplodeOverrides((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        setAssemblyStep((currentStep) => {
+          assemblyParts.forEach((p, i) => {
+            if (i < currentStep) {
+              next[p.id] = 0; // 이미 조립됨
+            } else if (i === currentStep) {
+              next[p.id] = Math.max(0, 1 - assemblyProgressRef.current); // 애니메이션 중
+            } else {
+              next[p.id] = 1; // 아직 분해됨
+            }
+          });
+          return currentStep;
+        });
+        return next;
+      });
+
+      assemblyAnimRef.current = requestAnimationFrame(animate);
+    };
+
+    assemblyAnimRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (assemblyAnimRef.current) {
+        cancelAnimationFrame(assemblyAnimRef.current);
+        assemblyAnimRef.current = null;
+      }
+    };
+  }, [isAssemblyMode, assemblyPlaying, assemblySpeed, assemblyParts]);
+
+  // 수동 단계 이동
+  const handleAssemblyPrev = useCallback(() => {
+    setAssemblyStep((prev) => {
+      const next = Math.max(0, prev - 1);
+      assemblyProgressRef.current = 0;
+      // 오버라이드 업데이트
+      setPartExplodeOverrides((overrides) => {
+        if (!overrides) return overrides;
+        const updated = { ...overrides };
+        assemblyParts.forEach((p, i) => {
+          updated[p.id] = i < next ? 0 : 1;
+        });
+        return updated;
+      });
+      return next;
+    });
+  }, [assemblyParts]);
+
+  const handleAssemblyNext = useCallback(() => {
+    setAssemblyStep((prev) => {
+      const next = Math.min(assemblyParts.length - 1, prev + 1);
+      assemblyProgressRef.current = 0;
+      // 현재 부품을 조립 완료 처리
+      setPartExplodeOverrides((overrides) => {
+        if (!overrides) return overrides;
+        const updated = { ...overrides };
+        assemblyParts.forEach((p, i) => {
+          updated[p.id] = i <= prev ? 0 : i === next ? 1 : 1;
+        });
+        return updated;
+      });
+      return next;
+    });
+  }, [assemblyParts]);
+
+  // === 측정 도구 로직 (Feature 6) ===
+  const handleMeasurementClick = useCallback((point: [number, number, number]) => {
+    if (!pendingMeasurePoint) {
+      // 첫 번째 점
+      setPendingMeasurePoint(point);
+    } else {
+      // 두 번째 점: 거리 계산
+      const dx = point[0] - pendingMeasurePoint[0];
+      const dy = point[1] - pendingMeasurePoint[1];
+      const dz = point[2] - pendingMeasurePoint[2];
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      setMeasurements((prev) => [...prev, { pointA: pendingMeasurePoint, pointB: point, distance }]);
+      setPendingMeasurePoint(null);
+    }
+  }, [pendingMeasurePoint]);
+
+  const handleClearMeasurements = useCallback(() => {
+    setMeasurements([]);
+    setPendingMeasurePoint(null);
+  }, []);
+
   // === 부품 커스터마이징 ===
   const { customizations, upsertCustomization, resetCustomization } = usePartCustomizations(user, modelId);
 
@@ -749,11 +924,49 @@ export default function ViewerPage() {
     return () => window.removeEventListener('partTagClick', handler);
   }, [setSelectedPartId]);
 
-  // 부품 선택 시 핀 말풍선 닫기
+  // 부품 선택 시 핀 말풍선 닫기 + 자동 포커스
   const handleSelectPart = useCallback((partId: string | null) => {
     setSelectedPartId(partId);
     setActiveAnnotationId(null);
-  }, [setSelectedPartId, setActiveAnnotationId]);
+
+    // 자동 포커스: 부품 클릭 시 카메라를 부품 방향으로 부드럽게 이동
+    if (partId && autoFocusEnabled && meshBounds[partId]) {
+      const modelObj = originalModel || combinedModel;
+      const scale = (modelObj && 'scale' in modelObj ? (modelObj as CombinedModelConfig).scale : undefined) || 1;
+      const bound = meshBounds[partId];
+      const part = modelObj?.parts.find((p) => p.id === partId);
+
+      // 분해 오프셋 반영
+      let tx = bound.center[0] * scale;
+      let ty = bound.center[1] * scale;
+      let tz = bound.center[2] * scale;
+      if (part) {
+        const [dx, dy, dz] = part.explodeDirection;
+        const dist = part.explodeDistance * explodeValue;
+        tx += dx * dist * scale;
+        ty += dy * dist * scale;
+        tz += dz * dist * scale;
+      }
+
+      // 카메라 방향 유지 + 부품 크기 기반 거리
+      const maxSize = Math.max(bound.size[0], bound.size[1], bound.size[2]) * scale;
+      const zoomDist = Math.max(1.5, maxSize * 3);
+      const camDir = [
+        cameraPosition[0] - cameraTarget[0],
+        cameraPosition[1] - cameraTarget[1],
+        cameraPosition[2] - cameraTarget[2],
+      ];
+      const len = Math.sqrt(camDir[0] ** 2 + camDir[1] ** 2 + camDir[2] ** 2);
+      const norm = len > 0 ? [camDir[0] / len, camDir[1] / len, camDir[2] / len] : [0, 0.5, 1];
+
+      setCameraTarget([tx, ty, tz]);
+      setCameraPosition([
+        tx + norm[0] * zoomDist,
+        ty + norm[1] * zoomDist,
+        tz + norm[2] * zoomDist,
+      ]);
+    }
+  }, [setSelectedPartId, setActiveAnnotationId, autoFocusEnabled, meshBounds, originalModel, combinedModel, explodeValue, cameraPosition, cameraTarget]);
 
   // 주석 포함 스크린샷 저장
   const handleAnnotationScreenshot = useCallback(async () => {
@@ -947,7 +1160,7 @@ export default function ViewerPage() {
         {/* 왼쪽: 로고 */}
         <Link href="/models" className="flex items-center shrink-0 hover:opacity-80 transition-opacity">
           <span className={`text-[26px] ${isDarkMode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'Righteous', fontWeight: 400 }}>
-            SIMVEX
+            VEXA
           </span>
         </Link>
 
@@ -1125,6 +1338,44 @@ export default function ViewerPage() {
                   </svg>
                 </button>
               </Tooltip>
+
+              {/* 측정 도구 */}
+              <Tooltip label={measurementMode ? '측정 모드 끄기' : '측정 도구'}>
+                <button
+                  onClick={() => {
+                    setMeasurementMode(!measurementMode);
+                    if (measurementMode) {
+                      setPendingMeasurePoint(null);
+                    }
+                  }}
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    measurementMode
+                      ? 'bg-red-500 text-white shadow-sm'
+                      : isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 6v12a2 2 0 002 2h2V6M21 6v12a2 2 0 01-2 2h-2V6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 10v4M12 10v4M17 10v4" />
+                  </svg>
+                </button>
+              </Tooltip>
+
+              {/* 측정 초기화 */}
+              {measurements.length > 0 && (
+                <Tooltip label="측정 초기화">
+                  <button
+                    onClick={handleClearMeasurements}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      isDarkMode ? 'hover:bg-gray-800 text-red-400' : 'hover:bg-gray-100 text-red-500'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </Tooltip>
+              )}
 
               <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200'}`} />
             </>
@@ -1374,6 +1625,7 @@ export default function ViewerPage() {
                   containerRef={viewportRef}
                   focusedPartId={focusedPartId}
                   onMeshPositions={handleMeshPositions}
+                  onMeshBounds={handleMeshBounds}
                   globalOpacity={globalOpacity}
                   isDraggingPin={!!draggingAnnotationId}
                   onDragMove={handleDragMove}
@@ -1381,6 +1633,11 @@ export default function ViewerPage() {
                   dragPreviewPosition={dragPreviewPosition}
                   dragTargetInfo={dragTargetInfo}
                   onDragStart={handleDragStart}
+                  partExplodeOverrides={partExplodeOverrides}
+                  onMeasurementClick={measurementMode ? handleMeasurementClick : undefined}
+                  measurementMode={measurementMode}
+                  measurements={measurements}
+                  pendingMeasurePoint={pendingMeasurePoint}
                 />
               ) : model ? (
                 <ModelViewer
@@ -1468,7 +1725,6 @@ export default function ViewerPage() {
                 {(['model', 'notes', 'quiz'] as const).map((tab) => {
                   const labels = { model: '모델', notes: '노트', quiz: '퀴즈' };
                   const isActive = rightSidebarTab === tab;
-                  if (tab === 'quiz' && !modelHasQuiz) return null;
                   return (
                     <button
                       key={tab}
@@ -1498,6 +1754,27 @@ export default function ViewerPage() {
                     <div className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-blue-100/80 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'}`}>
                       <h3 className={`text-[16px] font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'} mb-4`}>구조 제어</h3>
                       <ExplodeSlider />
+                      <div className={`mt-5 pt-5 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                        <CrossSectionSlider />
+                      </div>
+                      {isCombinedModel && (
+                        <div className={`mt-5 pt-5 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                          <AssemblyControls
+                            isActive={isAssemblyMode}
+                            onToggle={handleAssemblyToggle}
+                            isPlaying={assemblyPlaying}
+                            onPlayPause={() => setAssemblyPlaying(!assemblyPlaying)}
+                            onPrev={handleAssemblyPrev}
+                            onNext={handleAssemblyNext}
+                            currentStep={assemblyStep}
+                            totalSteps={assemblyParts.length}
+                            currentPart={assemblyParts[assemblyStep] || null}
+                            speed={assemblySpeed}
+                            onSpeedChange={setAssemblySpeed}
+                            isDarkMode={isDarkMode}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* 모델 정보 카드 */}
@@ -1597,7 +1874,7 @@ export default function ViewerPage() {
                 )}
 
                 {/* 퀴즈 탭 */}
-                {rightSidebarTab === 'quiz' && quiz && currentModelInfo && (
+                {rightSidebarTab === 'quiz' && currentModelInfo && (
                   <div style={{ animation: 'fadeIn 0.2s ease' }}>
                     <QuizPanel
                       quiz={quiz}
@@ -1607,6 +1884,7 @@ export default function ViewerPage() {
                       selectedPartId={selectedPartId}
                       onRequestPartSelect={handleQuizRequestPartSelect}
                       onClearPartSelect={handleQuizClearPartSelect}
+                      modelInfo={currentModelInfo}
                     />
                   </div>
                 )}

@@ -6,8 +6,18 @@ import { useQuizStore } from '@/lib/store/quizStore';
 import { QuestionCard } from './QuestionCard';
 import { ScoreDisplay } from './ScoreDisplay';
 
+interface ModelInfo {
+  id: string;
+  name: string;
+  nameKo: string;
+  description: string;
+  theory: string;
+  category: string;
+  parts: { id: string; name: string; nameKo: string; description: string }[];
+}
+
 interface QuizPanelProps {
-  quiz: ModelQuiz;
+  quiz?: ModelQuiz;
   modelId: string;
   isDarkMode: boolean;
   onClose: () => void;
@@ -15,17 +25,78 @@ interface QuizPanelProps {
   selectedPartId: string | null;
   onRequestPartSelect: (questionPartId: string) => void;
   onClearPartSelect: () => void;
+  // AI 퀴즈 생성용
+  modelInfo?: ModelInfo | null;
 }
 
 export function QuizPanel({
-  quiz,
+  quiz: propQuiz,
   modelId,
   isDarkMode,
   onClose,
   selectedPartId,
   onRequestPartSelect,
   onClearPartSelect,
+  modelInfo,
 }: QuizPanelProps) {
+  // AI 퀴즈 생성 상태
+  const [aiQuiz, setAiQuiz] = useState<ModelQuiz | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // localStorage 캐시에서 AI 퀴즈 복원
+  useEffect(() => {
+    if (propQuiz) return; // 내장 퀴즈가 있으면 AI 퀴즈 불필요
+    try {
+      const cached = localStorage.getItem(`ai-quiz-${modelId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setAiQuiz(parsed);
+      }
+    } catch { /* ignore */ }
+  }, [modelId, propQuiz]);
+
+  const quiz = propQuiz || aiQuiz;
+
+  // AI 퀴즈 생성
+  const handleGenerateAIQuiz = useCallback(async () => {
+    if (!modelInfo) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch('/api/quiz/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelName: modelInfo.name,
+          modelNameKo: modelInfo.nameKo,
+          modelDescription: modelInfo.description,
+          modelTheory: modelInfo.theory,
+          parts: modelInfo.parts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            nameKo: p.nameKo,
+            description: p.description,
+          })),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '퀴즈 생성 실패');
+
+      const generatedQuiz: ModelQuiz = {
+        modelId,
+        titleKo: `${modelInfo.nameKo} AI 퀴즈`,
+        description: `AI가 생성한 ${modelInfo.nameKo} 학습 퀴즈입니다.`,
+        questions: data.questions,
+      };
+      setAiQuiz(generatedQuiz);
+      localStorage.setItem(`ai-quiz-${modelId}`, JSON.stringify(generatedQuiz));
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : '퀴즈 생성 실패');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [modelId, modelInfo]);
   const {
     quizProgress,
     startQuiz,
@@ -49,7 +120,7 @@ export function QuizPanel({
   const prevSelectedPartIdRef = useRef<string | null>(null);
 
   // 선택된 문제들을 ID로 매핑
-  const selectedQuestions: QuizQuestion[] = progress?.selectedQuestionIds
+  const selectedQuestions: QuizQuestion[] = progress?.selectedQuestionIds && quiz
     ? progress.selectedQuestionIds
         .map((id) => quiz.questions.find((q) => q.id === id))
         .filter((q): q is QuizQuestion => q !== undefined)
@@ -66,13 +137,14 @@ export function QuizPanel({
 
   // 퀴즈 시작 (30개 중 10개 랜덤 선택)
   const handleStart = useCallback(() => {
+    if (!quiz) return;
     const allQuestionIds = quiz.questions.map((q) => q.id);
     startQuiz(modelId, allQuestionIds, 10);
     setShowResult(false);
     setWaitingForPartClick(false);
     onClearPartSelect();
     prevSelectedPartIdRef.current = null;
-  }, [modelId, quiz.questions, startQuiz, onClearPartSelect]);
+  }, [modelId, quiz, startQuiz, onClearPartSelect]);
 
   // 답변 선택 (객관식, O/X)
   const handleAnswer = useCallback(
@@ -236,7 +308,7 @@ export function QuizPanel({
               isDarkMode ? 'text-white' : 'text-gray-900'
             }`}
           >
-            {quiz.titleKo}
+            {quiz?.titleKo || '퀴즈'}
           </h2>
           <button
             onClick={onClose}
@@ -333,8 +405,64 @@ export function QuizPanel({
 
       {/* 콘텐츠 */}
       <div className="flex-1 overflow-y-auto p-4">
+        {/* 퀴즈 없음: AI 생성 화면 */}
+        {!quiz && (
+          <div className="text-center py-12 space-y-6">
+            <div
+              className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center ${
+                isDarkMode ? 'bg-purple-900/30' : 'bg-purple-100'
+              }`}
+            >
+              <svg
+                className={`w-10 h-10 ${isDarkMode ? 'text-purple-400' : 'text-purple-500'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                AI 퀴즈 생성
+              </h3>
+              <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                이 모델에 대한 퀴즈가 없습니다.<br />AI가 자동으로 퀴즈를 생성합니다.
+              </p>
+            </div>
+            {aiError && (
+              <p className="text-red-500 text-sm">{aiError}</p>
+            )}
+            <button
+              onClick={handleGenerateAIQuiz}
+              disabled={aiLoading || !modelInfo}
+              className={`px-8 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto ${
+                aiLoading
+                  ? isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                  : isDarkMode
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                  : 'bg-purple-500 hover:bg-purple-600 text-white'
+              }`}
+            >
+              {aiLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  생성 중...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  AI 퀴즈 생성
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* 시작 화면 */}
-        {!progress && (
+        {quiz && !progress && (
           <div className="text-center py-12 space-y-6">
             <div
               className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center ${
@@ -394,7 +522,7 @@ export function QuizPanel({
         )}
 
         {/* 퀴즈 진행 중 */}
-        {progress && !progress.completed && currentQuestion && (
+        {quiz && progress && !progress.completed && currentQuestion && (
           <div className="space-y-6">
             <QuestionCard
               question={currentQuestion}
