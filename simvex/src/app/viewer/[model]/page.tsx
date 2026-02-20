@@ -30,6 +30,7 @@ import { userModelToConfig } from '@/types/userModel';
 import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { PartCompareModal, ComparisonResult, ComparePartData } from '@/components/compare/PartCompareModal';
+import { FaultDiagnosisModal } from '@/components/fault/FaultDiagnosisModal';
 import { FlashcardPanel } from '@/components/flashcard/FlashcardPanel';
 import { GuideTourOverlay } from '@/components/guide/GuideTourOverlay';
 import { useGuideTourStore } from '@/lib/store/guideTourStore';
@@ -273,6 +274,14 @@ export default function ViewerPage() {
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [showCompareModal, setShowCompareModal] = useState(false);
+
+  // === 고장 진단 시뮬레이터 ===
+  const [faultDiagLoading, setFaultDiagLoading] = useState(false);
+  const [faultDiagResult, setFaultDiagResult] = useState<import('@/components/fault/FaultDiagnosisModal').FaultDiagnosisResult | null>(null);
+  const [faultDiagError, setFaultDiagError] = useState<string | null>(null);
+  const [showFaultModal, setShowFaultModal] = useState(false);
+  const [faultHighlights, setFaultHighlights] = useState<Record<string, 'fault' | 'affected'> | undefined>(undefined);
+  const [faultPartId, setFaultPartId] = useState<string | null>(null);
 
   // === 측정 도구 (Feature 6) ===
   const [measurementMode, setMeasurementMode] = useState(false);
@@ -709,15 +718,20 @@ export default function ViewerPage() {
       // 현재 부품 애니메이션 진행
       assemblyProgressRef.current += dt * assemblySpeed * 0.8; // 속도 조절
 
+      let justFinished = false;
+
       if (assemblyProgressRef.current >= 1) {
-        assemblyProgressRef.current = 0;
         // 다음 단계로
         setAssemblyStep((prev) => {
           const next = prev + 1;
           if (next >= assemblyParts.length) {
+            // 마지막 부품 완료: 모든 부품을 조립 완료 상태로
+            justFinished = true;
+            assemblyProgressRef.current = 1; // 완료 상태 유지
             setAssemblyPlaying(false);
             return prev;
           }
+          assemblyProgressRef.current = 0;
           return next;
         });
       }
@@ -725,6 +739,12 @@ export default function ViewerPage() {
       // partExplodeOverrides 업데이트
       setPartExplodeOverrides((prev) => {
         if (!prev) return prev;
+        // 전체 완료 시 모든 부품을 0으로
+        if (justFinished) {
+          const next = { ...prev };
+          assemblyParts.forEach((p) => { next[p.id] = 0; });
+          return next;
+        }
         const next = { ...prev };
         setAssemblyStep((currentStep) => {
           assemblyParts.forEach((p, i) => {
@@ -1011,6 +1031,82 @@ export default function ViewerPage() {
   const handleCancelCompare = useCallback(() => {
     setIsCompareMode(false);
     setComparePartA(null);
+  }, []);
+
+  // === 고장 진단 콜백 ===
+  const triggerFaultDiagnosis = useCallback(async () => {
+    if (!selectedPartId) return;
+    const modelObj = mergedModel ?? currentModelInfo;
+    if (!modelObj) return;
+
+    const part = modelObj.parts.find((p) => p.id === selectedPartId);
+    if (!part) return;
+
+    setFaultPartId(selectedPartId);
+    setFaultDiagLoading(true);
+    setFaultDiagResult(null);
+    setFaultDiagError(null);
+    setShowFaultModal(true);
+
+    // 즉시 고장 부품 빨강 하이라이트
+    setFaultHighlights({ [selectedPartId]: 'fault' });
+
+    try {
+      const res = await fetch('/api/fault/diagnose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          part: {
+            id: part.id,
+            name: part.name,
+            nameKo: part.nameKo,
+            description: part.description,
+            material: part.material,
+          },
+          modelInfo: {
+            name: modelObj.name,
+            nameKo: modelObj.nameKo,
+            description: modelObj.description,
+            theory: modelObj.theory,
+            category: modelObj.category,
+          },
+          allParts: modelObj.parts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            nameKo: p.nameKo,
+            description: p.description,
+            material: p.material,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || '진단 실패');
+      }
+
+      const data = await res.json();
+      setFaultDiagResult(data.diagnosis);
+
+      // 하이라이트 맵 생성
+      const highlights: Record<string, 'fault' | 'affected'> = { [selectedPartId]: 'fault' };
+      data.diagnosis.affectedParts?.forEach((id: string) => {
+        highlights[id] = 'affected';
+      });
+      setFaultHighlights(highlights);
+    } catch (err) {
+      setFaultDiagError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+    } finally {
+      setFaultDiagLoading(false);
+    }
+  }, [selectedPartId, mergedModel, currentModelInfo]);
+
+  const handleCloseFaultModal = useCallback(() => {
+    setShowFaultModal(false);
+    setFaultDiagResult(null);
+    setFaultDiagError(null);
+    setFaultHighlights(undefined);
+    setFaultPartId(null);
   }, []);
 
   // 부품 선택 시 핀 말풍선 닫기 + 자동 포커스
@@ -1809,6 +1905,7 @@ export default function ViewerPage() {
                   measurementMode={measurementMode}
                   measurements={measurements}
                   pendingMeasurePoint={pendingMeasurePoint}
+                  faultHighlights={faultHighlights}
                 />
               ) : model ? (
                 <ModelViewer
@@ -2002,6 +2099,9 @@ export default function ViewerPage() {
                         isCompareMode={isCompareMode}
                         onStartCompare={selectedPartId ? handleStartCompare : undefined}
                         onCancelCompare={handleCancelCompare}
+                        modelInfo={currentModelInfo ? { name: currentModelInfo.name, nameKo: currentModelInfo.nameKo, description: currentModelInfo.description, theory: currentModelInfo.theory, category: currentModelInfo.category } : undefined}
+                        allParts={currentModelInfo?.parts.map(p => ({ nameKo: p.nameKo, description: p.description }))}
+                        onFaultDiagnose={selectedPartId ? triggerFaultDiagnosis : undefined}
                       />
                     </div>
                   </div>
@@ -2273,6 +2373,26 @@ export default function ViewerPage() {
           error={compareError}
           isDarkMode={isDarkMode}
           onClose={() => { setShowCompareModal(false); setComparePartA(null); setComparePartB(null); setCompareResult(null); setCompareError(null); }}
+        />
+      );
+    })()}
+
+    {/* ══════ 고장 진단 모달 ══════ */}
+    {showFaultModal && faultPartId && (() => {
+      const modelObj = mergedModel ?? currentModelInfo;
+      const faultPart = modelObj?.parts.find((p) => p.id === faultPartId);
+      if (!faultPart) return null;
+      return (
+        <FaultDiagnosisModal
+          partNameKo={faultPart.nameKo}
+          partName={faultPart.name}
+          partColor={faultPart.color}
+          diagnosis={faultDiagResult}
+          isLoading={faultDiagLoading}
+          error={faultDiagError}
+          isDarkMode={isDarkMode}
+          onClose={handleCloseFaultModal}
+          allParts={modelObj?.parts.map((p) => ({ id: p.id, nameKo: p.nameKo, color: p.color })) || []}
         />
       );
     })()}

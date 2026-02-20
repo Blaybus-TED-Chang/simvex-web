@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { PartCustomization } from '@/hooks/usePartCustomizations';
 import { TTSButton } from '@/components/ui/TTSButton';
+import { NarrationButton } from '@/components/ui/NarrationButton';
 
 export interface PartInfoData {
   id: string;
@@ -23,9 +24,12 @@ interface PartInfoProps {
   isCompareMode?: boolean;
   onStartCompare?: () => void;
   onCancelCompare?: () => void;
+  modelInfo?: { name: string; nameKo: string; description: string; theory: string; category: string };
+  allParts?: { nameKo: string; description: string }[];
+  onFaultDiagnose?: () => void;
 }
 
-export function PartInfo({ part, isLoggedIn, customization, onCustomize, onResetCustomize, isDarkMode, isCompareMode, onStartCompare, onCancelCompare }: PartInfoProps) {
+export function PartInfo({ part, isLoggedIn, customization, onCustomize, onResetCustomize, isDarkMode, isCompareMode, onStartCompare, onCancelCompare, modelInfo, allParts, onFaultDiagnose }: PartInfoProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -187,6 +191,7 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
           {part.description}
         </p>
         <TTSButton text={`${displayNameKo}. ${part.description}`} isDarkMode={isDarkMode} />
+        <NarrationButton part={part} modelInfo={modelInfo} allParts={allParts} isDarkMode={isDarkMode} />
       </div>
 
       {/* 비교 버튼 */}
@@ -205,6 +210,23 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
           다른 부품과 비교
         </button>
       )}
+      {/* 고장 진단 버튼 */}
+      {onFaultDiagnose && !isCompareMode && (
+        <button
+          onClick={onFaultDiagnose}
+          className={`w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors ${
+            isDarkMode
+              ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50'
+              : 'bg-red-50 text-red-700 hover:bg-red-100'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          고장 진단 시뮬레이션
+        </button>
+      )}
+
       {isCompareMode && (
         <div className={`mt-3 p-3 rounded-xl text-center ${isDarkMode ? 'bg-purple-900/20 border border-purple-700' : 'bg-purple-50 border border-purple-200'}`}>
           <p className={`text-[13px] font-medium mb-2 ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
