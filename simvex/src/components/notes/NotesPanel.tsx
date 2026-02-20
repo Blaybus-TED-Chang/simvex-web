@@ -10,6 +10,7 @@ import { NoteEditor } from './NoteEditor';
 
 interface NotesPanelProps {
   modelId: string;
+  modelNameKo?: string;
   user: User | null;
   isDarkMode: boolean;
   selectedPartId: string | null;
@@ -19,6 +20,7 @@ interface NotesPanelProps {
 
 export function NotesPanel({
   modelId,
+  modelNameKo,
   user,
   isDarkMode,
   selectedPartId,
@@ -51,6 +53,7 @@ export function NotesPanel({
         note={activeNote}
         isDarkMode={isDarkMode}
         modelId={modelId}
+        modelNameKo={modelNameKo}
         selectedPartId={selectedPartId}
         selectedPartName={selectedPartName}
         onUpdate={updateNote}

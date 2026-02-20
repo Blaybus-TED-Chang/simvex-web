@@ -12,6 +12,11 @@ export interface PdfChatMessage {
   content: string;
 }
 
+export interface PdfAISummary {
+  keyPoints: string[];
+  summary: string;
+}
+
 export interface PdfExportData {
   modelNameKo: string;
   modelName: string;
@@ -20,6 +25,7 @@ export interface PdfExportData {
   noteItems: PdfNoteItem[];
   chatMessages: PdfChatMessage[];
   screenshotDataUrl: string; // base64 data URL
+  aiSummary?: PdfAISummary;
 }
 
 // tiptap JSONContent에서 plain text 추출
@@ -92,6 +98,27 @@ export async function generateModelPdf(data: PdfExportData): Promise<Blob> {
         <img src="${data.screenshotDataUrl}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
       </div>
     `, 24);
+  }
+
+  // AI 학습 정리
+  if (data.aiSummary) {
+    addSection(`
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 20px;">
+        <h2 style="font-size: 18px; color: #1d4ed8; margin: 0 0 14px 0; display: flex; align-items: center; gap: 6px;">
+          AI 학습 정리
+        </h2>
+        <div style="margin-bottom: 14px;">
+          <h3 style="font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 8px 0;">핵심 포인트</h3>
+          <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.7; color: #1e3a5f;">
+            ${data.aiSummary.keyPoints.map(p => `<li style="margin-bottom: 4px;">${escapeHtml(p)}</li>`).join('')}
+          </ul>
+        </div>
+        <div>
+          <h3 style="font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 8px 0;">학습 요약</h3>
+          <p style="font-size: 13px; line-height: 1.7; margin: 0; white-space: pre-wrap; color: #1e3a5f;">${escapeHtml(data.aiSummary.summary)}</p>
+        </div>
+      </div>
+    `, 20);
   }
 
   // 설명
