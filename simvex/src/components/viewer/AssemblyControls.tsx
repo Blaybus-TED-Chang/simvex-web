@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CombinedPartConfig } from './CombinedGLBPart';
 
 interface AssemblyControlsProps {
@@ -15,6 +16,12 @@ interface AssemblyControlsProps {
   speed: number;
   onSpeedChange: (speed: number) => void;
   isDarkMode?: boolean;
+  onAIRecommend?: () => void;
+  aiRecommendLoading?: boolean;
+  isAIOrder?: boolean;
+  onResetOrder?: () => void;
+  currentStepReason?: string;
+  aiStrategy?: string;
 }
 
 export function AssemblyControls({
@@ -30,7 +37,15 @@ export function AssemblyControls({
   speed,
   onSpeedChange,
   isDarkMode,
+  onAIRecommend,
+  aiRecommendLoading,
+  isAIOrder,
+  onResetOrder,
+  currentStepReason,
+  aiStrategy,
 }: AssemblyControlsProps) {
+  const [strategyExpanded, setStrategyExpanded] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* 조립 애니메이션 토글 */}
@@ -62,6 +77,88 @@ export function AssemblyControls({
       {/* 조립 모드 활성화 시 컨트롤 */}
       {isActive && (
         <div className="space-y-3">
+          {/* AI 순서 추천 / 원래 순서 버튼 */}
+          {onAIRecommend && (
+            <div className="flex gap-2">
+              {!isAIOrder ? (
+                <button
+                  onClick={onAIRecommend}
+                  disabled={aiRecommendLoading}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all ${
+                    aiRecommendLoading
+                      ? isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-50 text-purple-400'
+                      : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-sm'
+                  }`}
+                >
+                  {aiRecommendLoading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                      AI 분석 중...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                      AI 순서 추천
+                    </>
+                  )}
+                </button>
+              ) : (
+                <>
+                  <span className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium ${
+                    isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-50 text-purple-600'
+                  }`}>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                    AI 순서
+                  </span>
+                  <button
+                    onClick={onResetOrder}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                      isDarkMode
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    원래 순서
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* AI 전략 요약 (접을 수 있는 카드) */}
+          {isAIOrder && aiStrategy && (
+            <div className={`rounded-lg border ${isDarkMode ? 'bg-purple-900/20 border-purple-800/50' : 'bg-purple-50 border-purple-100'}`}>
+              <button
+                onClick={() => setStrategyExpanded(!strategyExpanded)}
+                className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-medium ${
+                  isDarkMode ? 'text-purple-400' : 'text-purple-600'
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  조립 전략
+                </span>
+                <svg className={`w-3 h-3 transition-transform ${strategyExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {strategyExpanded && (
+                <p className={`px-3 pb-2 text-[11px] leading-relaxed ${isDarkMode ? 'text-purple-300/80' : 'text-purple-700/80'}`}>
+                  {aiStrategy}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* 진행 바 */}
           <div className="flex gap-0.5">
             {Array.from({ length: totalSteps }).map((_, i) => (
@@ -69,9 +166,9 @@ export function AssemblyControls({
                 key={i}
                 className={`flex-1 h-1.5 rounded-full transition-colors ${
                   i < currentStep
-                    ? 'bg-[#001AFF]'
+                    ? isAIOrder ? 'bg-purple-500' : 'bg-[#001AFF]'
                     : i === currentStep
-                    ? 'bg-blue-300'
+                    ? isAIOrder ? 'bg-purple-300' : 'bg-blue-300'
                     : isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
                 }`}
               />
@@ -86,6 +183,14 @@ export function AssemblyControls({
             {currentPart && (
               <p className={`text-[12px] mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {currentPart.nameKo} ({currentPart.name})
+              </p>
+            )}
+            {/* AI 추천 이유 */}
+            {isAIOrder && currentStepReason && (
+              <p className={`text-[11px] mt-1.5 px-2 py-1 rounded-md ${
+                isDarkMode ? 'bg-purple-900/20 text-purple-400' : 'bg-purple-50 text-purple-600'
+              }`}>
+                {currentStepReason}
               </p>
             )}
           </div>
@@ -111,7 +216,9 @@ export function AssemblyControls({
             {/* 재생/일시정지 */}
             <button
               onClick={onPlayPause}
-              className="p-3 rounded-full bg-[#001AFF] text-white hover:bg-blue-700 transition-colors shadow-md"
+              className={`p-3 rounded-full text-white hover:opacity-90 transition-colors shadow-md ${
+                isAIOrder ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-[#001AFF] hover:bg-blue-700'
+              }`}
               title={isPlaying ? '일시정지' : '재생'}
             >
               {isPlaying ? (
