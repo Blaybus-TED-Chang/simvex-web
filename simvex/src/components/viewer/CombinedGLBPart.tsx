@@ -165,6 +165,8 @@ interface CombinedGLBViewerProps {
   onMeasurementClick?: (point: [number, number, number]) => void;
   measurementMode?: boolean;
   isDarkMode?: boolean;
+  // 고장 진단 하이라이트
+  faultHighlights?: Record<string, 'fault' | 'affected'>;
 }
 
 // Individual part mesh component
@@ -182,6 +184,7 @@ const PartMesh = memo(function PartMesh({
   onPointerMoveWithPoint,
   modelBoundsMin,
   modelBoundsMax,
+  faultStatus,
 }: {
   meshData: ExtractedMeshData;
   explodeValue: number;
@@ -196,6 +199,7 @@ const PartMesh = memo(function PartMesh({
   onPointerMoveWithPoint?: (point: [number, number, number]) => void;
   modelBoundsMin?: THREE.Vector3;
   modelBoundsMax?: THREE.Vector3;
+  faultStatus?: 'fault' | 'affected' | null;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { worldPosition, worldQuaternion, worldScale, partConfig, geometry, material } = meshData;
@@ -282,11 +286,17 @@ const PartMesh = memo(function PartMesh({
     mat.needsUpdate = true;
   }, [crossSection, clonedMaterial, modelBoundsMin, modelBoundsMax]);
 
-  // Update emissive for highlight
+  // Update emissive for highlight (faultStatus takes priority)
   useEffect(() => {
     const mat = clonedMaterial as THREE.MeshStandardMaterial;
     if (mat && mat.emissive) {
-      if (isSelected) {
+      if (faultStatus === 'fault') {
+        mat.emissive.setHex(0xff0000);
+        mat.emissiveIntensity = 0.7;
+      } else if (faultStatus === 'affected') {
+        mat.emissive.setHex(0xff8800);
+        mat.emissiveIntensity = 0.5;
+      } else if (isSelected) {
         mat.emissive.setHex(0x0066ff);
         mat.emissiveIntensity = 0.5;
       } else if (isHovered) {
@@ -297,7 +307,7 @@ const PartMesh = memo(function PartMesh({
         mat.emissiveIntensity = 0;
       }
     }
-  }, [clonedMaterial, isSelected, isHovered]);
+  }, [clonedMaterial, isSelected, isHovered, faultStatus]);
 
   // X-Ray 모드: 선택/호버 부품만 불투명, 나머지 와이어프레임
   useEffect(() => {
@@ -388,7 +398,8 @@ const PartMesh = memo(function PartMesh({
     prev.isVisible === next.isVisible &&
     prev.opacity === next.opacity &&
     prev.modelBoundsMin === next.modelBoundsMin &&
-    prev.modelBoundsMax === next.modelBoundsMax
+    prev.modelBoundsMax === next.modelBoundsMax &&
+    prev.faultStatus === next.faultStatus
   );
 });
 
@@ -413,6 +424,7 @@ export function CombinedGLBViewer({
   onMeasurementClick,
   measurementMode = false,
   isDarkMode = false,
+  faultHighlights,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
@@ -558,6 +570,7 @@ export function CombinedGLBViewer({
           : globalOpacity;
         // 조립 순서 애니메이션: 개별 분해값 오버라이드
         const effectiveExplodeValue = partExplodeOverrides?.[partConfig.id] ?? explodeValue;
+        const faultStatus = faultHighlights?.[partConfig.id] ?? null;
 
         return (
           <PartMesh
@@ -570,6 +583,7 @@ export function CombinedGLBViewer({
             opacity={opacity}
             modelBoundsMin={boundsMin ?? undefined}
             modelBoundsMax={boundsMax ?? undefined}
+            faultStatus={faultStatus}
             onClick={() => onSelectPart(partConfig.id)}
             onClickWithPoint={
               measurementMode && onMeasurementClick
@@ -660,6 +674,8 @@ interface CombinedModelViewerProps {
   measurementMode?: boolean;
   measurements?: { pointA: [number, number, number]; pointB: [number, number, number]; distance: number }[];
   pendingMeasurePoint?: [number, number, number] | null;
+  // 고장 진단 하이라이트
+  faultHighlights?: Record<string, 'fault' | 'affected'>;
 }
 
 // SmoothZoom은 @/components/common/SmoothZoom에서 import
@@ -802,6 +818,7 @@ export function CombinedModelViewer({
   measurementMode = false,
   measurements,
   pendingMeasurePoint,
+  faultHighlights,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -883,6 +900,7 @@ export function CombinedModelViewer({
             onMeasurementClick={onMeasurementClick}
             measurementMode={measurementMode}
             isDarkMode={isDarkMode}
+            faultHighlights={faultHighlights}
           />
         </Suspense>
 
