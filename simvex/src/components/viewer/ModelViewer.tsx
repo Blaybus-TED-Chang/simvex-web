@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
+import SmoothZoom from '@/components/common/SmoothZoom';
 import { ModelConfig, PartConfig } from '@/types/viewer';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { GLBPart } from './GLBPart';
@@ -147,10 +148,10 @@ function Scene({
         makeDefault
         enableDamping
         dampingFactor={0.05}
-        minDistance={0.1}
-        maxDistance={30}
+        enableZoom={false}
         target={cameraTarget || model.cameraTarget || [0, 0, 0]}
       />
+      <SmoothZoom minDist={0.1} maxDist={30} />
     </>
   );
 }

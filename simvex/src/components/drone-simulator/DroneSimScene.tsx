@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import DroneSimModel from './DroneSimModel';
+import SmoothZoom from '@/components/common/SmoothZoom';
 
 function LoadingFallback() {
   return (
@@ -66,9 +67,9 @@ export default function DroneSimScene({ isDarkMode = true }: DroneSimSceneProps)
         makeDefault
         enableDamping
         dampingFactor={0.05}
-        minDistance={0.1}
-        maxDistance={30}
+        enableZoom={false}
       />
+      <SmoothZoom minDist={0.1} maxDist={30} />
 
       {/* 축 인디케이터 (Gizmo) */}
       <GizmoHelper alignment="top-right" margin={[72, 72]}>

@@ -8,6 +8,7 @@ import { useViewerStore } from '@/lib/store/viewerStore';
 import type { CrossSectionAxis, CrossSectionState } from '@/types/viewer';
 import { AnnotationPins } from '@/components/annotation/AnnotationPins';
 import { MeasurementOverlay } from '@/components/viewer/MeasurementOverlay';
+import SmoothZoom from '@/components/common/SmoothZoom';
 
 // 단면도 절단면 채색 (Cap Plane)
 function CapPlane({
@@ -661,59 +662,7 @@ interface CombinedModelViewerProps {
   pendingMeasurePoint?: [number, number, number] | null;
 }
 
-// 부드러운 줌 — 재사용 Vector3로 GC 압력 제거
-const _smoothZoomDir = new THREE.Vector3();
-const _smoothZoomFallback = new THREE.Vector3(0, 0, 0);
-
-function SmoothZoom() {
-  const { camera, controls } = useThree();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const velocityRef = useRef(0);
-  const activeRef = useRef(false);
-
-  useEffect(() => {
-    const canvas = (controls as unknown as { domElement?: HTMLCanvasElement })?.domElement
-      ?? document.querySelector('canvas');
-    if (!canvas) return;
-    canvasRef.current = canvas;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      velocityRef.current += e.deltaY * 0.0008;
-      activeRef.current = true;
-    };
-
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
-  }, [controls]);
-
-  useFrame(() => {
-    if (!activeRef.current) return;
-
-    const v = velocityRef.current;
-    if (Math.abs(v) < 0.0005) {
-      velocityRef.current = 0;
-      activeRef.current = false;
-      return;
-    }
-
-    const orbitTarget = controls && 'target' in controls
-      ? (controls as unknown as { target: THREE.Vector3 }).target
-      : _smoothZoomFallback;
-
-    _smoothZoomDir.subVectors(camera.position, orbitTarget);
-    const dist = _smoothZoomDir.length();
-    const move = v * (0.4 + dist * 0.25);
-    const newDist = Math.max(0.3, Math.min(30, dist + move));
-
-    _smoothZoomDir.normalize().multiplyScalar(newDist);
-    camera.position.copy(orbitTarget).add(_smoothZoomDir);
-
-    velocityRef.current *= 0.75;
-  });
-
-  return null;
-}
+// SmoothZoom은 @/components/common/SmoothZoom에서 import
 
 // 카메라 위치/타겟을 prop 변경에 따라 부드럽게 업데이트 (lerp)
 function CameraSync({
