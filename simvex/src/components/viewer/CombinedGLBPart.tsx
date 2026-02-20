@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
+import { useRef, useMemo, useEffect, useState, useCallback, Suspense, memo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
@@ -167,7 +167,7 @@ interface CombinedGLBViewerProps {
 }
 
 // Individual part mesh component
-function PartMesh({
+const PartMesh = memo(function PartMesh({
   meshData,
   explodeValue,
   isSelected,
@@ -198,6 +198,18 @@ function PartMesh({
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { worldPosition, worldQuaternion, worldScale, partConfig, geometry, material } = meshData;
+
+  // 콜백을 ref로 유지하여 memo 비교에서 제외해도 최신 콜백 사용
+  const onClickRef = useRef(onClick);
+  const onClickWithPointRef = useRef(onClickWithPoint);
+  const onPointerOverRef = useRef(onPointerOver);
+  const onPointerOutRef = useRef(onPointerOut);
+  const onPointerMoveWithPointRef = useRef(onPointerMoveWithPoint);
+  onClickRef.current = onClick;
+  onClickWithPointRef.current = onClickWithPoint;
+  onPointerOverRef.current = onPointerOver;
+  onPointerOutRef.current = onPointerOut;
+  onPointerMoveWithPointRef.current = onPointerMoveWithPoint;
 
   // Calculate exploded position
   const [dx, dy, dz] = partConfig.explodeDirection;
@@ -318,33 +330,45 @@ function PartMesh({
       receiveShadow={opacity > 0.5}
       onClick={(e) => {
         e.stopPropagation();
-        if (onClickWithPoint) {
+        if (onClickWithPointRef.current) {
           const p = e.point;
-          onClickWithPoint([p.x, p.y, p.z]);
+          onClickWithPointRef.current([p.x, p.y, p.z]);
         } else {
-          onClick();
+          onClickRef.current();
         }
       }}
       onPointerOver={(e) => {
         e.stopPropagation();
-        onPointerOver();
+        onPointerOverRef.current();
       }}
       onPointerOut={(e) => {
         e.stopPropagation();
-        onPointerOut();
+        onPointerOutRef.current();
       }}
       onPointerMove={
         onPointerMoveWithPoint
           ? (e) => {
               e.stopPropagation();
               const p = e.point;
-              onPointerMoveWithPoint([p.x, p.y, p.z]);
+              onPointerMoveWithPointRef.current?.([p.x, p.y, p.z]);
             }
           : undefined
       }
     />
   );
-}
+}, (prev, next) => {
+  // 시각적 상태가 동일하면 리렌더링 스킵 (콜백 변경 무시)
+  return (
+    prev.meshData === next.meshData &&
+    prev.explodeValue === next.explodeValue &&
+    prev.isSelected === next.isSelected &&
+    prev.isHovered === next.isHovered &&
+    prev.isVisible === next.isVisible &&
+    prev.opacity === next.opacity &&
+    prev.modelBoundsMin === next.modelBoundsMin &&
+    prev.modelBoundsMax === next.modelBoundsMax
+  );
+});
 
 export function CombinedGLBViewer({
   model,
@@ -616,7 +640,10 @@ interface CombinedModelViewerProps {
   pendingMeasurePoint?: [number, number, number] | null;
 }
 
-// 부드러운 줌
+// 부드러운 줌 — 재사용 Vector3로 GC 압력 제거
+const _smoothZoomDir = new THREE.Vector3();
+const _smoothZoomFallback = new THREE.Vector3(0, 0, 0);
+
 function SmoothZoom() {
   const { camera, controls } = useThree();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -651,15 +678,15 @@ function SmoothZoom() {
 
     const orbitTarget = controls && 'target' in controls
       ? (controls as unknown as { target: THREE.Vector3 }).target
-      : new THREE.Vector3(0, 0, 0);
+      : _smoothZoomFallback;
 
-    const dir = new THREE.Vector3().subVectors(camera.position, orbitTarget);
-    const dist = dir.length();
+    _smoothZoomDir.subVectors(camera.position, orbitTarget);
+    const dist = _smoothZoomDir.length();
     const move = v * (0.4 + dist * 0.25);
     const newDist = Math.max(0.3, Math.min(30, dist + move));
 
-    dir.normalize().multiplyScalar(newDist);
-    camera.position.copy(orbitTarget).add(dir);
+    _smoothZoomDir.normalize().multiplyScalar(newDist);
+    camera.position.copy(orbitTarget).add(_smoothZoomDir);
 
     velocityRef.current *= 0.75;
   });

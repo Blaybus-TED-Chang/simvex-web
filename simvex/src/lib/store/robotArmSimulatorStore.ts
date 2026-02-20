@@ -85,7 +85,11 @@ export const useRobotArmSimulatorStore = create<RobotArmSimulatorState>((set, ge
   },
 
   resetToDefault: () => {
-    const params = { ...DEFAULT_ROBOT_ARM_PARAMS };
+    const params = {
+      ...DEFAULT_ROBOT_ARM_PARAMS,
+      jointAngles: [...DEFAULT_ROBOT_ARM_PARAMS.jointAngles],
+      ikTarget: { ...DEFAULT_ROBOT_ARM_PARAMS.ikTarget },
+    };
     set({ params, output: calculateFK(params.jointAngles) });
   },
 
@@ -112,8 +116,17 @@ export const useRobotArmSimulatorStore = create<RobotArmSimulatorState>((set, ge
   },
 
   playWaypoints: () => {
-    if (get().waypoints.length < 2) return;
-    set({ isPlayingWaypoints: true, currentWaypointIndex: 0 });
+    const { waypoints } = get();
+    if (waypoints.length < 2) return;
+    // 첫 번째 웨이포인트로 즉시 이동
+    const wp = waypoints[0];
+    const params = { ...get().params, jointAngles: [...wp.jointAngles] };
+    set({
+      isPlayingWaypoints: true,
+      currentWaypointIndex: 0,
+      params,
+      output: calculateFK(wp.jointAngles),
+    });
   },
 
   stopWaypoints: () => {
