@@ -697,6 +697,7 @@ export function QuizPanel({
             onRetry={handleRetry}
             onClose={onClose}
             isDarkMode={isDarkMode}
+            modelNameKo={modelInfo?.nameKo}
           />
         )}
       </div>
