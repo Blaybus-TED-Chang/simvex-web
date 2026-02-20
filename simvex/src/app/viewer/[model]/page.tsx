@@ -47,8 +47,10 @@ import { ViewerTabs, ViewerTabType } from '@/components/viewer/ViewerTabs';
 import { SimulationTabContent } from '@/components/viewer/SimulationTabContent';
 import { hasSimulation as checkHasSimulation, hasViewer as checkHasViewer, getSimulationMapping } from '@/data/simulationMapping';
 import { getSimulationModelInfo } from '@/data/simulationModelInfo';
+import { LearningReportPanel } from '@/components/report/LearningReportPanel';
+import { useQuizStore } from '@/lib/store/quizStore';
 
-type RightSidebarTab = 'model' | 'notes' | 'quiz';
+type RightSidebarTab = 'model' | 'notes' | 'quiz' | 'report';
 
 // 3D 뷰어는 클라이언트에서만 렌더링
 const ModelViewer = dynamic(
@@ -282,6 +284,15 @@ export default function ViewerPage() {
   const [showFaultModal, setShowFaultModal] = useState(false);
   const [faultHighlights, setFaultHighlights] = useState<Record<string, 'fault' | 'affected'> | undefined>(undefined);
   const [faultPartId, setFaultPartId] = useState<string | null>(null);
+
+  // === AI 학습 리포트 약점 부품 하이라이트 ===
+  const [reportHighlightParts, setReportHighlightParts] = useState<string[] | null>(null);
+
+  // === AI 조립 순서 추천 ===
+  const [aiAssemblyOrder, setAiAssemblyOrder] = useState<{ partId: string; step: number; reason: string }[] | null>(null);
+  const [aiAssemblyStrategy, setAiAssemblyStrategy] = useState<string | null>(null);
+  const [aiAssemblyLoading, setAiAssemblyLoading] = useState(false);
+  const aiAssemblyCacheRef = useRef<Record<string, { order: { partId: string; step: number; reason: string }[]; strategy: string }>>({});
 
   // === 측정 도구 (Feature 6) ===
   const [measurementMode, setMeasurementMode] = useState(false);
@@ -535,6 +546,117 @@ export default function ViewerPage() {
     // TODO: 하이라이트 해제
   }, []);
 
+  // === AI 학습 리포트용 퀴즈 진행 데이터 ===
+  const quizProgress = useQuizStore((s) => currentModelInfo ? s.quizProgress[currentModelInfo.id] : undefined);
+  const reportQuizData = useMemo(() => {
+    if (!quizProgress || !quizProgress.completed || !currentModelInfo) return undefined;
+    const total = quizProgress.selectedQuestionIds?.length ?? 0;
+    const wrongPartIds: string[] = [];
+    if (quizProgress.correctAnswers && quiz) {
+      for (const [qId, isCorrect] of Object.entries(quizProgress.correctAnswers)) {
+        if (!isCorrect) {
+          const question = quiz.questions.find(q => q.id === qId);
+          if (question?.partId) wrongPartIds.push(question.partId);
+        }
+      }
+    }
+    return { score: quizProgress.score, total, wrongPartIds };
+  }, [quizProgress, currentModelInfo, quiz]);
+
+  // === AI 학습 리포트 약점 부품 하이라이트 핸들러 ===
+  const handleReportHighlight = useCallback((partIds: string[]) => {
+    if (partIds.length === 0) {
+      setReportHighlightParts(null);
+    } else {
+      setReportHighlightParts(partIds);
+    }
+  }, []);
+
+  // === AI 조립 순서 추천 핸들러 ===
+  const handleAIAssemblyRecommend = useCallback(async () => {
+    if (!currentModelInfo) return;
+
+    // 캐시 확인
+    const cached = aiAssemblyCacheRef.current[currentModelInfo.id];
+    if (cached) {
+      setAiAssemblyOrder(cached.order);
+      setAiAssemblyStrategy(cached.strategy);
+      // 조립 모드 리셋
+      setAssemblyStep(0);
+      assemblyProgressRef.current = 0;
+      setAssemblyPlaying(false);
+      if (combinedModel) {
+        const overrides: Record<string, number> = {};
+        combinedModel.parts.forEach((p) => { overrides[p.id] = 1; });
+        setPartExplodeOverrides(overrides);
+      }
+      return;
+    }
+
+    setAiAssemblyLoading(true);
+    try {
+      const res = await fetch('/api/assembly/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelInfo: {
+            name: currentModelInfo.name,
+            nameKo: currentModelInfo.nameKo,
+            description: currentModelInfo.description,
+            theory: currentModelInfo.theory,
+            category: currentModelInfo.category,
+          },
+          parts: currentModelInfo.parts.map(p => ({
+            id: p.id,
+            name: p.name,
+            nameKo: p.nameKo,
+            description: p.description,
+            material: (p as unknown as Record<string, unknown>).material as string | undefined,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        console.error('AI Assembly Error:', data.error);
+        return;
+      }
+
+      const data = await res.json();
+      setAiAssemblyOrder(data.order);
+      setAiAssemblyStrategy(data.strategy);
+      aiAssemblyCacheRef.current[currentModelInfo.id] = data;
+
+      // 조립 모드 리셋
+      setAssemblyStep(0);
+      assemblyProgressRef.current = 0;
+      setAssemblyPlaying(false);
+      if (combinedModel) {
+        const overrides: Record<string, number> = {};
+        combinedModel.parts.forEach((p) => { overrides[p.id] = 1; });
+        setPartExplodeOverrides(overrides);
+      }
+    } catch (err) {
+      console.error('AI Assembly Recommend Error:', err);
+    } finally {
+      setAiAssemblyLoading(false);
+    }
+  }, [currentModelInfo, combinedModel]);
+
+  const handleResetAssemblyOrder = useCallback(() => {
+    setAiAssemblyOrder(null);
+    setAiAssemblyStrategy(null);
+    // 조립 모드 리셋
+    setAssemblyStep(0);
+    assemblyProgressRef.current = 0;
+    setAssemblyPlaying(false);
+    if (combinedModel) {
+      const overrides: Record<string, number> = {};
+      combinedModel.parts.forEach((p) => { overrides[p.id] = 1; });
+      setPartExplodeOverrides(overrides);
+    }
+  }, [combinedModel]);
+
   // Zustand store hydration (SSR 호환)
   const [isHydrated, setIsHydrated] = useState(false);
   const isInitializedRef = useRef(false);
@@ -542,6 +664,7 @@ export default function ViewerPage() {
   useEffect(() => {
     useViewerStore.persist.rehydrate();
     useGuideTourStore.persist.rehydrate();
+    useQuizStore.persist.rehydrate();
     setIsHydrated(true);
   }, []);
 
@@ -671,9 +794,14 @@ export default function ViewerPage() {
   const assemblyParts = useMemo(() => {
     const modelObj = combinedModel;
     if (!modelObj) return [];
-    // 역순: 맨 바깥 부품부터 (분해 거리가 큰 것부터)
+    if (aiAssemblyOrder) {
+      // AI 추천 순서 사용
+      const orderMap = new Map(aiAssemblyOrder.map(o => [o.partId, o.step]));
+      return [...modelObj.parts].sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
+    }
+    // 기본: 맨 바깥 부품부터 (분해 거리가 큰 것부터)
     return [...modelObj.parts].sort((a, b) => b.explodeDistance - a.explodeDistance);
-  }, [combinedModel]);
+  }, [combinedModel, aiAssemblyOrder]);
 
   const handleAssemblyToggle = useCallback(() => {
     if (isAssemblyMode) {
@@ -1905,7 +2033,15 @@ export default function ViewerPage() {
                   measurementMode={measurementMode}
                   measurements={measurements}
                   pendingMeasurePoint={pendingMeasurePoint}
-                  faultHighlights={faultHighlights}
+                  faultHighlights={(() => {
+                    const merged = { ...faultHighlights };
+                    if (reportHighlightParts) {
+                      for (const id of reportHighlightParts) {
+                        if (!merged[id]) merged[id] = 'fault';
+                      }
+                    }
+                    return Object.keys(merged).length > 0 ? merged : undefined;
+                  })()}
                 />
               ) : model ? (
                 <ModelViewer
@@ -2018,8 +2154,8 @@ export default function ViewerPage() {
               )}
               {/* 사이드바 탭 헤더 */}
               <div className={`flex border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} pt-3 shrink-0`}>
-                {(['model', 'notes', 'quiz'] as const).map((tab) => {
-                  const labels = { model: '모델', notes: '노트', quiz: '퀴즈' };
+                {(['model', 'notes', 'quiz', 'report'] as const).map((tab) => {
+                  const labels = { model: '모델', notes: '노트', quiz: '퀴즈', report: '리포트' };
                   const isActive = rightSidebarTab === tab;
                   return (
                     <button
@@ -2068,6 +2204,12 @@ export default function ViewerPage() {
                             speed={assemblySpeed}
                             onSpeedChange={setAssemblySpeed}
                             isDarkMode={isDarkMode}
+                            onAIRecommend={handleAIAssemblyRecommend}
+                            aiRecommendLoading={aiAssemblyLoading}
+                            isAIOrder={!!aiAssemblyOrder}
+                            onResetOrder={handleResetAssemblyOrder}
+                            currentStepReason={aiAssemblyOrder?.find(o => o.partId === assemblyParts[assemblyStep]?.id)?.reason}
+                            aiStrategy={aiAssemblyStrategy ?? undefined}
                           />
                         </div>
                       )}
@@ -2111,9 +2253,9 @@ export default function ViewerPage() {
                 {rightSidebarTab === 'notes' && (
                   <div className="h-full flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
                     {/* 서브탭 */}
-                    <div className={`flex items-center gap-1 px-4 pt-3 pb-0 shrink-0`}>
+                    <div className={`flex items-center justify-center gap-1 px-2 pt-3 pb-0 shrink-0`}>
                       {([
-                        { id: 'mynotes' as const, label: '나의 노트', icon: (
+                        { id: 'mynotes' as const, label: '노트', icon: (
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
@@ -2123,7 +2265,7 @@ export default function ViewerPage() {
                             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                           </svg>
                         )},
-                        { id: 'flashcards' as const, label: '플래시카드', icon: (
+                        { id: 'flashcards' as const, label: '카드', icon: (
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
@@ -2132,7 +2274,7 @@ export default function ViewerPage() {
                         <button
                           key={sub.id}
                           onClick={() => setNotesSubTab(sub.id)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ${
+                          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all duration-200 ${
                             notesSubTab === sub.id
                               ? isDarkMode
                                 ? 'bg-gray-800 text-white'
@@ -2215,6 +2357,31 @@ export default function ViewerPage() {
                       modelInfo={currentModelInfo}
                       chatHistory={quizChatHistory}
                       notesContent={quizNotesContent}
+                    />
+                  </div>
+                )}
+
+                {/* 리포트 탭 */}
+                {rightSidebarTab === 'report' && currentModelInfo && (
+                  <div style={{ animation: 'fadeIn 0.2s ease' }}>
+                    <LearningReportPanel
+                      modelId={currentModelInfo.id}
+                      modelInfo={{
+                        name: currentModelInfo.name,
+                        nameKo: currentModelInfo.nameKo,
+                        description: currentModelInfo.description,
+                        category: currentModelInfo.category,
+                      }}
+                      parts={currentModelInfo.parts.map(p => ({
+                        id: p.id,
+                        nameKo: p.nameKo,
+                        description: p.description,
+                      }))}
+                      quizData={reportQuizData}
+                      notesContent={quizNotesContent}
+                      chatHistory={quizChatHistory}
+                      isDarkMode={isDarkMode}
+                      onHighlightParts={handleReportHighlight}
                     />
                   </div>
                 )}
