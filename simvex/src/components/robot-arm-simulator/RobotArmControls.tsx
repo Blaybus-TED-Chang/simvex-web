@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRobotArmSimulatorStore } from '@/lib/store/robotArmSimulatorStore';
 import { JOINT_CONFIGS } from '@/types/robot';
 import { InlineTooltip } from '@/components/ui/Tooltip';
@@ -249,6 +249,13 @@ function IKTab({
   const [localX, setLocalX] = useState(ikTarget.x.toString());
   const [localY, setLocalY] = useState(ikTarget.y.toString());
   const [localZ, setLocalZ] = useState(ikTarget.z.toString());
+
+  // 외부 ikTarget 변경 시 로컬 입력 동기화
+  useEffect(() => {
+    setLocalX(ikTarget.x.toString());
+    setLocalY(ikTarget.y.toString());
+    setLocalZ(ikTarget.z.toString());
+  }, [ikTarget.x, ikTarget.y, ikTarget.z]);
 
   const handleSubmit = () => {
     const x = parseFloat(localX) || 0;
