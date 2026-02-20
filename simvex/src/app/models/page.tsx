@@ -846,7 +846,7 @@ export default function ModelsPage() {
             <div className="text-[11px] text-gray-400 leading-relaxed">
               <p>약관 유료상품 이용약관 사업자정보</p>
               <p className="font-semibold text-gray-500 mt-1">개인정보처리방침</p>
-              <p className="mt-1">@Sinvex Corp. @TEDCHANG Corp.</p>
+              <p className="mt-1">@VEXA Corp. @TEDCHANG Corp.</p>
             </div>
           </div>
         </aside>

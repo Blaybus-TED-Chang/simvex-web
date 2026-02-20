@@ -32,7 +32,7 @@ export const DEFAULT_ROBOT_ARM_PARAMS: RobotArmParams = {
 
 // ── 4x4 Matrix helpers (row-major flat array) ──
 
-type Mat4 = number[];
+export type Mat4 = number[];
 
 function identity4(): Mat4 {
   // prettier-ignore
@@ -44,7 +44,7 @@ function identity4(): Mat4 {
   ];
 }
 
-function mul4(a: Mat4, b: Mat4): Mat4 {
+export function mul4(a: Mat4, b: Mat4): Mat4 {
   const r = new Array(16).fill(0);
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < 4; j++) {
@@ -76,6 +76,25 @@ function dhMatrix(theta: number, d: number, a: number, alpha: number): Mat4 {
   ];
 }
 
+/** Invert a rigid-body 4x4 matrix (rotation + translation only) */
+export function invertRigidMat4(m: Mat4): Mat4 {
+  const r00 = m[0], r01 = m[1], r02 = m[2], tx = m[3];
+  const r10 = m[4], r11 = m[5], r12 = m[6], ty = m[7];
+  const r20 = m[8], r21 = m[9], r22 = m[10], tz = m[11];
+
+  const ntx = -(r00 * tx + r10 * ty + r20 * tz);
+  const nty = -(r01 * tx + r11 * ty + r21 * tz);
+  const ntz = -(r02 * tx + r12 * ty + r22 * tz);
+
+  // prettier-ignore
+  return [
+    r00, r10, r20, ntx,
+    r01, r11, r21, nty,
+    r02, r12, r22, ntz,
+    0,   0,   0,   1,
+  ];
+}
+
 // ── FK Calculation ──
 
 export function calculateFK(jointAnglesDeg: number[]): RobotArmOutput {
@@ -96,6 +115,37 @@ export function calculateFK(jointAnglesDeg: number[]): RobotArmOutput {
     endEffectorPos,
     jointPositions,
     isReachable: true,
+  };
+}
+
+// ── FK Full (with cumulative transforms) ──
+
+export interface FKFullResult extends RobotArmOutput {
+  transforms: Mat4[]; // 7 cumulative 4×4 transforms (identity + 6 DH frames)
+}
+
+/** FK calculation that also returns 7 cumulative 4×4 transform matrices */
+export function calculateFKFull(jointAnglesDeg: number[]): FKFullResult {
+  const jointPositions: [number, number, number][] = [[0, 0, 0]];
+  const transforms: Mat4[] = [identity4()]; // transforms[0] = identity (base)
+  let T = identity4();
+
+  for (let i = 0; i < 6; i++) {
+    const thetaRad = (jointAnglesDeg[i] * Math.PI) / 180;
+    const { d, a, alpha } = DH_PARAMS[i];
+    T = mul4(T, dhMatrix(thetaRad, d, a, alpha));
+    transforms.push([...T]);
+    jointPositions.push(posFromMat4(T));
+  }
+
+  const endEffectorPos = posFromMat4(T);
+
+  return {
+    jointAngles: [...jointAnglesDeg],
+    endEffectorPos,
+    jointPositions,
+    isReachable: true,
+    transforms,
   };
 }
 

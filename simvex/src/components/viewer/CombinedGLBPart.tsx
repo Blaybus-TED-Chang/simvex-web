@@ -211,15 +211,37 @@ const PartMesh = memo(function PartMesh({
   onPointerOutRef.current = onPointerOut;
   onPointerMoveWithPointRef.current = onPointerMoveWithPoint;
 
-  // Calculate exploded position
+  // Calculate target exploded position
   const [dx, dy, dz] = partConfig.explodeDirection;
   const dist = partConfig.explodeDistance * explodeValue;
 
-  const position: [number, number, number] = [
+  const targetPosition = useRef<[number, number, number]>([
+    worldPosition.x + dx * dist,
+    worldPosition.y + dy * dist,
+    worldPosition.z + dz * dist,
+  ]);
+  targetPosition.current = [
     worldPosition.x + dx * dist,
     worldPosition.y + dy * dist,
     worldPosition.z + dz * dist,
   ];
+
+  // Smooth lerp toward target position
+  const posInitialized = useRef(false);
+  useFrame((_state, delta) => {
+    if (!meshRef.current) return;
+    const p = meshRef.current.position;
+    const t = targetPosition.current;
+    if (!posInitialized.current) {
+      p.set(t[0], t[1], t[2]);
+      posInitialized.current = true;
+      return;
+    }
+    const lerpSpeed = 1 - Math.pow(0.001, delta);
+    p.x = THREE.MathUtils.lerp(p.x, t[0], lerpSpeed);
+    p.y = THREE.MathUtils.lerp(p.y, t[1], lerpSpeed);
+    p.z = THREE.MathUtils.lerp(p.z, t[2], lerpSpeed);
+  });
 
   // Create material with base color from config
   const clonedMaterial = useMemo(() => {
@@ -323,7 +345,6 @@ const PartMesh = memo(function PartMesh({
       ref={meshRef}
       geometry={geometry}
       material={clonedMaterial}
-      position={position}
       quaternion={quaternionArray}
       scale={scaleArray}
       castShadow={opacity > 0.5}
