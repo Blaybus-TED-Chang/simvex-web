@@ -1954,6 +1954,7 @@ export default function ViewerPage() {
                         <div className="h-full p-4">
                           <NotesPanel
                             modelId={modelId}
+                            modelNameKo={currentModelInfo?.nameKo}
                             user={user}
                             isDarkMode={isDarkMode}
                             selectedPartId={selectedPartId}

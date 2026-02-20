@@ -1,7 +1,7 @@
 'use client';
 
 import type { Editor } from '@tiptap/react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 interface NoteToolbarProps {
   editor: Editor;
@@ -10,6 +10,8 @@ interface NoteToolbarProps {
   selectedPartName: string | null;
   modelId: string;
   onUploadImage: (file: File) => Promise<string | null>;
+  onAIEnhance?: (action: 'summarize' | 'expand' | 'organize' | 'simplify') => void;
+  aiLoading?: boolean;
 }
 
 export function NoteToolbar({
@@ -19,8 +21,11 @@ export function NoteToolbar({
   selectedPartName,
   modelId,
   onUploadImage,
+  onAIEnhance,
+  aiLoading = false,
 }: NoteToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAIMenu, setShowAIMenu] = useState(false);
 
   const btnClass = (active: boolean) =>
     `p-1.5 rounded transition-colors ${
@@ -181,6 +186,75 @@ export function NoteToolbar({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
         </svg>
       </button>
+
+      {/* AI 강화 */}
+      {onAIEnhance && (
+        <>
+          <div className={`w-px h-5 mx-1 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`} />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowAIMenu(!showAIMenu)}
+              disabled={aiLoading}
+              className={`p-1.5 rounded transition-colors ${
+                aiLoading
+                  ? isDarkMode ? 'text-gray-600 cursor-wait' : 'text-gray-300 cursor-wait'
+                  : isDarkMode
+                    ? 'text-purple-400 hover:bg-purple-500/20 border border-purple-500/30'
+                    : 'text-purple-600 hover:bg-purple-50 border border-purple-200'
+              }`}
+              title="AI 노트 강화"
+            >
+              {aiLoading ? (
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              )}
+            </button>
+            {showAIMenu && !aiLoading && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowAIMenu(false)} />
+                <div className={`absolute right-0 top-full mt-1 z-20 w-36 rounded-lg shadow-lg border py-1 ${
+                  isDarkMode
+                    ? 'bg-gray-800 border-gray-700'
+                    : 'bg-white border-gray-200'
+                }`}>
+                  {([
+                    { action: 'summarize' as const, label: '요약', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                    { action: 'expand' as const, label: '확장', icon: 'M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4' },
+                    { action: 'organize' as const, label: '정리', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
+                    { action: 'simplify' as const, label: '단순화', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+                  ]).map(({ action, label, icon }) => (
+                    <button
+                      key={action}
+                      type="button"
+                      onClick={() => {
+                        setShowAIMenu(false);
+                        onAIEnhance(action);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                        isDarkMode
+                          ? 'text-gray-300 hover:bg-gray-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+                      </svg>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
