@@ -204,7 +204,7 @@ export default function LandingPage() {
             color: 'white', fontSize: 'clamp(30px, 3.5vw, 50px)',
             fontFamily: 'Righteous', fontWeight: 400,
             letterSpacing: 4,
-          }}>VEXA ?</span>
+          }}><span style={{ fontSize: 'clamp(40px, 5vw, 70px)' }}>VEXA</span> ?</span>
         </div>
 
         {/* 보이지 않던 내부를 — 중앙 영역 */}
