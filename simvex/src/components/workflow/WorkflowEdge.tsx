@@ -56,16 +56,18 @@ export function WorkflowEdge({ id, sourceNode, sourceSide, targetNode, targetSid
         stroke="currentColor"
         strokeWidth={2}
         markerEnd="url(#arrowhead)"
-        className="text-gray-400 group-hover:text-blue-500 transition-colors pointer-events-none"
+        className="text-gray-400 group-hover:text-[#001AFF] transition-colors pointer-events-none"
       />
       {isOwner && (
-        <foreignObject x={midX - 10} y={midY - 10} width={20} height={20}
+        <foreignObject x={midX - 11} y={midY - 11} width={22} height={22}
           className="opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onDelete(id)}
-            className="w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+            className="w-[22px] h-[22px] bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm shadow-red-500/30"
           >
-            X
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </foreignObject>
       )}

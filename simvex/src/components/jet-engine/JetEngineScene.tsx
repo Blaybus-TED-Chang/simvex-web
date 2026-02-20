@@ -3,6 +3,7 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import { useJetEngineStore } from '@/lib/store/jetEngineStore';
+import SmoothZoom from '@/components/common/SmoothZoom';
 import JetEngineModel from './JetEngineModel';
 import AirflowParticles from './AirflowParticles';
 
@@ -51,13 +52,13 @@ export default function JetEngineScene({ isDarkMode = true }: JetEngineSceneProp
       {/* Controls */}
       <OrbitControls
         makeDefault
-        minDistance={3}
-        maxDistance={15}
         minPolarAngle={0.2}
         maxPolarAngle={Math.PI / 2}
         enableDamping
         dampingFactor={0.05}
+        enableZoom={false}
       />
+      <SmoothZoom minDist={3} maxDist={15} />
 
       {/* 축 인디케이터 (Gizmo) */}
       <GizmoHelper alignment="top-right" margin={[72, 72]}>

@@ -124,10 +124,10 @@ export function WorkflowMinimap({
 
   return (
     <div
-      className={`absolute bottom-4 right-4 rounded-lg shadow border overflow-hidden ${
+      className={`absolute bottom-4 right-4 rounded-xl border overflow-hidden backdrop-blur-sm ${
         isDarkMode
-          ? 'bg-gray-900/80 border-gray-700'
-          : 'bg-white/80 border-gray-300'
+          ? 'bg-gray-900/80 border-gray-700 shadow-lg shadow-black/20'
+          : 'bg-white/80 border-gray-200 shadow-lg shadow-gray-200/50'
       }`}
       style={{ width: MINIMAP_W, height: MINIMAP_H }}
     >

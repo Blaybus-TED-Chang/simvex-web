@@ -156,16 +156,34 @@ export default function WorkflowEditorPage() {
 
   if (!loaded || authLoading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#001AFF] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[13px] text-gray-400">워크플로우 불러오는 중...</p>
+        </div>
       </div>
     );
   }
 
   if (!workflow) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-950 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
-        워크플로우를 찾을 수 없습니다.
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p className="text-[16px] font-semibold text-gray-800 mb-1">워크플로우를 찾을 수 없습니다</p>
+        <p className="text-[13px] text-gray-400 mb-5">삭제되었거나 접근 권한이 없을 수 있습니다</p>
+        <a
+          href="/workflow"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-[#001AFF] hover:bg-[#0015D4] transition-colors shadow-sm shadow-[#001AFF]/20"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          목록으로 돌아가기
+        </a>
       </div>
     );
   }

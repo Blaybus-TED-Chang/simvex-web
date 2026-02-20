@@ -29,6 +29,8 @@ import { createClient } from '@/lib/supabase/client';
 import { userModelToConfig } from '@/types/userModel';
 import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { PartCompareModal, ComparisonResult, ComparePartData } from '@/components/compare/PartCompareModal';
+import { FlashcardPanel } from '@/components/flashcard/FlashcardPanel';
 import { GuideTourOverlay } from '@/components/guide/GuideTourOverlay';
 import { useGuideTourStore } from '@/lib/store/guideTourStore';
 import { ControlsHelp } from '@/components/ui/ControlsHelp';
@@ -222,7 +224,7 @@ export default function ViewerPage() {
   const [rightSidebarTab, setRightSidebarTab] = useState<RightSidebarTab>('model');
 
   // 노트 탭 내 서브탭 (나의 노트 / 핀 주석)
-  type NotesSubTab = 'mynotes' | 'annotations';
+  type NotesSubTab = 'mynotes' | 'annotations' | 'flashcards';
   const [notesSubTab, setNotesSubTab] = useState<NotesSubTab>('mynotes');
 
   // 열린 모델 탭 (브라우저 탭 스타일)
@@ -262,6 +264,15 @@ export default function ViewerPage() {
   const [partExplodeOverrides, setPartExplodeOverrides] = useState<Record<string, number> | undefined>(undefined);
   const assemblyAnimRef = useRef<number | null>(null);
   const assemblyProgressRef = useRef(0); // 현재 부품 애니메이션 진행도 (0~1)
+
+  // === 부품 비교 분석 ===
+  const [isCompareMode, setIsCompareMode] = useState(false);
+  const [comparePartA, setComparePartA] = useState<string | null>(null);
+  const [comparePartB, setComparePartB] = useState<string | null>(null);
+  const [compareResult, setCompareResult] = useState<ComparisonResult | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   // === 측정 도구 (Feature 6) ===
   const [measurementMode, setMeasurementMode] = useState(false);
@@ -947,8 +958,69 @@ export default function ViewerPage() {
     return () => window.removeEventListener('partTagClick', handler);
   }, [setSelectedPartId]);
 
+  // 비교 분석 실행
+  const triggerComparison = useCallback(async (partAId: string, partBId: string) => {
+    const modelObj = mergedModel ?? currentModelInfo;
+    if (!modelObj) return;
+    const pA = modelObj.parts.find((p) => p.id === partAId);
+    const pB = modelObj.parts.find((p) => p.id === partBId);
+    if (!pA || !pB) return;
+
+    setComparePartB(partBId);
+    setCompareLoading(true);
+    setCompareError(null);
+    setCompareResult(null);
+    setShowCompareModal(true);
+    setIsCompareMode(false);
+
+    try {
+      const res = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partA: { name: pA.name, nameKo: pA.nameKo, description: pA.description, material: pA.material },
+          partB: { name: pB.name, nameKo: pB.nameKo, description: pB.description, material: pB.material },
+          modelInfo: {
+            name: modelObj.name,
+            nameKo: modelObj.nameKo,
+            description: modelObj.description,
+            theory: modelObj.theory,
+            category: modelObj.category,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || '비교 분석에 실패했습니다.');
+      }
+      const data = await res.json();
+      setCompareResult(data.comparison);
+    } catch (err) {
+      setCompareError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+    } finally {
+      setCompareLoading(false);
+    }
+  }, [mergedModel, currentModelInfo]);
+
+  const handleStartCompare = useCallback(() => {
+    if (!selectedPartId) return;
+    setIsCompareMode(true);
+    setComparePartA(selectedPartId);
+  }, [selectedPartId]);
+
+  const handleCancelCompare = useCallback(() => {
+    setIsCompareMode(false);
+    setComparePartA(null);
+  }, []);
+
   // 부품 선택 시 핀 말풍선 닫기 + 자동 포커스
   const handleSelectPart = useCallback((partId: string | null) => {
+    // 비교 모드: 다른 부품 클릭 시 비교 실행
+    if (isCompareMode && comparePartA && partId && partId !== comparePartA) {
+      triggerComparison(comparePartA, partId);
+      return;
+    }
+
     setSelectedPartId(partId);
     setActiveAnnotationId(null);
 
@@ -989,7 +1061,7 @@ export default function ViewerPage() {
         tz + norm[2] * zoomDist,
       ]);
     }
-  }, [setSelectedPartId, setActiveAnnotationId, autoFocusEnabled, meshBounds, originalModel, combinedModel, explodeValue, cameraPosition, cameraTarget]);
+  }, [setSelectedPartId, setActiveAnnotationId, autoFocusEnabled, meshBounds, originalModel, combinedModel, explodeValue, cameraPosition, cameraTarget, isCompareMode, comparePartA, triggerComparison]);
 
   // === AI 가이드 투어 핸들러 ===
   const handleStartGuideTour = useCallback(async () => {
@@ -1768,6 +1840,26 @@ export default function ViewerPage() {
                 </button>
               )}
 
+              {/* 비교 모드 배너 */}
+              {isCompareMode && (
+                <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-lg border backdrop-blur-md ${
+                  isDarkMode ? 'bg-purple-900/80 border-purple-600 text-purple-200' : 'bg-purple-50/90 border-purple-300 text-purple-800'
+                }`} style={{ animation: 'fadeIn 0.2s ease' }}>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  <span className="text-sm font-medium">비교할 부품을 클릭하세요</span>
+                  <button
+                    onClick={handleCancelCompare}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    취소
+                  </button>
+                </div>
+              )}
+
               <ControlsHelp show={showControlsGuide} onDismiss={toggleControlsGuide} isDarkMode={isDarkMode} controls={VIEWER_CONTROLS_GUIDE} />
 
               {/* 조작 가이드 토글 버튼 (좌하단, 가이드 닫혀있을 때 표시) */}
@@ -1907,6 +1999,9 @@ export default function ViewerPage() {
                         onCustomize={upsertCustomization}
                         onResetCustomize={resetCustomization}
                         isDarkMode={isDarkMode}
+                        isCompareMode={isCompareMode}
+                        onStartCompare={selectedPartId ? handleStartCompare : undefined}
+                        onCancelCompare={handleCancelCompare}
                       />
                     </div>
                   </div>
@@ -1926,6 +2021,11 @@ export default function ViewerPage() {
                         { id: 'annotations' as const, label: '핀 주석', icon: (
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                          </svg>
+                        )},
+                        { id: 'flashcards' as const, label: '플래시카드', icon: (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
                         )},
                       ]).map((sub) => (
@@ -1975,6 +2075,26 @@ export default function ViewerPage() {
                           onUpdate={updateAnnotation}
                           onDelete={deleteAnnotation}
                           onScreenshot={handleAnnotationScreenshot}
+                        />
+                      )}
+
+                      {notesSubTab === 'flashcards' && currentModelInfo && (
+                        <FlashcardPanel
+                          modelId={modelId}
+                          modelInfo={{
+                            name: currentModelInfo.name,
+                            nameKo: currentModelInfo.nameKo,
+                            theory: currentModelInfo.theory,
+                            parts: currentModelInfo.parts.map((p) => ({
+                              id: p.id,
+                              name: p.name,
+                              nameKo: p.nameKo,
+                              description: p.description,
+                            })),
+                          }}
+                          notesContent={quizNotesContent}
+                          chatHistory={quizChatHistory}
+                          isDarkMode={isDarkMode}
                         />
                       )}
                     </div>
@@ -2135,6 +2255,27 @@ export default function ViewerPage() {
 
     {/* ══════ 로그인 모달 ══════ */}
     {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+
+    {/* ══════ 부품 비교 모달 ══════ */}
+    {showCompareModal && comparePartA && comparePartB && (() => {
+      const modelObj = mergedModel ?? currentModelInfo;
+      const pA = modelObj?.parts.find((p) => p.id === comparePartA);
+      const pB = modelObj?.parts.find((p) => p.id === comparePartB);
+      if (!pA || !pB) return null;
+      const partAData: ComparePartData = { name: pA.name, nameKo: pA.nameKo, description: pA.description, material: pA.material, color: pA.color };
+      const partBData: ComparePartData = { name: pB.name, nameKo: pB.nameKo, description: pB.description, material: pB.material, color: pB.color };
+      return (
+        <PartCompareModal
+          partA={partAData}
+          partB={partBData}
+          comparison={compareResult}
+          isLoading={compareLoading}
+          error={compareError}
+          isDarkMode={isDarkMode}
+          onClose={() => { setShowCompareModal(false); setComparePartA(null); setComparePartB(null); setCompareResult(null); setCompareError(null); }}
+        />
+      );
+    })()}
     </>
   );
 }
