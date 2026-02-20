@@ -16,6 +16,8 @@ interface ModelInfo {
   parts: { id: string; name: string; nameKo: string; description: string }[];
 }
 
+type DifficultyLevel = 'mixed' | 'easy' | 'medium' | 'hard';
+
 interface QuizPanelProps {
   quiz?: ModelQuiz;
   modelId: string;
@@ -27,6 +29,8 @@ interface QuizPanelProps {
   onClearPartSelect: () => void;
   // AI 퀴즈 생성용
   modelInfo?: ModelInfo | null;
+  chatHistory?: string;
+  notesContent?: string;
 }
 
 export function QuizPanel({
@@ -38,15 +42,29 @@ export function QuizPanel({
   onRequestPartSelect,
   onClearPartSelect,
   modelInfo,
+  chatHistory,
+  notesContent,
 }: QuizPanelProps) {
   // AI 퀴즈 생성 상태
   const [aiQuiz, setAiQuiz] = useState<ModelQuiz | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiDifficulty, setAiDifficulty] = useState<DifficultyLevel>('mixed');
+  // 현재 사용 중인 퀴즈 소스: 'builtin' | 'ai'
+  const [quizSource, setQuizSource] = useState<'builtin' | 'ai'>('builtin');
+
+  const {
+    quizProgress,
+    startQuiz,
+    answerQuestion,
+    nextQuestion,
+    prevQuestion,
+    completeQuiz,
+    resetQuiz,
+  } = useQuizStore();
 
   // localStorage 캐시에서 AI 퀴즈 복원
   useEffect(() => {
-    if (propQuiz) return; // 내장 퀴즈가 있으면 AI 퀴즈 불필요
     try {
       const cached = localStorage.getItem(`ai-quiz-${modelId}`);
       if (cached) {
@@ -54,9 +72,16 @@ export function QuizPanel({
         setAiQuiz(parsed);
       }
     } catch { /* ignore */ }
-  }, [modelId, propQuiz]);
+  }, [modelId]);
 
-  const quiz = propQuiz || aiQuiz;
+  // 내장 퀴즈가 없으면 AI 소스로 시작
+  useEffect(() => {
+    if (!propQuiz) {
+      setQuizSource('ai');
+    }
+  }, [propQuiz]);
+
+  const quiz = quizSource === 'ai' && aiQuiz ? aiQuiz : propQuiz || aiQuiz;
 
   // AI 퀴즈 생성
   const handleGenerateAIQuiz = useCallback(async () => {
@@ -78,34 +103,34 @@ export function QuizPanel({
             nameKo: p.nameKo,
             description: p.description,
           })),
+          difficulty: aiDifficulty,
+          chatHistory: chatHistory || undefined,
+          notesContent: notesContent || undefined,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '퀴즈 생성 실패');
 
+      const diffLabel = aiDifficulty === 'mixed' ? '' : ` (${
+        aiDifficulty === 'easy' ? '쉬움' : aiDifficulty === 'medium' ? '보통' : '어려움'
+      })`;
       const generatedQuiz: ModelQuiz = {
         modelId,
-        titleKo: `${modelInfo.nameKo} AI 퀴즈`,
-        description: `AI가 생성한 ${modelInfo.nameKo} 학습 퀴즈입니다.`,
+        titleKo: `${modelInfo.nameKo} AI 맞춤 퀴즈${diffLabel}`,
+        description: `AI가 학습 상태를 분석하여 생성한 맞춤 퀴즈입니다.`,
         questions: data.questions,
       };
       setAiQuiz(generatedQuiz);
+      setQuizSource('ai');
+      // 기존 진행 상태 초기화
+      resetQuiz(modelId);
       localStorage.setItem(`ai-quiz-${modelId}`, JSON.stringify(generatedQuiz));
     } catch (err) {
       setAiError(err instanceof Error ? err.message : '퀴즈 생성 실패');
     } finally {
       setAiLoading(false);
     }
-  }, [modelId, modelInfo]);
-  const {
-    quizProgress,
-    startQuiz,
-    answerQuestion,
-    nextQuestion,
-    prevQuestion,
-    completeQuiz,
-    resetQuiz,
-  } = useQuizStore();
+  }, [modelId, modelInfo, aiDifficulty, chatHistory, notesContent, resetQuiz]);
 
   // Zustand hydration
   useEffect(() => {
@@ -405,119 +430,183 @@ export function QuizPanel({
 
       {/* 콘텐츠 */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* 퀴즈 없음: AI 생성 화면 */}
-        {!quiz && (
-          <div className="text-center py-12 space-y-6">
-            <div
-              className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center ${
-                isDarkMode ? 'bg-purple-900/30' : 'bg-purple-100'
-              }`}
-            >
-              <svg
-                className={`w-10 h-10 ${isDarkMode ? 'text-purple-400' : 'text-purple-500'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                AI 퀴즈 생성
-              </h3>
-              <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                이 모델에 대한 퀴즈가 없습니다.<br />AI가 자동으로 퀴즈를 생성합니다.
-              </p>
-            </div>
-            {aiError && (
-              <p className="text-red-500 text-sm">{aiError}</p>
+        {/* 시작 화면 (퀴즈 없거나, 퀴즈 있지만 아직 시작 안 함) */}
+        {!progress && (
+          <div className="text-center py-8 space-y-5">
+            {/* 내장 퀴즈 시작 섹션 */}
+            {propQuiz && quizSource === 'builtin' && (
+              <>
+                <div
+                  className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+                    isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'
+                  }`}
+                >
+                  <svg
+                    className={`w-8 h-8 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {propQuiz.titleKo}
+                  </h3>
+                  <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {propQuiz.description}
+                  </p>
+                  <p className={`mt-0.5 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {propQuiz.questions.length}문제 중 10문제 랜덤 출제
+                  </p>
+                </div>
+                <button
+                  onClick={handleStart}
+                  className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
+                    isDarkMode
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  퀴즈 시작
+                </button>
+              </>
             )}
-            <button
-              onClick={handleGenerateAIQuiz}
-              disabled={aiLoading || !modelInfo}
-              className={`px-8 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto ${
-                aiLoading
-                  ? isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
-                  : isDarkMode
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                  : 'bg-purple-500 hover:bg-purple-600 text-white'
-              }`}
-            >
-              {aiLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  생성 중...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            {/* AI 퀴즈가 이미 생성되어 있고 AI 소스 선택 중일 때 */}
+            {quizSource === 'ai' && aiQuiz && (
+              <>
+                <div
+                  className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+                    isDarkMode ? 'bg-purple-900/30' : 'bg-purple-100'
+                  }`}
+                >
+                  <svg
+                    className={`w-8 h-8 ${isDarkMode ? 'text-purple-400' : 'text-purple-500'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  AI 퀴즈 생성
-                </>
-              )}
-            </button>
-          </div>
-        )}
+                </div>
+                <div>
+                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {aiQuiz.titleKo}
+                  </h3>
+                  <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {aiQuiz.description}
+                  </p>
+                </div>
+                <button
+                  onClick={handleStart}
+                  className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
+                    isDarkMode
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-purple-500 hover:bg-purple-600 text-white'
+                  }`}
+                >
+                  AI 퀴즈 시작
+                </button>
+              </>
+            )}
 
-        {/* 시작 화면 */}
-        {quiz && !progress && (
-          <div className="text-center py-12 space-y-6">
-            <div
-              className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center ${
-                isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'
-              }`}
-            >
-              <svg
-                className={`w-10 h-10 ${
-                  isDarkMode ? 'text-blue-400' : 'text-blue-500'
+            {/* 구분선 */}
+            {(propQuiz || aiQuiz) && (
+              <div className="flex items-center gap-3 py-1">
+                <div className={`flex-1 h-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+                <span className={`text-xs ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>또는</span>
+                <div className={`flex-1 h-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+              </div>
+            )}
+
+            {/* 내장 퀴즈로 전환 버튼 (AI 소스 사용 중이고 내장 퀴즈가 있을 때) */}
+            {quizSource === 'ai' && propQuiz && (
+              <button
+                onClick={() => setQuizSource('builtin')}
+                className={`text-sm px-4 py-2 rounded-lg transition-colors ${
+                  isDarkMode
+                    ? 'text-blue-400 hover:bg-blue-900/20'
+                    : 'text-blue-600 hover:bg-blue-50'
                 }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
+                내장 퀴즈로 전환
+              </button>
+            )}
+
+            {/* AI 맞춤 퀴즈 생성 섹션 — 항상 표시 */}
+            <div className={`rounded-xl p-4 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+              <h4 className={`text-sm font-semibold mb-3 flex items-center gap-1.5 ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                AI 맞춤 퀴즈 생성
+              </h4>
+
+              {/* 난이도 선택 */}
+              <div className="flex gap-1.5 mb-3">
+                {([
+                  { value: 'mixed' as DifficultyLevel, label: '혼합' },
+                  { value: 'easy' as DifficultyLevel, label: '쉬움' },
+                  { value: 'medium' as DifficultyLevel, label: '보통' },
+                  { value: 'hard' as DifficultyLevel, label: '어려움' },
+                ]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setAiDifficulty(value)}
+                    className={`flex-1 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                      aiDifficulty === value
+                        ? isDarkMode
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-purple-500 text-white'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 학습 데이터 표시 */}
+              {(chatHistory || notesContent) && (
+                <p className={`text-xs mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {chatHistory && notesContent ? 'AI 대화 + 노트' : chatHistory ? 'AI 대화' : '노트'} 기반 맞춤 출제
+                </p>
+              )}
+
+              {aiError && (
+                <p className="text-red-500 text-xs mb-2">{aiError}</p>
+              )}
+
+              <button
+                onClick={handleGenerateAIQuiz}
+                disabled={aiLoading || !modelInfo}
+                className={`w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
+                  aiLoading
+                    ? isDarkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
+                    : isDarkMode
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-purple-500 hover:bg-purple-600 text-white'
+                }`}
+              >
+                {aiLoading ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    생성 중...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {aiQuiz ? 'AI 퀴즈 새로 생성' : 'AI 맞춤 퀴즈 생성'}
+                  </>
+                )}
+              </button>
             </div>
-            <div>
-              <h3
-                className={`text-xl font-semibold ${
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                {quiz.titleKo}
-              </h3>
-              <p
-                className={`mt-2 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                }`}
-              >
-                {quiz.description}
-              </p>
-              <p
-                className={`mt-1 text-sm ${
-                  isDarkMode ? 'text-gray-500' : 'text-gray-500'
-                }`}
-              >
-                {quiz.questions.length}문제 중 10문제 랜덤 출제
-              </p>
-            </div>
-            <button
-              onClick={handleStart}
-              className={`px-8 py-3 rounded-lg font-medium transition-colors ${
-                isDarkMode
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`}
-            >
-              퀴즈 시작
-            </button>
           </div>
         )}
 

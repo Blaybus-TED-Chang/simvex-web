@@ -29,6 +29,8 @@ import { createClient } from '@/lib/supabase/client';
 import { userModelToConfig } from '@/types/userModel';
 import { getQuizByModelId, hasQuiz } from '@/data/quizzes';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { GuideTourOverlay } from '@/components/guide/GuideTourOverlay';
+import { useGuideTourStore } from '@/lib/store/guideTourStore';
 import { ControlsHelp } from '@/components/ui/ControlsHelp';
 import { useScraps } from '@/hooks/useScraps';
 import { useAnnotations } from '@/hooks/useAnnotations';
@@ -484,6 +486,26 @@ export default function ViewerPage() {
     return hasQuiz(currentModelInfo.id);
   }, [currentModelInfo]);
 
+  // AI 퀴즈용 학습 컨텍스트
+  const quizChatHistory = useMemo(() => {
+    if (!chatMessages || chatMessages.length === 0) return undefined;
+    return chatMessages
+      .slice(-20)
+      .map((m) => `${m.role === 'user' ? '사용자' : 'AI'}: ${m.content}`)
+      .join('\n');
+  }, [chatMessages]);
+
+  const quizNotesContent = useMemo(() => {
+    if (!noteItems || noteItems.length === 0) return undefined;
+    return noteItems
+      .map((n) => `[${n.title}] ${jsonContentToText(n.content)}`)
+      .join('\n');
+  }, [noteItems]);
+
+  // === AI 가이드 투어 (상태만 여기서 정의, 핸들러는 handleSelectPart 이후) ===
+  const [guideTourLoading, setGuideTourLoading] = useState(false);
+  const guideTourActive = useGuideTourStore((s) => !!s.activeTour);
+
   // 퀴즈에서 부품 선택 요청 시 (향후 부품 하이라이트에 사용 가능)
   const handleQuizRequestPartSelect = useCallback((_partId: string) => {
     // TODO: 퀴즈 진행 중 해당 부품 하이라이트 기능 추가 가능
@@ -499,6 +521,7 @@ export default function ViewerPage() {
 
   useEffect(() => {
     useViewerStore.persist.rehydrate();
+    useGuideTourStore.persist.rehydrate();
     setIsHydrated(true);
   }, []);
 
@@ -967,6 +990,59 @@ export default function ViewerPage() {
       ]);
     }
   }, [setSelectedPartId, setActiveAnnotationId, autoFocusEnabled, meshBounds, originalModel, combinedModel, explodeValue, cameraPosition, cameraTarget]);
+
+  // === AI 가이드 투어 핸들러 ===
+  const handleStartGuideTour = useCallback(async () => {
+    if (!currentModelInfo) return;
+
+    // 캐시 확인
+    const cached = useGuideTourStore.getState().getCachedTour(currentModelInfo.id);
+    if (cached) {
+      useGuideTourStore.getState().startTour(cached);
+      return;
+    }
+
+    // API 호출
+    setGuideTourLoading(true);
+    try {
+      const response = await fetch('/api/guide/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelName: currentModelInfo.name,
+          modelNameKo: currentModelInfo.nameKo,
+          modelDescription: currentModelInfo.description,
+          modelTheory: currentModelInfo.theory,
+          parts: currentModelInfo.parts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            nameKo: p.nameKo,
+            description: p.description,
+          })),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '가이드 생성 실패');
+
+      const tour = {
+        modelId: currentModelInfo.id,
+        title: data.title,
+        steps: data.steps,
+        generatedAt: Date.now(),
+      };
+      useGuideTourStore.getState().cacheTour(currentModelInfo.id, tour);
+      useGuideTourStore.getState().startTour(tour);
+    } catch (err) {
+      console.error('가이드 투어 생성 실패:', err);
+    } finally {
+      setGuideTourLoading(false);
+    }
+  }, [currentModelInfo]);
+
+  // 가이드 투어에서 부품 선택 콜백
+  const handleGuideTourSelectPart = useCallback((partId: string) => {
+    handleSelectPart(partId);
+  }, [handleSelectPart]);
 
   // 주석 포함 스크린샷 저장
   const handleAnnotationScreenshot = useCallback(async () => {
@@ -1441,6 +1517,29 @@ export default function ViewerPage() {
             </Tooltip>
           )}
 
+          {/* AI 가이드 투어 */}
+          {currentModelInfo && (
+            <Tooltip label={guideTourLoading ? '가이드 생성 중...' : 'AI 가이드 투어'}>
+              <button
+                onClick={handleStartGuideTour}
+                disabled={guideTourLoading}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  guideTourLoading
+                    ? isDarkMode ? 'text-gray-600' : 'text-gray-300'
+                    : isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                }`}
+              >
+                {guideTourLoading ? (
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                )}
+              </button>
+            </Tooltip>
+          )}
+
           <Tooltip label="스크린샷 캡처">
             <button
               onClick={handleAnnotationScreenshot}
@@ -1689,14 +1788,22 @@ export default function ViewerPage() {
                 </button>
               )}
 
-              {/* 3D 뷰어 라벨 */}
-              <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-1.5 backdrop-blur-sm rounded-full border shadow-sm transition-all duration-300 ${
-                isDarkMode
-                  ? 'bg-gray-900/80 border-gray-700 text-gray-400'
-                  : 'bg-white/80 border-gray-200 text-gray-500'
-              }`}>
-                <span className="text-[13px] font-medium">3D뷰어</span>
-              </div>
+              {/* AI 가이드 투어 오버레이 */}
+              <GuideTourOverlay
+                isDarkMode={isDarkMode}
+                onSelectPart={handleGuideTourSelectPart}
+              />
+
+              {/* 3D 뷰어 라벨 (투어 중에는 숨김) */}
+              {!guideTourActive && (
+                <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-1.5 backdrop-blur-sm rounded-full border shadow-sm transition-all duration-300 ${
+                  isDarkMode
+                    ? 'bg-gray-900/80 border-gray-700 text-gray-400'
+                    : 'bg-white/80 border-gray-200 text-gray-500'
+                }`}>
+                  <span className="text-[13px] font-medium">3D뷰어</span>
+                </div>
+              )}
             </div>
 
             {/* 사이드바 리사이즈 핸들 (별도 flex 아이템) */}
@@ -1885,6 +1992,8 @@ export default function ViewerPage() {
                       onRequestPartSelect={handleQuizRequestPartSelect}
                       onClearPartSelect={handleQuizClearPartSelect}
                       modelInfo={currentModelInfo}
+                      chatHistory={quizChatHistory}
+                      notesContent={quizNotesContent}
                     />
                   </div>
                 )}
