@@ -24,7 +24,7 @@ interface ChatRequest {
 }
 
 function buildSystemPrompt(modelInfo?: ChatRequest['modelInfo'], selectedPart?: ChatRequest['selectedPart']): string {
-  let systemPrompt = `당신은 SIMVEX 플랫폼의 AI 학습 어시스턴트입니다.
+  let systemPrompt = `당신은 VEXA 플랫폼의 AI 학습 어시스턴트입니다.
 공학 학습을 돕는 전문가로서, 기계 부품과 구조에 대해 친절하고 상세하게 설명합니다.
 
 ## 역할
@@ -133,7 +133,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('OpenAI API Response:', JSON.stringify(data, null, 2));
 
     // GPT-5-mini 응답 구조 확인
     const assistantMessage = data.choices?.[0]?.message?.content

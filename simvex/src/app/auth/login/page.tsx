@@ -60,7 +60,7 @@ export default function LoginPage() {
           <Link href="/" className="inline-flex items-center gap-3">
             <Image
               src="/logo.svg"
-              alt="SIMVEX"
+              alt="VEXA"
               width={120}
               height={25}
               className="object-contain invert"

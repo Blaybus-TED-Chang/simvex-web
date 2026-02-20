@@ -42,129 +42,196 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-// HTML 요소를 생성하여 이미지로 변환 후 PDF에 추가
+// ── PDF 생성 (섹션 단위 페이지 분할) ──
+
+const CONTAINER_W = 800;   // px
+const RENDER_SCALE = 1.5;
+const PAGE_W_MM = 210;     // A4
+const PAGE_H_MM = 297;
+const MARGIN_MM = 15;
+const CONTENT_W_MM = PAGE_W_MM - MARGIN_MM * 2; // 180mm
+
+const BASE_FONT = `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;`;
+const TITLE_STYLE = `font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;`;
+
 export async function generateModelPdf(data: PdfExportData): Promise<Blob> {
-  // 임시 HTML 컨테이너 생성
+  // ── 1. 섹션별 HTML 구성 ──
   const container = document.createElement('div');
   container.style.cssText = `
-    position: fixed;
-    top: -9999px;
-    left: -9999px;
-    width: 800px;
+    position: fixed; top: -9999px; left: -9999px;
+    box-sizing: border-box;
+    width: ${CONTAINER_W}px;
+    padding: 0 40px;
     background: white;
-    padding: 40px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+    ${BASE_FONT}
     color: #333;
   `;
 
-  // 노트 HTML 생성
-  const notesHtml = data.noteItems.length > 0
-    ? `
-      <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">학습 노트</h2>
-        ${data.noteItems.map((note) => `
-          <div style="margin-bottom: 16px; background: #f9fafb; padding: 16px; border-radius: 8px;">
-            <div style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 6px;">${escapeHtml(note.title)}</div>
-            <div style="font-size: 11px; color: #999; margin-bottom: 8px;">${new Date(note.updatedAt).toLocaleDateString('ko-KR')}</div>
-            <div style="font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: #444;">${escapeHtml(note.content)}</div>
-          </div>
-        `).join('')}
-      </div>
-    `
-    : '';
+  const sectionEls: HTMLDivElement[] = [];
 
-  // AI 대화 HTML 생성
-  const chatHtml = data.chatMessages.length > 0
-    ? `
-      <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">AI 대화 내역</h2>
-        ${data.chatMessages.map((msg) => `
-          <div style="margin-bottom: 10px; display: flex; gap: 10px;">
-            <div style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: ${msg.role === 'user' ? '#e0e7ff' : '#f0fdf4'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: ${msg.role === 'user' ? '#4338ca' : '#166534'};">
-              ${msg.role === 'user' ? 'Q' : 'A'}
-            </div>
-            <div style="flex: 1; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 8px; background: ${msg.role === 'user' ? '#f0f4ff' : '#f7fdf9'}; color: #333; white-space: pre-wrap;">${escapeHtml(msg.content)}</div>
-          </div>
-        `).join('')}
-      </div>
-    `
-    : '';
+  function addSection(html: string, marginBottom = 16) {
+    const div = document.createElement('div');
+    div.style.marginBottom = `${marginBottom}px`;
+    div.innerHTML = html;
+    container.appendChild(div);
+    sectionEls.push(div);
+  }
 
-  // PDF 콘텐츠 HTML 생성
-  container.innerHTML = `
-    <div style="text-align: center; margin-bottom: 30px;">
+  // 헤더
+  addSection(`
+    <div style="text-align: center; padding-top: 20px;">
       <h1 style="font-size: 28px; margin: 0 0 8px 0; color: #1a1a1a;">${escapeHtml(data.modelNameKo)}</h1>
       <p style="font-size: 16px; color: #666; margin: 0;">${escapeHtml(data.modelName)}</p>
     </div>
+  `, 20);
 
-    ${data.screenshotDataUrl ? `
-      <div style="margin-bottom: 30px; text-align: center;">
+  // 스크린샷
+  if (data.screenshotDataUrl) {
+    addSection(`
+      <div style="text-align: center;">
         <img src="${data.screenshotDataUrl}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
       </div>
-    ` : ''}
+    `, 24);
+  }
 
-    <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">설명</h2>
-      <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(data.description)}</p>
-    </div>
+  // 설명
+  addSection(`
+    <h2 style="${TITLE_STYLE}">설명</h2>
+    <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(data.description)}</p>
+  `);
 
-    ${data.theory ? `
-      <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">이론 및 원리</h2>
-        <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(data.theory)}</p>
-      </div>
-    ` : ''}
+  // 이론 — 번호 섹션 또는 단락 단위로 분할
+  if (data.theory) {
+    addSection(`<h2 style="${TITLE_STYLE}">이론 및 원리</h2>`, 4);
 
-    ${notesHtml}
+    const numbered = data.theory.split(/\n(?=\d+\.\s)/).filter(t => t.trim());
+    const chunks = numbered.length > 1
+      ? numbered
+      : data.theory.split(/\n\n+/).filter(p => p.trim());
 
-    ${chatHtml}
+    for (const chunk of chunks) {
+      addSection(`
+        <p style="font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(chunk)}</p>
+      `, 8);
+    }
+  }
 
-    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+  // 학습 노트
+  if (data.noteItems.length > 0) {
+    addSection(`<h2 style="${TITLE_STYLE}">학습 노트</h2>`, 8);
+    for (const note of data.noteItems) {
+      addSection(`
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px;">
+          <div style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 6px;">${escapeHtml(note.title)}</div>
+          <div style="font-size: 11px; color: #999; margin-bottom: 8px;">${new Date(note.updatedAt).toLocaleDateString('ko-KR')}</div>
+          <div style="font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: #444;">${escapeHtml(note.content)}</div>
+        </div>
+      `, 12);
+    }
+  }
+
+  // AI 대화
+  if (data.chatMessages.length > 0) {
+    addSection(`<h2 style="${TITLE_STYLE}">AI 대화 내역</h2>`, 8);
+    for (const msg of data.chatMessages) {
+      addSection(`
+        <div style="display: flex; gap: 10px;">
+          <div style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: ${msg.role === 'user' ? '#e0e7ff' : '#f0fdf4'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: ${msg.role === 'user' ? '#4338ca' : '#166534'};">
+            ${msg.role === 'user' ? 'Q' : 'A'}
+          </div>
+          <div style="flex: 1; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 8px; background: ${msg.role === 'user' ? '#f0f4ff' : '#f7fdf9'}; color: #333; white-space: pre-wrap;">${escapeHtml(msg.content)}</div>
+        </div>
+      `, 10);
+    }
+  }
+
+  // 푸터
+  addSection(`
+    <div style="padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
       <p style="font-size: 12px; color: #999; margin: 0;">
-        SIMVEX - 3D 기계 부품 학습 뷰어 | ${new Date().toLocaleDateString('ko-KR')}
+        VEXA - 3D 기계 부품 학습 뷰어 | ${new Date().toLocaleDateString('ko-KR')}
       </p>
     </div>
-  `;
+  `, 0);
 
   document.body.appendChild(container);
 
   try {
-    // HTML을 캔버스로 변환 (scale 1.5로 적절한 해상도 유지)
-    const canvas = await html2canvas(container, {
-      scale: 1.5,
+    // ── 2. 전체를 한 번에 렌더링 ──
+    const fullCanvas = await html2canvas(container, {
+      scale: RENDER_SCALE,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
     });
 
-    // JPEG로 변환하여 용량 감소 (품질 0.85)
-    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+    // ── 3. 섹션 경계 측정 (canvas pixel 단위) ──
+    const boundaries: number[] = sectionEls.map(el => el.offsetTop * RENDER_SCALE);
+    boundaries.push(fullCanvas.height);
 
-    // 캔버스 크기에 맞는 PDF 생성
-    const imgWidth = 210; // A4 width in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    // ── 4. 페이지 분할 — 섹션 경계에서만 끊기 ──
+    const pageContentHPx = ((PAGE_H_MM - MARGIN_MM * 2) / CONTENT_W_MM) * fullCanvas.width;
 
+    const pages: { startPx: number; endPx: number }[] = [];
+    let pageStart = 0;
+
+    while (pageStart < fullCanvas.height) {
+      const pageEndLimit = pageStart + pageContentHPx;
+
+      // 남은 콘텐츠가 한 페이지에 들어가면 종료
+      if (pageEndLimit >= fullCanvas.height) {
+        pages.push({ startPx: pageStart, endPx: fullCanvas.height });
+        break;
+      }
+
+      // pageEndLimit 이하이면서 pageStart 초과인 가장 큰 경계 찾기
+      let bestBreak = pageStart;
+      for (const b of boundaries) {
+        if (b > pageStart && b <= pageEndLimit) {
+          bestBreak = b;
+        }
+      }
+
+      // 경계가 없으면 (섹션이 페이지보다 큰 경우) 강제 분할
+      if (bestBreak <= pageStart) {
+        bestBreak = pageEndLimit;
+      }
+
+      pages.push({ startPx: pageStart, endPx: bestBreak });
+      pageStart = bestBreak;
+    }
+
+    // ── 5. 페이지별 크롭 → PDF 출력 ──
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageHeight = pdf.internal.pageSize.getHeight();
 
-    let heightLeft = imgHeight;
-    let position = 0;
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) pdf.addPage();
 
-    // 첫 페이지 (이미 생성된 imgData 재사용)
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+      const { startPx, endPx } = pages[i];
+      const heightPx = endPx - startPx;
+      if (heightPx <= 0) continue;
 
-    // 필요한 경우 추가 페이지 (동일한 imgData 재사용)
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      const heightMm = (heightPx / fullCanvas.width) * CONTENT_W_MM;
+
+      // 해당 영역만 잘라내기
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = fullCanvas.width;
+      pageCanvas.height = Math.ceil(heightPx);
+      const ctx = pageCanvas.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      ctx.drawImage(
+        fullCanvas,
+        0, Math.floor(startPx), fullCanvas.width, Math.ceil(heightPx),
+        0, 0, fullCanvas.width, Math.ceil(heightPx),
+      );
+
+      const imgData = pageCanvas.toDataURL('image/jpeg', 0.85);
+      pdf.addImage(imgData, 'JPEG', MARGIN_MM, MARGIN_MM, CONTENT_W_MM, heightMm);
     }
 
     return pdf.output('blob');
   } finally {
-    // 임시 컨테이너 제거
     document.body.removeChild(container);
   }
 }

@@ -67,7 +67,7 @@ function EditablePercent({
 }
 
 export function ExplodeSlider() {
-  const { explodeValue, setExplodeValue, globalOpacity, setGlobalOpacity, isDarkMode } = useViewerStore();
+  const { explodeValue, setExplodeValue, globalOpacity, setGlobalOpacity, isDarkMode, xRayMode, setXRayMode, autoFocusEnabled, setAutoFocusEnabled } = useViewerStore();
 
   const transparencyPercent = Math.round((1 - globalOpacity) * 100);
 
@@ -147,6 +147,56 @@ export function ExplodeSlider() {
           <span className={`text-[12px] shrink-0 w-10 text-right ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>투명</span>
         </div>
         <p className={`text-[12px] mt-1 ml-[52px] ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{transparencyPercent}%</p>
+      </div>
+
+      {/* X-Ray 모드 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <span className={`text-[14px] font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>X-Ray</span>
+          <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            선택한 부품만 표시
+          </p>
+        </div>
+        <button
+          onClick={() => setXRayMode(!xRayMode)}
+          className={`relative w-11 h-6 rounded-full transition-colors ${
+            xRayMode
+              ? 'bg-[#001AFF]'
+              : isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
+          }`}
+          title={xRayMode ? 'X-Ray 끄기' : 'X-Ray 켜기'}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+              xRayMode ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* 자동 포커스 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <span className={`text-[14px] font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>자동 포커스</span>
+          <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            부품 클릭 시 카메라 이동
+          </p>
+        </div>
+        <button
+          onClick={() => setAutoFocusEnabled(!autoFocusEnabled)}
+          className={`relative w-11 h-6 rounded-full transition-colors ${
+            autoFocusEnabled
+              ? 'bg-[#001AFF]'
+              : isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
+          }`}
+          title={autoFocusEnabled ? '자동 포커스 끄기' : '자동 포커스 켜기'}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+              autoFocusEnabled ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
       </div>
     </div>
   );

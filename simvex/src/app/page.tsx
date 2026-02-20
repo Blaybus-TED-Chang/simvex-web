@@ -78,7 +78,7 @@ export default function LandingPage() {
         <div className="landing-logo" style={{
           color: 'black', fontSize: 26, fontFamily: 'Righteous', fontWeight: 400,
         }}>
-          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>SIMVEX</Link>
+          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>VEXA</Link>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           <Link href="/" className="landing-nav-link landing-nav" style={{
@@ -140,16 +140,16 @@ export default function LandingPage() {
           <span style={{ color: 'white', fontSize: 19, fontFamily: 'Roboto', fontWeight: 900 }}>슥</span>
         </div>
 
-        {/* SIMVEX 텍스트 (파란색 — 원 바깥) */}
+        {/* VEXA 텍스트 (파란색 — 원 바깥) */}
         <div style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           color: '#0019FF', fontSize: 'clamp(90px, 11vw, 150px)', fontFamily: 'Righteous', fontWeight: 400,
           lineHeight: 1, zIndex: 1,
           animation: 'fadeIn 1s ease both', animationDelay: '0.3s',
-        }}>SIMVEX</div>
+        }}>VEXA</div>
 
-        {/* SIMVEX 텍스트 (흰색 — 원 안쪽 clip) */}
+        {/* VEXA 텍스트 (흰색 — 원 안쪽 clip) */}
         <div style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
@@ -163,11 +163,11 @@ export default function LandingPage() {
             color: 'white', fontSize: 'clamp(90px, 11vw, 150px)', fontFamily: 'Righteous', fontWeight: 400,
             lineHeight: 1, whiteSpace: 'nowrap',
             animation: 'fadeIn 1s ease both', animationDelay: '0.3s',
-          }}>SIMVEX</div>
+          }}>VEXA</div>
         </div>
       </section>
 
-      {/* ── Why, SIMVEX? 섹션 ── */}
+      {/* ── Why, VEXA? 섹션 ── */}
       <section className="why-section" style={{
         position: 'relative', width: '100%', aspectRatio: '16 / 9',
         minHeight: 500, overflow: 'hidden',
@@ -195,7 +195,7 @@ export default function LandingPage() {
           pointerEvents: 'none', userSelect: 'none',
         }}>Why,</div>
 
-        {/* SIMVEX ? — 상단 영역 */}
+        {/* VEXA ? — 상단 영역 */}
         <div className="why-title" style={{
           position: 'absolute', top: '10%', left: 0, right: 0,
           textAlign: 'center', zIndex: 2,
@@ -204,7 +204,7 @@ export default function LandingPage() {
             color: 'white', fontSize: 'clamp(30px, 3.5vw, 50px)',
             fontFamily: 'Righteous', fontWeight: 400,
             letterSpacing: 4,
-          }}>SIMVEX ?</span>
+          }}><span style={{ fontSize: 'clamp(40px, 5vw, 70px)' }}>VEXA</span> ?</span>
         </div>
 
         {/* 보이지 않던 내부를 — 중앙 영역 */}
@@ -257,10 +257,10 @@ export default function LandingPage() {
           <path ref={curveRef} d={CURVE_PATH} stroke="#373737" strokeOpacity="0.3" strokeWidth="4" />
         </svg>
 
-        {/* "about SIMVEX" 타이틀 */}
+        {/* "about VEXA" 타이틀 */}
         <div className="fade-in-up landing-about-title" style={{ display: 'flex', gap: 8, marginBottom: 56 }}>
           <span style={{ color: 'black', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>about </span>
-          <span style={{ color: '#001AFF', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>SIMVEX</span>
+          <span style={{ color: '#001AFF', fontSize: 30, fontFamily: 'Righteous', fontWeight: 400, lineHeight: '44px' }}>VEXA</span>
         </div>
 
         {/* Feature 1 — 이미지 왼쪽 · 텍스트 오른쪽 */}
@@ -279,7 +279,7 @@ export default function LandingPage() {
               textTransform: 'capitalize' as const, letterSpacing: 0.2, marginBottom: 16,
             }}>3D모델 조립·분해 기반 학습</div>
             <div style={{ lineHeight: '24px' }}>
-              <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>SIMVEX는 사용자가 업로드한 </span>
+              <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>VEXA는 사용자가 업로드한 </span>
               <span style={{ color: '#0019FF', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 600 }}>3D모델의 조립·분해, 회전·확대·축소 기능을 제공</span>
               <span style={{ color: '#474747', fontSize: 15, fontFamily: 'Pretendard Variable', fontWeight: 400 }}>하며, 부품 간 구조 관계를 시각적으로 확인할 수 있습니다.</span>
             </div>
@@ -448,7 +448,7 @@ export default function LandingPage() {
           <div style={{ margin: '0 40px', borderTop: '1px solid rgba(255,255,255,0.15)' }} />
 
         <div className="landing-footer-bottom" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px 24px' }}>
-          <div style={{ fontSize: 24, fontFamily: 'Righteous', fontWeight: 400 }}>SIMVEX</div>
+          <div style={{ fontSize: 24, fontFamily: 'Righteous', fontWeight: 400 }}>VEXA</div>
           <div style={{ display: 'flex', gap: 28 }}>
             {['Terms', 'Privacy', 'Cookies'].map((t) => (
               <span key={t} style={{ fontSize: 13, color: '#ccc', cursor: 'pointer' }}>{t}</span>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { PartCustomization } from '@/hooks/usePartCustomizations';
+import { TTSButton } from '@/components/ui/TTSButton';
 
 interface PartInfoData {
   id: string;
@@ -178,9 +179,12 @@ export function PartInfo({ part, isLoggedIn, customization, onCustomize, onReset
       )}
 
       {/* 설명 */}
-      <p className={`text-[13px] leading-relaxed mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} ${!isExpanded ? 'line-clamp-2' : ''}`}>
-        {part.description}
-      </p>
+      <div className="flex items-start gap-1 mt-2">
+        <p className={`text-[13px] leading-relaxed flex-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} ${!isExpanded ? 'line-clamp-2' : ''}`}>
+          {part.description}
+        </p>
+        <TTSButton text={`${displayNameKo}. ${part.description}`} isDarkMode={isDarkMode} />
+      </div>
 
       {/* 원본 복원 */}
       {isLoggedIn && hasCustomization && onResetCustomize && isExpanded && (
