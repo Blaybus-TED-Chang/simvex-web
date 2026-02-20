@@ -167,6 +167,8 @@ interface CombinedGLBViewerProps {
   isDarkMode?: boolean;
   // 고장 진단 하이라이트
   faultHighlights?: Record<string, 'fault' | 'affected'>;
+  // 스크롤 중 호버 억제
+  isScrollingRef?: React.RefObject<boolean>;
 }
 
 // Individual part mesh component
@@ -425,6 +427,7 @@ export function CombinedGLBViewer({
   measurementMode = false,
   isDarkMode = false,
   faultHighlights,
+  isScrollingRef,
 }: CombinedGLBViewerProps) {
   const { scene } = useGLTF(model.glbPath);
   const [extractedMeshes, setExtractedMeshes] = useState<ExtractedMeshData[]>([]);
@@ -607,8 +610,8 @@ export function CombinedGLBViewer({
                   }
                 : undefined
             }
-            onPointerOver={() => onHoverPart(partConfig.id)}
-            onPointerOut={() => onHoverPart(null)}
+            onPointerOver={() => { if (!isScrollingRef?.current) onHoverPart(partConfig.id); }}
+            onPointerOut={() => { if (!isScrollingRef?.current) onHoverPart(null); }}
             onPointerMoveWithPoint={
               isDraggingPin && onDragMove
                 ? (point) => {
@@ -821,11 +824,30 @@ export function CombinedModelViewer({
   faultHighlights,
 }: CombinedModelViewerProps) {
   const [mounted, setMounted] = useState(false);
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const isScrollingRef = useRef(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // 스크롤 중 감지 (호버 레이캐스팅 억제용)
+  useEffect(() => {
+    const el = containerRef?.current;
+    if (!el) return;
+    const onWheel = () => {
+      isScrollingRef.current = true;
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = setTimeout(() => { isScrollingRef.current = false; }, 150);
+    };
+    el.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    };
+  }, [containerRef]);
 
   const bgColor = isDarkMode ? '#111' : '#f5f5f5';
   const gradientFrom = isDarkMode ? 'from-gray-900' : 'from-gray-100';
@@ -845,7 +867,12 @@ export function CombinedModelViewer({
   }
 
   return (
-    <div ref={containerRef} className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`} style={isDraggingPin ? { cursor: 'grabbing' } : isPlacingPin ? { cursor: 'crosshair' } : measurementMode ? { cursor: 'crosshair' } : undefined}>
+    <div
+      ref={containerRef}
+      className={`w-full h-full bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-lg overflow-hidden relative`}
+      style={isDraggingPin ? { cursor: 'grabbing' } : isPlacingPin ? { cursor: 'crosshair' } : measurementMode ? { cursor: 'crosshair' } : undefined}
+      onPointerDown={(e) => { pointerDownPos.current = { x: e.clientX, y: e.clientY }; }}
+    >
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -855,7 +882,16 @@ export function CombinedModelViewer({
           near: 0.01,
           far: 100,
         }}
-        onPointerMissed={() => { if (!isPlacingPin) onSelectPart(null); }}
+        onPointerMissed={(e) => {
+          if (isPlacingPin) return;
+          const down = pointerDownPos.current;
+          if (down) {
+            const dx = (e as MouseEvent).clientX - down.x;
+            const dy = (e as MouseEvent).clientY - down.y;
+            if (dx * dx + dy * dy > 9) return;
+          }
+          onSelectPart(null);
+        }}
         gl={{
           antialias: true,
           preserveDrawingBuffer: true,
@@ -901,6 +937,7 @@ export function CombinedModelViewer({
             measurementMode={measurementMode}
             isDarkMode={isDarkMode}
             faultHighlights={faultHighlights}
+            isScrollingRef={isScrollingRef}
           />
         </Suspense>
 
