@@ -81,7 +81,7 @@ ${selectedPart.material ? `- **재질**: ${selectedPart.material}` : ''}
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY_LHH || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY_LHH;
 
     if (!apiKey || apiKey === 'your-openai-api-key-here') {
       return NextResponse.json(
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     // 시스템 프롬프트 생성
     const systemPrompt = buildSystemPrompt(modelInfo, selectedPart);
 
-    // OpenAI API 호출
+    // OpenAI API 호출 (스트리밍)
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -116,35 +116,57 @@ export async function POST(request: NextRequest) {
           { role: 'system', content: systemPrompt },
           ...messages,
         ],
-        // GPT-5 계열은 max_completion_tokens, GPT-4 계열은 max_tokens 사용
+        stream: true,
         ...(aiModel.startsWith('gpt-5')
-          ? { max_completion_tokens: 16000 }
-          : { max_tokens: 4096 }),
+          ? { max_completion_tokens: 8000 }
+          : { max_tokens: 2000 }),
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('OpenAI API Error:', errorData);
       return NextResponse.json(
         { error: `OpenAI API 오류: ${errorData.error?.message || '알 수 없는 오류'}` },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
+    // SSE → 순수 텍스트 스트림으로 변환하여 클라이언트에 전달
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            for (const line of chunk.split('\n')) {
+              if (!line.startsWith('data: ')) continue;
+              const payload = line.slice(6).trim();
+              if (payload === '[DONE]') { controller.close(); return; }
+              try {
+                const parsed = JSON.parse(payload);
+                const text: string = parsed.choices?.[0]?.delta?.content ?? '';
+                if (text) controller.enqueue(encoder.encode(text));
+              } catch { /* 파싱 실패 라인 무시 */ }
+            }
+          }
+        } catch {
+          controller.error(new Error('stream error'));
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-    // GPT-5-mini 응답 구조 확인
-    const assistantMessage = data.choices?.[0]?.message?.content
-      || data.output?.message?.content
-      || data.message?.content
-      || data.content
-      || data.text
-      || (typeof data === 'string' ? data : null)
-      || '응답을 생성할 수 없습니다.';
-
-    return NextResponse.json({
-      message: assistantMessage,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
     });
   } catch (error) {
     console.error('Chat API Error:', error);

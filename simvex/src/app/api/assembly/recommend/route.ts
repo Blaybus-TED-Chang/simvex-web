@@ -13,7 +13,7 @@ interface AssemblyRecommendRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY_LHH || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY_LHH;
 
     if (!apiKey || apiKey === 'your-openai-api-key-here') {
       return NextResponse.json(

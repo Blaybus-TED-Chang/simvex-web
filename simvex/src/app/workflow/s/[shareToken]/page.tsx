@@ -77,6 +77,7 @@ export default function WorkflowSharePage() {
         onTitleChange={() => {}}
         onSave={() => {}}
         onAddNode={() => {}}
+        onOpenAI={() => {}}
         onGenerateShareLink={async () => null}
       />
       <WorkflowCanvas

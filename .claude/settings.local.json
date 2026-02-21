@@ -53,7 +53,10 @@
       "Bash(git pull:*)",
       "Bash(git merge:*)",
       "Bash(npm ls:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "enableAllProjectMcpServers": true,

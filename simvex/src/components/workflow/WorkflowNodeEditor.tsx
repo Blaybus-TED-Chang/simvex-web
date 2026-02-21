@@ -12,11 +12,18 @@ interface WorkflowNodeEditorProps {
   onClose: () => void;
   onTitleChange: (title: string) => void;
   onContentChange: (content: string) => void;
+  onColorChange: (color: string | undefined) => void;
   onLinksChange: (links: WorkflowNodeLink[]) => void;
   onUploadFile: (file: File) => void;
   onDeleteAttachment: (attachmentId: string) => void;
   getDownloadUrl: (storagePath: string) => string;
 }
+
+const PRESET_COLORS = [
+  '#001AFF', '#4D6AFF', '#7C3AED', '#DB2777',
+  '#DC2626', '#EA580C', '#D97706', '#16A34A',
+  '#0891B2', '#475569',
+];
 
 export function WorkflowNodeEditor({
   node,
@@ -27,6 +34,7 @@ export function WorkflowNodeEditor({
   onClose,
   onTitleChange,
   onContentChange,
+  onColorChange,
   onLinksChange,
   onUploadFile,
   onDeleteAttachment,
@@ -117,6 +125,74 @@ export function WorkflowNodeEditor({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+        {/* 색상 섹션 */}
+        {isOwner && (
+          <div>
+            <label className={`flex items-center gap-1.5 text-[12px] font-semibold mb-2.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              노드 색상
+            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* 기본(초기화) 버튼 */}
+              <button
+                onClick={() => onColorChange(undefined)}
+                title="기본 색상"
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-150 ${
+                  !node.color
+                    ? 'border-[#001AFF] scale-110'
+                    : isDarkMode ? 'border-gray-600 hover:border-gray-400' : 'border-gray-300 hover:border-gray-400'
+                }`}
+                style={{ background: 'linear-gradient(135deg, #001AFF 0%, #4D6AFF 100%)' }}
+              >
+                {!node.color && (
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+              {/* 프리셋 색상 */}
+              {PRESET_COLORS.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => onColorChange(color)}
+                  title={color}
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-150 ${
+                    node.color === color
+                      ? 'border-white scale-110 shadow-md'
+                      : 'border-transparent hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: color, boxShadow: node.color === color ? `0 0 0 2px ${color}` : undefined }}
+                >
+                  {node.color === color && (
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+              {/* 커스텀 색상 피커 */}
+              <label
+                title="직접 선택"
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all duration-150 ${
+                  isDarkMode ? 'border-gray-600 hover:border-gray-400 bg-gray-700' : 'border-gray-300 hover:border-gray-400 bg-gray-100'
+                }`}
+              >
+                <svg className={`w-3 h-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <input
+                  type="color"
+                  className="sr-only"
+                  value={node.color ?? '#001AFF'}
+                  onChange={(e) => onColorChange(e.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+        )}
+
         {/* 제목 섹션 */}
         <div>
           <label className={`flex items-center gap-1.5 text-[12px] font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>

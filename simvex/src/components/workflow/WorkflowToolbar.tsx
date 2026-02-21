@@ -12,6 +12,7 @@ interface WorkflowToolbarProps {
   onTitleChange: (title: string) => void;
   onSave: () => void;
   onAddNode: () => void;
+  onOpenAI: () => void;
   onGenerateShareLink: () => Promise<string | null>;
 }
 
@@ -23,6 +24,7 @@ export function WorkflowToolbar({
   onTitleChange,
   onSave,
   onAddNode,
+  onOpenAI,
   onGenerateShareLink,
 }: WorkflowToolbarProps) {
   return (
@@ -91,6 +93,21 @@ export function WorkflowToolbar({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
             </svg>
             저장
+          </button>
+
+          <button
+            onClick={onOpenAI}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200 active:scale-[0.97] ${
+              isDarkMode
+                ? 'bg-violet-900/40 text-violet-300 hover:bg-violet-900/60 border border-violet-700/50'
+                : 'bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-200'
+            }`}
+            title="AI로 워크플로우 자동 생성"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            AI 생성
           </button>
 
           <button
