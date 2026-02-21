@@ -23,15 +23,17 @@ export function GuideTourOverlay({ isDarkMode, onSelectPart }: GuideTourOverlayP
   } = useGuideTourStore();
 
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+  const onSelectPartRef = useRef(onSelectPart);
+  onSelectPartRef.current = onSelectPart;
 
   // 단계 변경 시 부품 선택
   useEffect(() => {
     if (!activeTour) return;
     const step = activeTour.steps[currentStep];
     if (step) {
-      onSelectPart(step.partId);
+      onSelectPartRef.current(step.partId);
     }
-  }, [activeTour, currentStep, onSelectPart]);
+  }, [activeTour, currentStep]);
 
   // 자동 재생
   useEffect(() => {
