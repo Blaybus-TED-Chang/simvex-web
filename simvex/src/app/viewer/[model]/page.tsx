@@ -2473,6 +2473,8 @@ export default function ViewerPage() {
             user={user}
             isDarkMode={isDarkMode}
             onClose={() => setIsAIPanelOpen(false)}
+            allParts={notesModelInfo?.parts.map((p) => ({ id: p.id, name: p.name, nameKo: p.nameKo })) ?? []}
+            onSelectPart={handleSelectPart}
           />
         </div>
 

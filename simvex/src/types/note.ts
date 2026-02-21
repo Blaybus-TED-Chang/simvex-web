@@ -11,4 +11,5 @@ export interface NoteItem {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  partRefs?: string[];
 }

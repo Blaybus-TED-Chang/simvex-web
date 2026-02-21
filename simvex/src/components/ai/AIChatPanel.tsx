@@ -30,6 +30,8 @@ interface AIChatPanelProps {
   user: User | null;
   isDarkMode: boolean;
   onClose: () => void;
+  allParts?: { id: string; name: string; nameKo: string }[];
+  onSelectPart?: (partId: string) => void;
 }
 
 export function AIChatPanel({
@@ -39,6 +41,8 @@ export function AIChatPanel({
   user,
   isDarkMode,
   onClose,
+  allParts,
+  onSelectPart,
 }: AIChatPanelProps) {
   const supabaseChat = useSupabaseChat(user ?? null, modelId ?? '');
 
@@ -92,7 +96,8 @@ export function AIChatPanel({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '응답을 가져오는데 실패했습니다.');
 
-      const assistantMessage: ChatMessage = { role: 'assistant', content: data.message };
+      const partRefs = allParts && allParts.length > 0 ? findPartRefs(data.message, allParts) : undefined;
+      const assistantMessage: ChatMessage = { role: 'assistant', content: data.message, ...(partRefs && partRefs.length > 0 ? { partRefs } : {}) };
       const updatedWithAssistant = [...updatedWithUser, assistantMessage];
 
       if (user) {
@@ -105,7 +110,7 @@ export function AIChatPanel({
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, messages, user, supabaseChat, modelInfo, selectedPart, selectedAIModel]);
+  }, [isLoading, messages, user, supabaseChat, modelInfo, selectedPart, selectedAIModel, allParts]);
 
   const clearChat = useCallback(() => {
     if (user) {
@@ -119,6 +124,8 @@ export function AIChatPanel({
   const handleSuggestionClick = useCallback((text: string) => {
     setInputValue(text);
   }, []);
+
+
 
   return (
     <div className={`h-full flex flex-col ${
@@ -179,6 +186,8 @@ export function AIChatPanel({
           isLoading={isLoading}
           isDarkMode={isDarkMode}
           onSuggestionClick={handleSuggestionClick}
+          allParts={allParts}
+          onPartClick={onSelectPart}
         />
       </div>
 
@@ -203,4 +212,15 @@ export function AIChatPanel({
       </div>
     </div>
   );
+}
+
+function findPartRefs(text: string, parts: { id: string; name: string; nameKo: string }[]): string[] {
+  const matched: string[] = [];
+  for (const p of parts) {
+    if (text.includes(p.nameKo) || text.toLowerCase().includes(p.name.toLowerCase())) {
+      matched.push(p.id);
+    }
+    if (matched.length >= 5) break;
+  }
+  return matched;
 }

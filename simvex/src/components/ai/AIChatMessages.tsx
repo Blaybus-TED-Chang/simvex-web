@@ -8,9 +8,11 @@ interface AIChatMessagesProps {
   isLoading: boolean;
   isDarkMode: boolean;
   onSuggestionClick: (text: string) => void;
+  allParts?: { id: string; name: string; nameKo: string }[];
+  onPartClick?: (partId: string) => void;
 }
 
-export function AIChatMessages({ messages, isLoading, isDarkMode, onSuggestionClick }: AIChatMessagesProps) {
+export function AIChatMessages({ messages, isLoading, isDarkMode, onSuggestionClick, allParts, onPartClick }: AIChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export function AIChatMessages({ messages, isLoading, isDarkMode, onSuggestionCl
       {messages.map((message, index) => (
         <div
           key={index}
-          className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}
         >
           <div
             className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
@@ -68,6 +70,26 @@ export function AIChatMessages({ messages, isLoading, isDarkMode, onSuggestionCl
           >
             <div className="whitespace-pre-wrap">{message.content}</div>
           </div>
+          {message.role === 'assistant' && message.partRefs && message.partRefs.length > 0 && (
+            <div className="max-w-[85%] flex flex-wrap gap-1 mt-1">
+              {message.partRefs.map((partId) => {
+                const part = allParts?.find((p) => p.id === partId);
+                if (!part) return null;
+                return (
+                  <button
+                    key={partId}
+                    onClick={() => onPartClick?.(partId)}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors border border-blue-500/30"
+                  >
+                    <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                    </svg>
+                    {part.nameKo}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       ))}
       {isLoading && (
