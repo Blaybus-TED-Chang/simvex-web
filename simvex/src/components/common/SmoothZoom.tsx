@@ -30,7 +30,9 @@ export default function SmoothZoom({ minDist = 0.3, maxDist = 30 }: SmoothZoomPr
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      velocityRef.current += e.deltaY * 0.0008;
+      const added = e.deltaY * 0.0008;
+      // 최대 속도 제한으로 스크롤 이벤트 누적에 의한 급격한 줌 방지
+      velocityRef.current = Math.max(-0.8, Math.min(0.8, velocityRef.current + added));
       activeRef.current = true;
     };
 
