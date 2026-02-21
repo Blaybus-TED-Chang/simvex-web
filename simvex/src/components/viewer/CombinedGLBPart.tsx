@@ -699,6 +699,24 @@ function CameraSync({
   const targetPos = useRef(new THREE.Vector3(...position));
   const targetTgt = useRef(new THREE.Vector3(...target));
   const isLerping = useRef(false);
+  const isUserInteracting = useRef(false);
+
+  // 사용자가 OrbitControls로 직접 조작 중일 때 lerp 일시 중단
+  useEffect(() => {
+    if (!controls) return;
+    const orb = controls as unknown as {
+      addEventListener: (type: string, listener: () => void) => void;
+      removeEventListener: (type: string, listener: () => void) => void;
+    };
+    const onStart = () => { isUserInteracting.current = true; };
+    const onEnd = () => { isUserInteracting.current = false; };
+    orb.addEventListener('start', onStart);
+    orb.addEventListener('end', onEnd);
+    return () => {
+      orb.removeEventListener('start', onStart);
+      orb.removeEventListener('end', onEnd);
+    };
+  }, [controls]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -712,9 +730,9 @@ function CameraSync({
     isLerping.current = true;
   }, [position, target]);
 
-  // 부드러운 카메라 이동 (lerp)
+  // 부드러운 카메라 이동 (lerp) — 사용자 조작 중에는 중단
   useFrame(() => {
-    if (!isLerping.current) return;
+    if (!isLerping.current || isUserInteracting.current) return;
 
     const factor = 0.08;
     camera.position.lerp(targetPos.current, factor);
@@ -1041,7 +1059,8 @@ export function CombinedModelViewer({
         <OrbitControls
           makeDefault
           enableDamping
-          dampingFactor={0.05}
+          dampingFactor={0.12}
+          rotateSpeed={0.8}
           enableZoom={false}
           target={finalCameraTarget}
           enabled={!isDraggingPin}
