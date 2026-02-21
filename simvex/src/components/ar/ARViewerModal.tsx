@@ -10,8 +10,9 @@ import type { CombinedPartConfig } from '@/components/viewer/CombinedGLBPart';
 
 // @react-three/xr v6이 모든 material.onBuild()를 null 체크 없이 호출하는 버그 워크어라운드
 // 프로토타입에 한 번만 패치해 모든 Three.js 재질(JSX 포함)에 적용
-if (typeof (THREE.Material.prototype as any).onBuild !== 'function') {
-  (THREE.Material.prototype as any).onBuild = () => {};
+type MaterialWithOnBuild = THREE.Material & { onBuild?: () => void };
+if (typeof (THREE.Material.prototype as MaterialWithOnBuild).onBuild !== 'function') {
+  (THREE.Material.prototype as MaterialWithOnBuild).onBuild = () => {};
 }
 
 // 모듈 레벨 싱글톤 스토어 — 컴포넌트 리렌더에 재생성 방지
@@ -93,7 +94,7 @@ function ARPartMesh({
       roughness: 0.6,
     });
     // @react-three/xr v6이 XR 세션 중 material.onBuild()를 null 체크 없이 호출하는 버그 워크어라운드
-    (mat as any).onBuild = () => {};
+    (mat as MaterialWithOnBuild).onBuild = () => {};
     return mat;
   }, [data.color]);
 

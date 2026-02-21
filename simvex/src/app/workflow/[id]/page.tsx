@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import { useWorkflows } from '@/hooks/useWorkflows';
@@ -175,7 +176,7 @@ export default function WorkflowEditorPage() {
         </div>
         <p className="text-[16px] font-semibold text-gray-800 mb-1">워크플로우를 찾을 수 없습니다</p>
         <p className="text-[13px] text-gray-400 mb-5">삭제되었거나 접근 권한이 없을 수 있습니다</p>
-        <a
+        <Link
           href="/workflow"
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-[#001AFF] hover:bg-[#0015D4] transition-colors shadow-sm shadow-[#001AFF]/20"
         >
@@ -183,7 +184,7 @@ export default function WorkflowEditorPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           목록으로 돌아가기
-        </a>
+        </Link>
       </div>
     );
   }

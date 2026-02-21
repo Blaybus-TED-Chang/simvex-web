@@ -71,12 +71,13 @@ export function useUserModels(user: User | null) {
       const supabase = getSupabase();
 
       // 1) visibility 컬럼이 있으면 OR 조건, 없으면 is_public만
-      let { data: allData, error } = await supabase
+      const { data: allDataInit, error } = await supabase
         .from('user_models')
         .select('*')
         .or('is_public.eq.true,visibility.eq.public')
         .order('created_at', { ascending: false });
 
+      let allData = allDataInit;
       if (error) {
         const { data: fallback } = await supabase
           .from('user_models')

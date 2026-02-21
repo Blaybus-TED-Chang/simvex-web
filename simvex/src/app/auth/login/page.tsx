@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -19,7 +19,9 @@ function InputIcon({ children }: { children: React.ReactNode }) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() =>
+    typeof window !== 'undefined' ? (localStorage.getItem('savedEmail') ?? '') : ''
+  );
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -28,16 +30,10 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberEmail, setRememberEmail] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(() =>
+    typeof window !== 'undefined' ? !!localStorage.getItem('savedEmail') : false
+  );
   const router = useRouter();
-
-  useEffect(() => {
-    const saved = localStorage.getItem('savedEmail');
-    if (saved) {
-      setEmail(saved);
-      setRememberEmail(true);
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
