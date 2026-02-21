@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -28,7 +28,16 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const saved = localStorage.getItem('savedEmail');
+    if (saved) {
+      setEmail(saved);
+      setRememberEmail(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +46,12 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
+
+    if (rememberEmail) {
+      localStorage.setItem('savedEmail', email);
+    } else {
+      localStorage.removeItem('savedEmail');
+    }
 
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({
@@ -183,6 +198,19 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+
+              {/* 아이디 저장 (로그인 탭에서만) */}
+              {!isSignUp && (
+                <label className="flex items-center gap-2 cursor-pointer w-fit">
+                  <input
+                    type="checkbox"
+                    checked={rememberEmail}
+                    onChange={(e) => setRememberEmail(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[#001AFF] cursor-pointer"
+                  />
+                  <span className="text-[13px] text-gray-500 select-none">아이디 저장</span>
+                </label>
+              )}
 
               {/* 에러 / 성공 메시지 */}
               {error && (
