@@ -40,7 +40,20 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "mcp__serena__replace_symbol_body",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(wc:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(where:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh:*)",
+      "Bash(grep:*)",
+      "Bash(git status:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx vercel:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
