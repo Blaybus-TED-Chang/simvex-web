@@ -37,6 +37,40 @@
 
 ---
 
+## 🎬 구현 화면
+
+### 3D 분해/조립 인터랙션
+> 슬라이더로 드론 모델 분해 → 부품 클릭 → 정보 표시
+
+https://github.com/user-attachments/assets/3616f66b-1f20-4163-b441-914a35aca630
+
+### AI 채팅 어시스턴트
+> 현재 모델/부품 컨텍스트 기반 AI 학습 질의응답, 스트리밍 응답
+
+https://github.com/user-attachments/assets/a93556cb-4d91-4dbc-a1da-293148412ebc
+
+### 퀴즈 (AI 자동 생성)
+> 객관식·O/X·부품 클릭 문제, AI 자동 생성 및 해설
+
+https://github.com/user-attachments/assets/0400e85c-4665-4a84-a1f9-b7875175ea06
+
+### 단면도 + X-Ray
+> X/Y/Z 축 단면 슬라이싱 및 부품 투명도 조절
+
+https://github.com/user-attachments/assets/035d788b-1e35-4a02-afa0-3cb4f0d2b484
+
+### 사용자 모델 업로드
+> GLB/FBX 드래그앤드롭 → 자동 분해 설정 → 미리보기 → 뷰어 연동
+
+https://github.com/user-attachments/assets/cd44c6e1-99f0-40d3-bbe9-056ff9087482
+
+### 워크플로우 차트
+> 노드-엣지 캔버스에서 학습 플로우 구성, AI 자동 생성 및 공유
+
+https://github.com/user-attachments/assets/78933c00-4fe5-4265-a061-f00918c90d21
+
+---
+
 ## 😎 프로젝트 소개
 
 ### 1. 개발자 소개
