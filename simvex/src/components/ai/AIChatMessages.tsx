@@ -6,18 +6,19 @@ import type { ChatMessage } from '@/types/note';
 interface AIChatMessagesProps {
   messages: ChatMessage[];
   isLoading: boolean;
+  streamingMessage?: string;
   isDarkMode: boolean;
   onSuggestionClick: (text: string) => void;
   allParts?: { id: string; name: string; nameKo: string }[];
   onPartClick?: (partId: string) => void;
 }
 
-export function AIChatMessages({ messages, isLoading, isDarkMode, onSuggestionClick, allParts, onPartClick }: AIChatMessagesProps) {
+export function AIChatMessages({ messages, isLoading, streamingMessage, isDarkMode, onSuggestionClick, allParts, onPartClick }: AIChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, streamingMessage]);
 
   if (messages.length === 0 && !isLoading) {
     return (
@@ -92,7 +93,21 @@ export function AIChatMessages({ messages, isLoading, isDarkMode, onSuggestionCl
           )}
         </div>
       ))}
-      {isLoading && (
+      {/* 스트리밍 중: 실시간으로 텍스트 표시 */}
+      {streamingMessage !== undefined && streamingMessage !== null && (
+        <div className="flex flex-col items-start">
+          <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+            isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'
+          }`}>
+            <div className="whitespace-pre-wrap">
+              {streamingMessage}
+              <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-current align-middle animate-pulse" />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 스트리밍 전 대기 중: 점 애니메이션 */}
+      {isLoading && !streamingMessage && (
         <div className="flex justify-start">
           <div className={`rounded-lg px-3 py-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <div className="flex items-center gap-1">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import { useWorkflows } from '@/hooks/useWorkflows';
@@ -8,7 +9,9 @@ import { useWorkflowAttachments } from '@/hooks/useWorkflowAttachments';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { WorkflowToolbar } from '@/components/workflow/WorkflowToolbar';
 import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas';
-import type { WorkflowRow, WorkflowNode, WorkflowEdge } from '@/types/workflow';
+import { WorkflowAIPanel } from '@/components/workflow/WorkflowAIPanel';
+import type { AIWorkflowResult } from '@/components/workflow/WorkflowAIPanel';
+import type { WorkflowRow, WorkflowNode, WorkflowEdge, ConnectorSide } from '@/types/workflow';
 
 const NODE_DEFAULT_WIDTH = 220;
 
@@ -27,6 +30,7 @@ export default function WorkflowEditorPage() {
   const [canvasZoom, setCanvasZoom] = useState(1);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   const isOwner = !!(user && workflow && user.id === workflow.user_id);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -154,6 +158,79 @@ export default function WorkflowEditorPage() {
     await uploadAttachment(nodeId, file);
   }, [uploadAttachment]);
 
+  // AI 생성 결과를 캔버스에 적용
+  const handleAIApply = useCallback((result: AIWorkflowResult) => {
+    const COL_GAP = 280;
+    const ROW_GAP = 180;
+
+    // 기존 노드들의 아래쪽 빈 공간에 배치 (또는 중앙)
+    const startX = (-canvasOffset[0] + 100) / canvasZoom;
+    const startY = nodes.length === 0
+      ? (-canvasOffset[1] + 100) / canvasZoom
+      : Math.max(...nodes.map((n) => n.y)) + ROW_GAP + 60;
+
+    // 토폴로지 정렬로 열(rank) 배정
+    const rankOf = new Array(result.nodes.length).fill(0);
+    const inDegree = new Array(result.nodes.length).fill(0);
+    for (const e of result.edges) {
+      if (e.targetIndex < result.nodes.length) inDegree[e.targetIndex]++;
+    }
+    const queue = result.nodes.map((_, i) => i).filter((i) => inDegree[i] === 0);
+    let rank = 0;
+    while (queue.length > 0) {
+      const next: number[] = [];
+      for (const idx of queue) {
+        rankOf[idx] = rank;
+        for (const e of result.edges.filter((e) => e.sourceIndex === idx)) {
+          if (e.targetIndex < result.nodes.length) {
+            inDegree[e.targetIndex]--;
+            if (inDegree[e.targetIndex] === 0) next.push(e.targetIndex);
+          }
+        }
+      }
+      queue.splice(0, queue.length, ...next);
+      rank++;
+    }
+
+    // 같은 rank 내 행(row) 배정
+    const rowCount: number[] = new Array(rank).fill(0);
+    const rowOf = new Array(result.nodes.length).fill(0);
+    for (let i = 0; i < result.nodes.length; i++) {
+      rowOf[i] = rowCount[rankOf[i]];
+      rowCount[rankOf[i]]++;
+    }
+
+    // WorkflowNode 생성
+    const idMap: string[] = result.nodes.map(() => crypto.randomUUID());
+    const newNodes: WorkflowNode[] = result.nodes.map((n, i) => ({
+      id: idMap[i],
+      x: startX + rankOf[i] * COL_GAP,
+      y: startY + rowOf[i] * ROW_GAP,
+      width: NODE_DEFAULT_WIDTH,
+      title: n.title,
+      content: n.content,
+      color: n.color,
+      links: [],
+    }));
+
+    // WorkflowEdge 생성
+    const newEdges: WorkflowEdge[] = result.edges
+      .filter((e) => e.sourceIndex < result.nodes.length && e.targetIndex < result.nodes.length)
+      .map((e) => ({
+        id: crypto.randomUUID(),
+        sourceNodeId: idMap[e.sourceIndex],
+        sourceSide: e.sourceSide as ConnectorSide,
+        targetNodeId: idMap[e.targetIndex],
+        targetSide: e.targetSide as ConnectorSide,
+      }));
+
+    const mergedNodes = [...nodes, ...newNodes];
+    const mergedEdges = [...edges, ...newEdges];
+    setNodes(mergedNodes);
+    setEdges(mergedEdges);
+    triggerSave({ nodes_data: mergedNodes, edges_data: mergedEdges });
+  }, [nodes, edges, canvasOffset, canvasZoom, triggerSave]);
+
   if (!loaded || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -175,7 +252,7 @@ export default function WorkflowEditorPage() {
         </div>
         <p className="text-[16px] font-semibold text-gray-800 mb-1">워크플로우를 찾을 수 없습니다</p>
         <p className="text-[13px] text-gray-400 mb-5">삭제되었거나 접근 권한이 없을 수 있습니다</p>
-        <a
+        <Link
           href="/workflow"
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-[#001AFF] hover:bg-[#0015D4] transition-colors shadow-sm shadow-[#001AFF]/20"
         >
@@ -183,7 +260,7 @@ export default function WorkflowEditorPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           목록으로 돌아가기
-        </a>
+        </Link>
       </div>
     );
   }
@@ -198,6 +275,7 @@ export default function WorkflowEditorPage() {
         onTitleChange={handleTitleChange}
         onSave={handleSaveNow}
         onAddNode={handleAddNode}
+        onOpenAI={() => setAiPanelOpen(true)}
         onGenerateShareLink={handleGenerateLink}
       />
       <WorkflowCanvas
@@ -217,6 +295,16 @@ export default function WorkflowEditorPage() {
         onDeleteAttachment={deleteAttachment}
         getDownloadUrl={getDownloadUrl}
       />
+
+      {/* AI 워크플로우 생성 패널 */}
+      {aiPanelOpen && isOwner && (
+        <WorkflowAIPanel
+          isDarkMode={isDarkMode}
+          workflowTitle={title}
+          onClose={() => setAiPanelOpen(false)}
+          onApply={handleAIApply}
+        />
+      )}
     </div>
   );
 }

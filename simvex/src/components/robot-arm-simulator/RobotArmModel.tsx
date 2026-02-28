@@ -216,6 +216,7 @@ export default function RobotArmModel() {
   });
 
   // Read animated positions (mutated in-place by useFrame, read on React re-render)
+  // eslint-disable-next-line react-hooks/refs
   const positions = animatedJointPositions.current;
 
   return (

@@ -24,6 +24,6 @@ export async function convertFbxToGlb(fbxBuffer: ArrayBuffer): Promise<Blob> {
   });
 
   const exporter = new GLTFExporter();
-  const glb = await exporter.parseAsync(scene, { binary: true });
+  const glb = await exporter.parseAsync(scene as unknown as THREE.Object3D, { binary: true });
   return new Blob([glb as ArrayBuffer], { type: 'model/gltf-binary' });
 }

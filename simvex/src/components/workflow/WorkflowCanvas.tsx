@@ -162,6 +162,12 @@ export function WorkflowCanvas({
     onNodesChange(nodes.map((n) => (n.id === editorNodeId ? { ...n, links } : n)));
   }, [editorNodeId, nodes, onNodesChange]);
 
+  // 에디터에서 색상 변경
+  const handleColorChange = useCallback((color: string | undefined) => {
+    if (!editorNodeId) return;
+    onNodesChange(nodes.map((n) => (n.id === editorNodeId ? { ...n, color } : n)));
+  }, [editorNodeId, nodes, onNodesChange]);
+
   // 마우스 이동 추적 (연결 모드용 + 드래그/팬)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -382,6 +388,7 @@ export function WorkflowCanvas({
           onClose={() => setEditorNodeId(null)}
           onTitleChange={(title) => handleTitleChange(editorNode.id, title)}
           onContentChange={(content) => handleContentChange(editorNode.id, content)}
+          onColorChange={handleColorChange}
           onLinksChange={handleLinksChange}
           onUploadFile={(file) => onUploadFile(editorNode.id, file)}
           onDeleteAttachment={onDeleteAttachment}

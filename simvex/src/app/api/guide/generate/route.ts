@@ -17,7 +17,7 @@ interface GuideGenerateRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY_LHH || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY_LHH;
 
     if (!apiKey || apiKey === 'your-openai-api-key-here') {
       return NextResponse.json(
@@ -83,7 +83,7 @@ ${partsList}
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `${modelNameKo} 모델의 학습 가이드 투어를 설계해주세요. JSON만 출력하세요.` },
         ],
-        max_completion_tokens: 16000,
+        max_completion_tokens: 8000,
       }),
     });
 

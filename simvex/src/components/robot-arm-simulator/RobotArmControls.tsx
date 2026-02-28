@@ -250,7 +250,8 @@ function IKTab({
   const [localY, setLocalY] = useState(ikTarget.y.toString());
   const [localZ, setLocalZ] = useState(ikTarget.z.toString());
 
-  // 외부 ikTarget 변경 시 로컬 입력 동기화
+  // 외부 ikTarget 변경 시 로컬 입력 동기화 (controlled input sync 패턴)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setLocalX(ikTarget.x.toString());
     setLocalY(ikTarget.y.toString());

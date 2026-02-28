@@ -79,7 +79,10 @@ export function WorkflowNodeComponent({
       onMouseDown={handleMouseDown}
     >
       {/* 상단 컬러 액센트 바 */}
-      <div className="h-1 bg-gradient-to-r from-[#001AFF] via-[#4D6AFF] to-[#001AFF]" />
+      {node.color
+        ? <div className="h-1.5" style={{ backgroundColor: node.color }} />
+        : <div className="h-1.5 bg-gradient-to-r from-[#001AFF] via-[#4D6AFF] to-[#001AFF]" />
+      }
 
       {/* 4방향 커넥터 */}
       {isOwner && (['top', 'bottom', 'left', 'right'] as ConnectorSide[]).map((side) => (

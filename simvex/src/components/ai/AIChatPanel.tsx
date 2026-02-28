@@ -51,6 +51,7 @@ export function AIChatPanel({
 
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>('gpt-5-nano');
@@ -79,6 +80,7 @@ export function AIChatPanel({
 
     setInputValue('');
     setIsLoading(true);
+    setStreamingMessage('');
     setError(null);
 
     try {
@@ -93,19 +95,38 @@ export function AIChatPanel({
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '응답을 가져오는데 실패했습니다.');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '응답을 가져오는데 실패했습니다.');
+      }
 
-      const partRefs = allParts && allParts.length > 0 ? findPartRefs(data.message, allParts) : undefined;
-      const assistantMessage: ChatMessage = { role: 'assistant', content: data.message, ...(partRefs && partRefs.length > 0 ? { partRefs } : {}) };
+      // 스트리밍 읽기
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        setStreamingMessage(accumulated);
+      }
+
+      // 스트리밍 완료 → 정식 메시지로 확정
+      setStreamingMessage(undefined);
+      const partRefs = allParts && allParts.length > 0 ? findPartRefs(accumulated, allParts) : undefined;
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: accumulated,
+        ...(partRefs && partRefs.length > 0 ? { partRefs } : {}),
+      };
       const updatedWithAssistant = [...updatedWithUser, assistantMessage];
-
       if (user) {
         supabaseChat.saveMessages(updatedWithAssistant);
       } else {
         setLocalMessages(updatedWithAssistant);
       }
     } catch (err) {
+      setStreamingMessage(undefined);
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -184,6 +205,7 @@ export function AIChatPanel({
         <AIChatMessages
           messages={messages}
           isLoading={isLoading}
+          streamingMessage={streamingMessage}
           isDarkMode={isDarkMode}
           onSuggestionClick={handleSuggestionClick}
           allParts={allParts}

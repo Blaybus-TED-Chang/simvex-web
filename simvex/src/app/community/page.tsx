@@ -15,7 +15,6 @@ const PAGE_SIZE = 12;
 
 export default function CommunityPage() {
   const { user } = useUser();
-  const { isDarkMode } = useViewerStore();
   const { fetchPublicModelsPaginated } = useUserModels(user);
   const { isScraped, toggleScrap } = useScraps(user);
 

@@ -20,7 +20,7 @@ export async function generateExplodeConfig(
 
   try {
     const loader = new GLTFLoader();
-    const gltf = await new Promise<THREE.Object3D>((resolve, reject) => {
+    const gltf = await new Promise<THREE.Group>((resolve, reject) => {
       loader.load(url, (result) => resolve(result.scene), undefined, reject);
     });
 

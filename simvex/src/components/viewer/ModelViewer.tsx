@@ -7,7 +7,6 @@ import SmoothZoom from '@/components/common/SmoothZoom';
 import { ModelConfig, PartConfig } from '@/types/viewer';
 import { useViewerStore } from '@/lib/store/viewerStore';
 import { GLBPart } from './GLBPart';
-import * as THREE from 'three';
 
 interface ModelViewerProps {
   model: ModelConfig;
@@ -30,7 +29,6 @@ function LoadingFallback() {
 // 카메라 위치 추적 컴포넌트
 function CameraTracker({ onCameraChange }: { onCameraChange?: (pos: [number, number, number], target: [number, number, number]) => void }) {
   const { camera } = useThree();
-  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
     if (!onCameraChange) return;

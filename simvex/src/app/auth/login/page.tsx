@@ -19,7 +19,9 @@ function InputIcon({ children }: { children: React.ReactNode }) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() =>
+    typeof window !== 'undefined' ? (localStorage.getItem('savedEmail') ?? '') : ''
+  );
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -28,6 +30,9 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(() =>
+    typeof window !== 'undefined' ? !!localStorage.getItem('savedEmail') : false
+  );
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +42,12 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
+
+    if (rememberEmail) {
+      localStorage.setItem('savedEmail', email);
+    } else {
+      localStorage.removeItem('savedEmail');
+    }
 
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({
@@ -183,6 +194,19 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+
+              {/* 아이디 저장 (로그인 탭에서만) */}
+              {!isSignUp && (
+                <label className="flex items-center gap-2 cursor-pointer w-fit">
+                  <input
+                    type="checkbox"
+                    checked={rememberEmail}
+                    onChange={(e) => setRememberEmail(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[#001AFF] cursor-pointer"
+                  />
+                  <span className="text-[13px] text-gray-500 select-none">아이디 저장</span>
+                </label>
+              )}
 
               {/* 에러 / 성공 메시지 */}
               {error && (

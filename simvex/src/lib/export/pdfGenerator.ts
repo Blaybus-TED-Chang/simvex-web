@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 export interface PdfNoteItem {
   title: string;
@@ -61,6 +59,10 @@ const BASE_FONT = `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', R
 const TITLE_STYLE = `font-size: 18px; color: #2563eb; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;`;
 
 export async function generateModelPdf(data: PdfExportData): Promise<Blob> {
+  // 동적 import: 초기 번들에서 ~650KB 제외 (클릭 시점에 로드)
+  const { jsPDF } = await import('jspdf');
+  const html2canvas = (await import('html2canvas')).default;
+
   // ── 1. 섹션별 HTML 구성 ──
   const container = document.createElement('div');
   container.style.cssText = `

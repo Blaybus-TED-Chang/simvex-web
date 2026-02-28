@@ -64,6 +64,12 @@ const CombinedModelViewer = dynamic(
   { ssr: false, loading: () => <ViewerSkeleton /> }
 );
 
+// AR 뷰어 (WebXR)
+const ARViewerModal = dynamic(
+  () => import('@/components/ar/ARViewerModal').then((m) => m.ARViewerModal),
+  { ssr: false }
+);
+
 const VIEWER_CONTROLS_GUIDE = [
   { icon: '🖱️ 좌클릭 드래그', desc: '회전' },
   { icon: '🖱️ 우클릭 드래그', desc: '이동 (팬)' },
@@ -293,6 +299,9 @@ export default function ViewerPage() {
   const [aiAssemblyStrategy, setAiAssemblyStrategy] = useState<string | null>(null);
   const [aiAssemblyLoading, setAiAssemblyLoading] = useState(false);
   const aiAssemblyCacheRef = useRef<Record<string, { order: { partId: string; step: number; reason: string }[]; strategy: string }>>({});
+
+  // === AR 뷰어 ===
+  const [isAROpen, setIsAROpen] = useState(false);
 
   // === 측정 도구 (Feature 6) ===
   const [measurementMode, setMeasurementMode] = useState(false);
@@ -1750,6 +1759,24 @@ export default function ViewerPage() {
               )}
 
               <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200'}`} />
+
+              {/* AR 뷰어 버튼 */}
+              <Tooltip label="AR로 보기">
+                <button
+                  onClick={() => setIsAROpen(true)}
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9V5.5A2.5 2.5 0 015.5 3H9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 3h3.5A2.5 2.5 0 0121 5.5V9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15v3.5A2.5 2.5 0 005.5 21H9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 21h3.5A2.5 2.5 0 0021 18.5V15" />
+                    <circle cx="12" cy="12" r="2" strokeWidth={2} />
+                  </svg>
+                </button>
+              </Tooltip>
             </>
           )}
 
@@ -2565,6 +2592,17 @@ export default function ViewerPage() {
         />
       );
     })()}
+
+    {/* ══════ AR 뷰어 모달 ══════ */}
+    {isAROpen && mergedModel && 'glbPath' in mergedModel && (
+      <ARViewerModal
+        glbPath={(mergedModel as CombinedModelConfig).glbPath}
+        scale={(mergedModel as CombinedModelConfig).scale ?? 1}
+        parts={(mergedModel as CombinedModelConfig).parts}
+        explodeValue={explodeValue}
+        onClose={() => setIsAROpen(false)}
+      />
+    )}
     </>
   );
 }

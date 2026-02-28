@@ -52,6 +52,8 @@ export function QuizPanel({
   const [aiDifficulty, setAiDifficulty] = useState<DifficultyLevel>('mixed');
   // 현재 사용 중인 퀴즈 소스: 'builtin' | 'ai'
   const [quizSource, setQuizSource] = useState<'builtin' | 'ai'>('builtin');
+  // 이번 세션에서 퀴즈를 시작했는지 (시작 화면 제어용)
+  const [sessionStarted, setSessionStarted] = useState(false);
 
   const {
     quizProgress,
@@ -103,6 +105,7 @@ export function QuizPanel({
             nameKo: p.nameKo,
             description: p.description,
           })),
+          questionCount: 5,
           difficulty: aiDifficulty,
           chatHistory: chatHistory || undefined,
           notesContent: notesContent || undefined,
@@ -160,11 +163,12 @@ export function QuizPanel({
     ? progress?.answers[currentQuestion.id] !== undefined
     : false;
 
-  // 퀴즈 시작 (30개 중 10개 랜덤 선택)
+  // 퀴즈 시작
   const handleStart = useCallback(() => {
     if (!quiz) return;
     const allQuestionIds = quiz.questions.map((q) => q.id);
     startQuiz(modelId, allQuestionIds, 10);
+    setSessionStarted(true);
     setShowResult(false);
     setWaitingForPartClick(false);
     onClearPartSelect();
@@ -282,8 +286,8 @@ export function QuizPanel({
   // 다시 풀기
   const handleRetry = useCallback(() => {
     resetQuiz(modelId);
-    handleStart();
-  }, [modelId, resetQuiz, handleStart]);
+    setSessionStarted(false);
+  }, [modelId, resetQuiz]);
 
   // identify-part 문제 시작 시 클릭 대기 모드
   useEffect(() => {
@@ -358,7 +362,7 @@ export function QuizPanel({
             </svg>
           </button>
         </div>
-        {progress && !progress.completed && (
+        {sessionStarted && progress && !progress.completed && (
           <div className="mt-3">
             {/* 진행률 바 및 문제 번호 클릭 */}
             <div className="flex gap-1 mb-2">
@@ -430,8 +434,8 @@ export function QuizPanel({
 
       {/* 콘텐츠 */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* 시작 화면 (퀴즈 없거나, 퀴즈 있지만 아직 시작 안 함) */}
-        {!progress && (
+        {/* 시작 화면 (세션에서 아직 시작하지 않은 경우) */}
+        {!sessionStarted && (
           <div className="text-center py-8 space-y-5">
             {/* 내장 퀴즈 시작 섹션 */}
             {propQuiz && quizSource === 'builtin' && (
@@ -611,7 +615,7 @@ export function QuizPanel({
         )}
 
         {/* 퀴즈 진행 중 */}
-        {quiz && progress && !progress.completed && currentQuestion && (
+        {sessionStarted && quiz && progress && !progress.completed && currentQuestion && (
           <div className="space-y-6">
             <QuestionCard
               question={currentQuestion}
@@ -687,7 +691,7 @@ export function QuizPanel({
         )}
 
         {/* 완료 화면 */}
-        {progress?.completed && (
+        {sessionStarted && progress?.completed && (
           <ScoreDisplay
             score={progress.score}
             total={selectedQuestions.length}

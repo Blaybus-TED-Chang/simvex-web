@@ -113,33 +113,30 @@ function Streamlines() {
   const { params, output } = useJetEngineStore();
   const timeRef = useRef(0);
 
-  const streamData = useMemo(() => {
-    const data: { radius: number; angle: number; isBypass: boolean; offset: number }[] = [];
-
+  const streamDataRef = useRef<{ radius: number; angle: number; isBypass: boolean; offset: number }[]>([]);
+  if (streamDataRef.current.length === 0) {
     // Bypass streamlines (blue, outer)
     for (let i = 0; i < 32; i++) {
       const layer = Math.floor(i / 8);
-      data.push({
+      streamDataRef.current.push({
         radius: 0.72 + layer * 0.08,
         angle: (i / 8) * Math.PI * 2 + layer * 0.2,
         isBypass: true,
         offset: Math.random() * Math.PI * 2,
       });
     }
-
     // Core streamlines (orange, inner)
     for (let i = 0; i < 16; i++) {
       const layer = Math.floor(i / 8);
-      data.push({
+      streamDataRef.current.push({
         radius: 0.2 + layer * 0.15,
         angle: (i / 8) * Math.PI * 2 + layer * 0.3,
         isBypass: false,
         offset: Math.random() * Math.PI * 2,
       });
     }
-
-    return data;
-  }, []);
+  }
+  const streamData = streamDataRef.current;
 
   useFrame((_, delta) => {
     timeRef.current += delta * (0.3 + (output.n1 / 100) * 1.2);

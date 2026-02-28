@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useViewerStore } from '@/lib/store/viewerStore';
+import { useShallow } from 'zustand/shallow';
 
 /** 클릭하면 숫자 입력 필드로 전환되는 퍼센트 표시 */
 function EditablePercent({
@@ -67,7 +68,19 @@ function EditablePercent({
 }
 
 export function ExplodeSlider() {
-  const { explodeValue, setExplodeValue, globalOpacity, setGlobalOpacity, isDarkMode, xRayMode, setXRayMode, autoFocusEnabled, setAutoFocusEnabled } = useViewerStore();
+  const { explodeValue, setExplodeValue, globalOpacity, setGlobalOpacity, isDarkMode, xRayMode, setXRayMode, autoFocusEnabled, setAutoFocusEnabled } = useViewerStore(
+    useShallow((s) => ({
+      explodeValue: s.explodeValue,
+      setExplodeValue: s.setExplodeValue,
+      globalOpacity: s.globalOpacity,
+      setGlobalOpacity: s.setGlobalOpacity,
+      isDarkMode: s.isDarkMode,
+      xRayMode: s.xRayMode,
+      setXRayMode: s.setXRayMode,
+      autoFocusEnabled: s.autoFocusEnabled,
+      setAutoFocusEnabled: s.setAutoFocusEnabled,
+    }))
+  );
 
   const transparencyPercent = Math.round((1 - globalOpacity) * 100);
 

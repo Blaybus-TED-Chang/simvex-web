@@ -97,7 +97,7 @@ export function FlashcardViewer({ cards, isDarkMode }: FlashcardViewerProps) {
 
           {/* 뒷면 */}
           <div
-            className={`absolute inset-0 rounded-2xl border-2 p-6 flex flex-col justify-between ${
+            className={`absolute inset-0 rounded-2xl border-2 p-6 flex flex-col justify-start ${
               isDarkMode ? 'bg-purple-900/30 border-purple-600' : 'bg-purple-50 border-purple-300'
             }`}
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
@@ -111,10 +111,10 @@ export function FlashcardViewer({ cards, isDarkMode }: FlashcardViewerProps) {
               <p className={`text-[14px] leading-relaxed ${isDarkMode ? 'text-purple-100' : 'text-purple-900'}`}>
                 {card.back}
               </p>
+              <p className={`text-[11px] text-center mt-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-500'}`}>
+                클릭하여 질문으로 돌아가기
+              </p>
             </div>
-            <p className={`text-[11px] text-center mt-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-500'}`}>
-              클릭하여 질문으로 돌아가기
-            </p>
           </div>
         </div>
       </div>

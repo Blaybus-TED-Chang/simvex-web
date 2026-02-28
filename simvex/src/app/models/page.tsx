@@ -300,12 +300,6 @@ function VisibilityIcon({ state }: { state: VisibilityState }) {
   );
 }
 
-const VIS_COLORS: Record<VisibilityState, string> = {
-  private: 'text-gray-400',
-  shared:  'text-blue-400',
-  public:  'text-green-400',
-};
-
 function VisibilityDropdown({
   state,
   onChange,
@@ -603,6 +597,7 @@ export default function ModelsPage() {
     setScrapUserModels(data ?? []);
   }, [scraps]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (scrapsLoaded) fetchScrapUserModels(); }, [scrapsLoaded, fetchScrapUserModels]);
 
   // 스크랩 builtin 모델 정보

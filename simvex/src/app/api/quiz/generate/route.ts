@@ -21,7 +21,7 @@ interface QuizGenerateRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY_LHH || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY_LHH;
 
     if (!apiKey || apiKey === 'your-openai-api-key-here') {
       return NextResponse.json(
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // 난이도별 분포 설정
     const difficultyGuide = difficulty === 'mixed'
-      ? '난이도를 혼합하세요: easy(3~4), medium(3~4), hard(2~3)'
+      ? '난이도를 혼합하세요: easy(2), medium(2), hard(1)'
       : difficulty === 'easy'
       ? `모든 문제를 쉬운 난이도(easy)로 생성하세요. 기본 개념과 용어 위주로 출제하세요.`
       : difficulty === 'medium'
@@ -130,7 +130,7 @@ correctAnswer는 multiple-choice/true-false에서는 정답 인덱스(숫자), i
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `${modelNameKo} 모델에 대한 ${questionCount}개의 퀴즈를 생성해주세요. JSON 배열만 출력하세요.` },
         ],
-        max_completion_tokens: 16000,
+        max_completion_tokens: 6000,
       }),
     });
 
@@ -147,18 +147,39 @@ correctAnswer는 multiple-choice/true-false에서는 정답 인덱스(숫자), i
     const content =
       data.choices?.[0]?.message?.content ||
       data.output?.message?.content ||
+      data.message?.content ||
       '';
 
-    // JSON 파싱
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
+    console.log('[quiz/generate] raw response (first 300):', content.slice(0, 300));
+
+    // JSON 배열 추출 — 여러 형식 방어
+    let questions: unknown[] | null = null;
+
+    // 1) 직접 배열 형식: [...]
+    const arrayMatch = content.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      try { questions = JSON.parse(arrayMatch[0]); } catch { /* 파싱 실패 → 다음 시도 */ }
+    }
+
+    // 2) 객체로 감싸진 형식: {"questions": [...]}
+    if (!questions) {
+      const objMatch = content.match(/\{[\s\S]*\}/);
+      if (objMatch) {
+        try {
+          const obj = JSON.parse(objMatch[0]);
+          if (Array.isArray(obj.questions)) questions = obj.questions;
+          else if (Array.isArray(obj.data)) questions = obj.data;
+        } catch { /* 파싱 실패 */ }
+      }
+    }
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      console.error('[quiz/generate] 파싱 실패, raw content:', content.slice(0, 500));
       return NextResponse.json(
         { error: '퀴즈 데이터 파싱 실패' },
         { status: 500 },
       );
     }
-
-    const questions = JSON.parse(jsonMatch[0]);
 
     return NextResponse.json({ questions });
   } catch (error) {
