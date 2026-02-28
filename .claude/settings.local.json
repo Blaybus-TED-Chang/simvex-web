@@ -56,7 +56,9 @@
       "Bash(npx vercel:*)",
       "WebFetch(domain:github.com)",
       "Bash(npm install:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(cd /c/workspace/simvex-web && FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --msg-filter 'sed \"/Co-Authored-By.*Claude/d\" | sed -e :a -e \"/^\\\\n*$/{\\\\\\\\$d;N;ba;}\"' --tag-name-filter cat -- --all 2>&1)",
+      "Bash(cd:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

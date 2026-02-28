@@ -251,47 +251,45 @@ const PartMesh = memo(function PartMesh({
   });
 
   // Create material with base color from config
+  // opacity는 의존성에서 제거 → 아래 통합 useEffect에서 직접 업데이트하여 Material 재생성 방지
   const clonedMaterial = useMemo(() => {
-    const isTransparent = opacity < 1;
     const mat = new THREE.MeshStandardMaterial({
       color: partConfig.color || '#888888',
       metalness: 0.3,
       roughness: 0.6,
-      transparent: isTransparent,
-      opacity: opacity,
-      depthWrite: !isTransparent,
+      transparent: true,
+      opacity: 1,
+      depthWrite: true,
     });
     return mat;
-  }, [partConfig.color, opacity]);
+  }, [partConfig.color]);
 
   // X-Ray 모드 & 단면도 상태 구독
   const xRayMode = useViewerStore((s) => s.xRayMode);
   const crossSection = useViewerStore((s) => s.crossSection);
 
+  // 클리핑·emissive·X-Ray·opacity 통합 useEffect — needsUpdate를 마지막에 1회만 호출
   useEffect(() => {
     const mat = clonedMaterial as THREE.MeshStandardMaterial;
+
+    // 1) 단면도 클리핑
     if (!crossSection.crossSectionEnabled || !modelBoundsMin || !modelBoundsMax) {
       mat.clippingPlanes = [];
-      mat.needsUpdate = true;
-      return;
+    } else {
+      const axis = crossSection.crossSectionAxis;
+      const plane = buildClippingPlane(
+        axis,
+        crossSection.crossSectionOffset,
+        crossSection.crossSectionFlipped,
+        modelBoundsMin[axis],
+        modelBoundsMax[axis],
+      );
+      mat.clippingPlanes = [plane];
+      mat.clipShadows = true;
     }
-    const axis = crossSection.crossSectionAxis;
-    const plane = buildClippingPlane(
-      axis,
-      crossSection.crossSectionOffset,
-      crossSection.crossSectionFlipped,
-      modelBoundsMin[axis],
-      modelBoundsMax[axis],
-    );
-    mat.clippingPlanes = [plane];
-    mat.clipShadows = true;
-    mat.needsUpdate = true;
-  }, [crossSection, clonedMaterial, modelBoundsMin, modelBoundsMax]);
 
-  // Update emissive for highlight (faultStatus takes priority)
-  useEffect(() => {
-    const mat = clonedMaterial as THREE.MeshStandardMaterial;
-    if (mat && mat.emissive) {
+    // 2) emissive 하이라이트 (faultStatus 우선)
+    if (mat.emissive) {
       if (faultStatus === 'fault') {
         mat.emissive.setHex(0xff0000);
         mat.emissiveIntensity = 0.7;
@@ -309,21 +307,15 @@ const PartMesh = memo(function PartMesh({
         mat.emissiveIntensity = 0;
       }
     }
-  }, [clonedMaterial, isSelected, isHovered, faultStatus]);
 
-  // X-Ray 모드: 선택/호버 부품만 불투명, 나머지 와이어프레임
-  useEffect(() => {
-    const mat = clonedMaterial as THREE.MeshStandardMaterial;
+    // 3) X-Ray 모드 & opacity
     if (!xRayMode) {
       mat.wireframe = false;
       const isTransparent = opacity < 1;
       mat.transparent = isTransparent;
       mat.opacity = opacity;
       mat.depthWrite = !isTransparent;
-      mat.needsUpdate = true;
-      return;
-    }
-    if (isSelected || isHovered) {
+    } else if (isSelected || isHovered) {
       mat.wireframe = false;
       mat.transparent = false;
       mat.opacity = 1;
@@ -334,8 +326,10 @@ const PartMesh = memo(function PartMesh({
       mat.opacity = 0.15;
       mat.depthWrite = false;
     }
+
+    // needsUpdate 마지막에 1회만 호출
     mat.needsUpdate = true;
-  }, [clonedMaterial, xRayMode, isSelected, isHovered, opacity]);
+  }, [clonedMaterial, opacity, xRayMode, isSelected, isHovered, faultStatus, crossSection, modelBoundsMin, modelBoundsMax]);
 
   if (!isVisible || opacity <= 0.01) return null;
 
